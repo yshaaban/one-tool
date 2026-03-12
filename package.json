@@ -12,17 +12,22 @@
     ".": {
       "types": "./dist/src/index.d.ts",
       "default": "./dist/src/index.js"
+    },
+    "./vfs/browser": {
+      "types": "./dist/src/vfs/browser-vfs.d.ts",
+      "default": "./dist/src/vfs/browser-vfs.js"
     }
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "demo": "npm run build && node --enable-source-maps dist/examples/demo-app.js",
     "agent": "npm run build && node --enable-source-maps dist/examples/agent.js",
-    "test": "npm run build && node --test dist/test/*.test.js",
+    "test": "npm run build && node --test dist/test/**/*.test.js",
     "clean": "rm -rf dist agent_state"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
+    "fake-indexeddb": "^6.2.5",
     "typescript": "^5.8.3"
   }
 }

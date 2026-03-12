@@ -6,6 +6,7 @@ export type { AgentCLIOptions } from './runtime.js';
 export type { VFS, VFileInfo } from './vfs/interface.js';
 export { MemoryVFS } from './vfs/memory-vfs.js';
 export { NodeVFS, RootedVFS } from './vfs/node-vfs.js';
+export { BrowserVFS } from './vfs/browser-vfs.js';
 
 // Commands
 export { CommandRegistry, registerBuiltinCommands } from './commands.js';
@@ -22,9 +23,6 @@ export type {
   MemoryItem,
 } from './types.js';
 export { ok, err, okBytes } from './types.js';
-
-// Parser
-export { parseCommandLine, tokenizeCommandLine, ParseError } from './parser.js';
 
 // Memory
 export { SimpleMemory } from './memory.js';

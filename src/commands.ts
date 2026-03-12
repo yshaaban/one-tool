@@ -1,10 +1,9 @@
 import type { MaybePromise, CommandResult, ToolAdapters } from './types.js';
-import { err, ok, okBytes } from './types.js';
+import { err, ok, okBytes, textDecoder, textEncoder } from './types.js';
 import type { VFS } from './vfs/interface.js';
 import { SimpleMemory } from './memory.js';
 import {
-  decodeText,
-  encodeText,
+  errorMessage,
   formatSize,
   looksBinary,
   parentPath,
@@ -62,6 +61,43 @@ function renderHelp(spec: CommandSpec): string {
   return `${spec.name}: ${spec.summary}\nUsage: ${spec.usage}\n\n${spec.details}`;
 }
 
+function errorCode(caught: unknown): string | null {
+  if (caught && typeof caught === 'object' && 'code' in caught) {
+    const code = (caught as { code?: unknown }).code;
+    if (typeof code === 'string') {
+      return code;
+    }
+  }
+  return null;
+}
+
+function errorPath(message: string): string {
+  const idx = message.indexOf(':');
+  return idx === -1 ? '' : message.slice(idx + 1);
+}
+
+async function firstFileInPath(ctx: CommandContext, inputPath: string): Promise<string | null> {
+  const normalized = ctx.vfs.normalize(inputPath);
+  if (normalized === '/') {
+    return null;
+  }
+
+  let current = '';
+  for (const segment of normalized.split('/').filter(Boolean)) {
+    current += `/${segment}`;
+    const info = await ctx.vfs.stat(current);
+    if (info.exists && !info.isDir) {
+      return current;
+    }
+  }
+
+  return null;
+}
+
+async function blockingParentPath(ctx: CommandContext, inputPath: string): Promise<string> {
+  return (await firstFileInPath(ctx, parentPath(inputPath))) ?? parentPath(inputPath);
+}
+
 async function readTextFromFileOrStdin(
   ctx: CommandContext,
   filePath: string | undefined,
@@ -89,7 +125,7 @@ async function readTextFromFileOrStdin(
         ),
       };
     }
-    return { text: decodeText(raw) };
+    return { text: textDecoder.decode(raw) };
   }
 
   if (stdin.length > 0) {
@@ -101,7 +137,7 @@ async function readTextFromFileOrStdin(
         ),
       };
     }
-    return { text: decodeText(stdin) };
+    return { text: textDecoder.decode(stdin) };
   }
 
   return {
@@ -115,7 +151,7 @@ function contentFromArgsOrStdin(
   commandName: string,
 ): { content?: Uint8Array; error?: CommandResult } {
   if (args.length > 1) {
-    return { content: encodeText(args.slice(1).join(' ')) };
+    return { content: textEncoder.encode(args.slice(1).join(' ')) };
   }
   if (stdin.length > 0) {
     return { content: stdin };
@@ -162,8 +198,7 @@ async function loadJson(
   try {
     return { value: JSON.parse(text ?? '') };
   } catch (caught) {
-    const message = caught instanceof Error ? caught.message : String(caught);
-    return { error: err(`${commandName}: invalid JSON: ${message}`) };
+    return { error: err(`${commandName}: invalid JSON: ${errorMessage(caught)}`) };
   }
 }
 
@@ -258,7 +293,7 @@ async function cmdLs(ctx: CommandContext, args: string[], stdin: Uint8Array): Pr
     const entries = await ctx.vfs.listdir(target);
     return ok(entries.join('\n'));
   } catch (caught) {
-    const message = caught instanceof Error ? caught.message : String(caught);
+    const message = errorMessage(caught);
     if (message.startsWith('ENOENT:')) {
       return err(`ls: path not found: ${ctx.vfs.normalize(target)}`);
     }
@@ -331,8 +366,36 @@ async function cmdWrite(ctx: CommandContext, args: string[], stdin: Uint8Array):
     return error;
   }
 
-  const saved = await ctx.vfs.writeBytes(args[0]!, content ?? new Uint8Array());
-  return ok(`wrote ${formatSize((content ?? new Uint8Array()).length)} to ${saved}`);
+  try {
+    const bytes = content!;
+    const saved = await ctx.vfs.writeBytes(args[0]!, bytes);
+    return ok(`wrote ${formatSize(bytes.length)} to ${saved}`);
+  } catch (caught) {
+    const code = errorCode(caught);
+    const message = errorMessage(caught);
+    if (code === 'EISDIR' || message.startsWith('EISDIR:')) {
+      const normalized = ctx.vfs.normalize(args[0]!);
+      return err(`write: path is a directory: ${normalized}. Use: ls ${normalized}`);
+    }
+    if (code === 'ENOTDIR' || message.startsWith('ENOTDIR:')) {
+      return err(`write: parent is not a directory: ${await blockingParentPath(ctx, args[0]!)}`);
+    }
+    if (code === 'EEXIST') {
+      const blockingPath = await firstFileInPath(ctx, parentPath(args[0]!));
+      if (blockingPath) {
+        return err(`write: parent is not a directory: ${blockingPath}`);
+      }
+    }
+    if (message.startsWith('ENOENT:')) {
+      const missingParent = errorPath(message);
+      return err(`write: parent path not found: ${missingParent}. Use: mkdir ${missingParent}`);
+    }
+    if (code === 'ENOENT') {
+      const missingParent = parentPath(args[0]!);
+      return err(`write: parent path not found: ${missingParent}. Use: mkdir ${missingParent}`);
+    }
+    return err(`write: ${message}`);
+  }
 }
 
 async function cmdAppend(ctx: CommandContext, args: string[], stdin: Uint8Array): Promise<CommandResult> {
@@ -345,8 +408,36 @@ async function cmdAppend(ctx: CommandContext, args: string[], stdin: Uint8Array)
     return error;
   }
 
-  const saved = await ctx.vfs.appendBytes(args[0]!, content ?? new Uint8Array());
-  return ok(`appended ${formatSize((content ?? new Uint8Array()).length)} to ${saved}`);
+  try {
+    const bytes = content!;
+    const saved = await ctx.vfs.appendBytes(args[0]!, bytes);
+    return ok(`appended ${formatSize(bytes.length)} to ${saved}`);
+  } catch (caught) {
+    const code = errorCode(caught);
+    const message = errorMessage(caught);
+    if (code === 'EISDIR' || message.startsWith('EISDIR:')) {
+      const normalized = ctx.vfs.normalize(args[0]!);
+      return err(`append: path is a directory: ${normalized}. Use: ls ${normalized}`);
+    }
+    if (code === 'ENOTDIR' || message.startsWith('ENOTDIR:')) {
+      return err(`append: parent is not a directory: ${await blockingParentPath(ctx, args[0]!)}`);
+    }
+    if (code === 'EEXIST') {
+      const blockingPath = await firstFileInPath(ctx, parentPath(args[0]!));
+      if (blockingPath) {
+        return err(`append: parent is not a directory: ${blockingPath}`);
+      }
+    }
+    if (message.startsWith('ENOENT:')) {
+      const missingParent = errorPath(message);
+      return err(`append: parent path not found: ${missingParent}. Use: mkdir ${missingParent}`);
+    }
+    if (code === 'ENOENT') {
+      const missingParent = parentPath(args[0]!);
+      return err(`append: parent path not found: ${missingParent}. Use: mkdir ${missingParent}`);
+    }
+    return err(`append: ${message}`);
+  }
 }
 
 async function cmdGrep(ctx: CommandContext, args: string[], stdin: Uint8Array): Promise<CommandResult> {
@@ -393,8 +484,7 @@ async function cmdGrep(ctx: CommandContext, args: string[], stdin: Uint8Array): 
   try {
     compiled = new RegExp(pattern, ignoreCase ? 'i' : '');
   } catch (caught) {
-    const message = caught instanceof Error ? caught.message : String(caught);
-    return err(`grep: invalid regex: ${message}`);
+    return err(`grep: invalid regex: ${errorMessage(caught)}`);
   }
 
   const outLines: string[] = [];
@@ -462,8 +552,23 @@ async function cmdMkdir(ctx: CommandContext, args: string[], stdin: Uint8Array):
   if (args.length !== 1) {
     return err('mkdir: usage: mkdir <path>');
   }
-  const created = await ctx.vfs.mkdir(args[0]!, true);
-  return ok(`created ${created}`);
+  try {
+    const created = await ctx.vfs.mkdir(args[0]!, true);
+    return ok(`created ${created}`);
+  } catch (caught) {
+    const code = errorCode(caught);
+    const message = errorMessage(caught);
+    if (code === 'EEXIST' || message.startsWith('EEXIST:')) {
+      return err(`mkdir: path already exists: ${ctx.vfs.normalize(args[0]!)}`);
+    }
+    if (code === 'ENOTDIR' || message.startsWith('ENOTDIR:')) {
+      return err(`mkdir: parent is not a directory: ${await blockingParentPath(ctx, args[0]!)}`);
+    }
+    if (message.startsWith('ENOENT:')) {
+      return err(`mkdir: parent path not found: ${errorPath(message)}`);
+    }
+    return err(`mkdir: ${message}`);
+  }
 }
 
 async function cmdCp(ctx: CommandContext, args: string[], stdin: Uint8Array): Promise<CommandResult> {
@@ -478,12 +583,27 @@ async function cmdCp(ctx: CommandContext, args: string[], stdin: Uint8Array): Pr
     const { src, dst } = await ctx.vfs.copy(args[0]!, args[1]!);
     return ok(`copied ${src} -> ${dst}`);
   } catch (caught) {
-    const message = caught instanceof Error ? caught.message : String(caught);
-    if (message.startsWith('ENOENT:')) {
+    const code = errorCode(caught);
+    const message = errorMessage(caught);
+    if (code === 'ENOENT' || message.startsWith('ENOENT:')) {
       return err(`cp: source not found: ${ctx.vfs.normalize(args[0]!)}`);
     }
-    if (message.startsWith('EEXIST:')) {
+    if (code === 'EEXIST' || message.startsWith('EEXIST:')) {
+      const blockingPath = await firstFileInPath(ctx, parentPath(args[1]!));
+      if (blockingPath) {
+        return err(`cp: parent is not a directory: ${blockingPath}`);
+      }
       return err(`cp: destination already exists: ${ctx.vfs.normalize(args[1]!)}`);
+    }
+    if (code === 'EISDIR' || message.startsWith('EISDIR:')) {
+      const normalized = ctx.vfs.normalize(args[1]!);
+      return err(`cp: destination is a directory: ${normalized}. Use a file path.`);
+    }
+    if (code === 'ENOTDIR' || message.startsWith('ENOTDIR:')) {
+      return err(`cp: parent is not a directory: ${await blockingParentPath(ctx, args[1]!)}`);
+    }
+    if (code === 'EINVAL' || message.startsWith('EINVAL:') || message.includes('EINVAL')) {
+      return err(`cp: destination is inside the source directory: ${ctx.vfs.normalize(args[1]!)}`);
     }
     return err(`cp: ${message}`);
   }
@@ -500,8 +620,30 @@ async function cmdMv(ctx: CommandContext, args: string[], stdin: Uint8Array): Pr
   try {
     const { src, dst } = await ctx.vfs.move(args[0]!, args[1]!);
     return ok(`moved ${src} -> ${dst}`);
-  } catch {
-    return err(`mv: source not found: ${ctx.vfs.normalize(args[0]!)}`);
+  } catch (caught) {
+    const code = errorCode(caught);
+    const message = errorMessage(caught);
+    if (code === 'ENOENT' || message.startsWith('ENOENT:')) {
+      return err(`mv: source not found: ${ctx.vfs.normalize(args[0]!)}`);
+    }
+    if (code === 'EEXIST' || message.startsWith('EEXIST:')) {
+      const blockingPath = await firstFileInPath(ctx, parentPath(args[1]!));
+      if (blockingPath) {
+        return err(`mv: parent is not a directory: ${blockingPath}`);
+      }
+      return err(`mv: destination already exists: ${ctx.vfs.normalize(args[1]!)}`);
+    }
+    if (code === 'EISDIR' || message.startsWith('EISDIR:')) {
+      const normalized = ctx.vfs.normalize(args[1]!);
+      return err(`mv: destination is a directory: ${normalized}. Use a file path.`);
+    }
+    if (code === 'ENOTDIR' || message.startsWith('ENOTDIR:')) {
+      return err(`mv: parent is not a directory: ${await blockingParentPath(ctx, args[1]!)}`);
+    }
+    if (code === 'EINVAL' || message.startsWith('EINVAL:')) {
+      return err(`mv: destination is inside the source directory: ${ctx.vfs.normalize(args[1]!)}`);
+    }
+    return err(`mv: ${message}`);
   }
 }
 
@@ -516,8 +658,15 @@ async function cmdRm(ctx: CommandContext, args: string[], stdin: Uint8Array): Pr
   try {
     const removed = await ctx.vfs.delete(args[0]!);
     return ok(`removed ${removed}`);
-  } catch {
-    return err(`rm: path not found: ${ctx.vfs.normalize(args[0]!)}`);
+  } catch (caught) {
+    const message = errorMessage(caught);
+    if (message.startsWith('ENOENT:')) {
+      return err(`rm: path not found: ${ctx.vfs.normalize(args[0]!)}`);
+    }
+    if (message === 'cannot delete root') {
+      return err('rm: cannot delete root: /');
+    }
+    return err(`rm: ${message}`);
   }
 }
 
@@ -573,18 +722,12 @@ async function cmdFetch(ctx: CommandContext, args: string[], stdin: Uint8Array):
     if (payload instanceof Uint8Array) {
       return okBytes(payload, contentType);
     }
-    if (Array.isArray(payload) || (typeof payload === 'object' && payload !== null)) {
+    if (typeof payload === 'object' && payload !== null) {
       return ok(JSON.stringify(payload, null, 2), { contentType: 'application/json' });
     }
-    if (payload === null || payload === undefined) {
-      return ok('null', { contentType });
-    }
-    if (typeof payload === 'boolean' || typeof payload === 'number') {
-      return ok(JSON.stringify(payload), { contentType });
-    }
-    return ok(String(payload), { contentType });
+    return ok(String(payload ?? 'null'), { contentType });
   } catch (caught) {
-    const message = caught instanceof Error ? caught.message : String(caught);
+    const message = errorMessage(caught);
     if (message.includes('not found')) {
       return err(`fetch: resource not found: ${args[0]!}`);
     }
@@ -643,8 +786,7 @@ async function cmdJson(ctx: CommandContext, args: string[], stdin: Uint8Array): 
       }
       return ok(String(extracted));
     } catch (caught) {
-      const message = caught instanceof Error ? caught.message : String(caught);
-      return err(`json get: path not found: ${pathExpression} (${message})`);
+      return err(`json get: path not found: ${pathExpression} (${errorMessage(caught)})`);
     }
   }
 
@@ -663,7 +805,7 @@ async function cmdMemory(ctx: CommandContext, args: string[], stdin: Uint8Array)
     if (args.length > 1) {
       text = args.slice(1).join(' ');
     } else if (stdin.length > 0) {
-      text = decodeText(stdin);
+      text = textDecoder.decode(stdin);
     } else {
       return err('memory store: provide text inline or via stdin');
     }
@@ -696,7 +838,7 @@ async function cmdMemory(ctx: CommandContext, args: string[], stdin: Uint8Array)
     if (args.length === 1 && stdin.length === 0) {
       return err('memory search: usage: memory search <query>');
     }
-    const query = args.length > 1 ? args.slice(1).join(' ') : decodeText(stdin);
+    const query = args.length > 1 ? args.slice(1).join(' ') : textDecoder.decode(stdin);
     const items = ctx.memory.search(query, 10);
     if (items.length === 0) {
       return ok('(no matches)');
@@ -719,8 +861,7 @@ async function cmdCalc(_ctx: CommandContext, args: string[], stdin: Uint8Array):
     const value = safeEvalArithmetic(args.join(' '));
     return ok(String(value));
   } catch (caught) {
-    const message = caught instanceof Error ? caught.message : String(caught);
-    return err(`calc: invalid expression: ${message}`);
+    return err(`calc: invalid expression: ${errorMessage(caught)}`);
   }
 }
 

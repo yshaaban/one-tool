@@ -1,6 +1,11 @@
 import { createAgentCLI, type AgentCLI, type VFS, NodeVFS, SimpleMemory } from '../src/index.js';
 import { DemoFetch, DemoSearch } from './demo-adapters.js';
 
+export interface DemoRuntimeOptions {
+  rootDir?: string;
+  vfs?: VFS;
+}
+
 export async function seedVfs(vfs: VFS): Promise<void> {
   await vfs.writeBytes(
     '/notes/todo.txt',
@@ -90,8 +95,8 @@ export function seedMemory(memory: SimpleMemory): void {
   memory.store('Ops owner for production config is ops@example.com.');
 }
 
-export async function buildDemoRuntime(rootDir = './agent_state'): Promise<AgentCLI> {
-  const vfs = new NodeVFS(rootDir);
+export async function buildDemoRuntime(options: DemoRuntimeOptions = {}): Promise<AgentCLI> {
+  const vfs = options.vfs ?? new NodeVFS(options.rootDir ?? './agent_state');
   await seedVfs(vfs);
 
   const searchDocs = [

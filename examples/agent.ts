@@ -18,6 +18,7 @@ import process from 'node:process';
 import { buildDemoRuntime } from './demo-runtime.js';
 import type { AgentCLI } from '../src/index.js';
 import { buildToolDefinition } from '../src/index.js';
+import { errorMessage } from '../src/utils.js';
 
 /* ------------------------------------------------------------------ */
 /*  Types for the OpenAI chat completions response                    */
@@ -123,7 +124,7 @@ async function chatCompletion(
     });
   } catch (e) {
     const cause = e instanceof Error && e.cause ? ` (${e.cause})` : '';
-    throw new Error(`Network error calling ${url}: ${e instanceof Error ? e.message : String(e)}${cause}`);
+    throw new Error(`Network error calling ${url}: ${errorMessage(e)}${cause}`);
   }
 
   if (!res.ok) {
@@ -180,7 +181,7 @@ async function agentLoop(
         console.log(`  \x1b[2m> ${command}\x1b[0m`);
         result = await runtime.run(command);
       } catch (e) {
-        result = `tool error: ${e instanceof Error ? e.message : String(e)}`;
+        result = `tool error: ${errorMessage(e)}`;
       }
 
       messages.push({
@@ -245,7 +246,7 @@ async function main(): Promise<void> {
         const reply = await agentLoop(runtime, config, raw, messages, tools);
         console.log(`\n\x1b[33mAgent:\x1b[0m ${reply}\n`);
       } catch (e) {
-        console.error(`\n\x1b[31mError:\x1b[0m ${e instanceof Error ? e.message : String(e)}\n`);
+        console.error(`\n\x1b[31mError:\x1b[0m ${errorMessage(e)}\n`);
       }
     }
   } finally {

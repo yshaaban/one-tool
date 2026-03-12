@@ -1,11 +1,7 @@
-import { textDecoder, textEncoder } from './types.js';
+import { parentOf, posixNormalize } from './vfs/path-utils.js';
 
-export function encodeText(text: string): Uint8Array {
-  return textEncoder.encode(text);
-}
-
-export function decodeText(data: Uint8Array): string {
-  return textDecoder.decode(data);
+export function errorMessage(caught: unknown): string {
+  return caught instanceof Error ? caught.message : String(caught);
 }
 
 export function splitLines(text: string): string[] {
@@ -79,11 +75,7 @@ export function looksBinary(data: Uint8Array): boolean {
 }
 
 export function parentPath(inputPath: string): string {
-  const candidate = inputPath.startsWith('/') ? inputPath : `/${inputPath}`;
-  const normalized = candidate.replace(/\/+/g, '/');
-  const trimmed = normalized.endsWith('/') && normalized !== '/' ? normalized.slice(0, -1) : normalized;
-  const index = trimmed.lastIndexOf('/');
-  return index <= 0 ? '/' : trimmed.slice(0, index);
+  return parentOf(posixNormalize(inputPath));
 }
 
 type ArithmeticToken =

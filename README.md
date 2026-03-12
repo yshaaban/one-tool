@@ -1,15 +1,19 @@
-# Single-Tool CLI Runtime for LLM Agents (TypeScript, No Real Shell)
+# one-tool: Single-Tool CLI Runtime for LLM Agents
 
 This project is a **complete TypeScript reference implementation** of the pattern from your essay:
 
 - expose **one** tool: `run(command: string)`
 - make commands feel like a CLI
 - support `|`, `&&`, `||`, and `;`
-- emulate local files through a **rooted virtual file system**
+- emulate local files through a **virtual file system (VFS)**
 - do **not** invoke a real shell
 - make help, errors, truncation, and footers do the navigation work for the model
 
-The implementation is **Node-first, ESM, strict TypeScript, async-friendly**, and ready to drop into a backend service.
+The implementation is **ESM, strict TypeScript, async-friendly**, and ships with multiple VFS backends:
+
+- `NodeVFS` for a rooted host-backed workspace
+- `MemoryVFS` for pure in-memory tests and embeddings
+- `BrowserVFS` for IndexedDB-backed browser persistence
 
 ---
 
@@ -19,7 +23,7 @@ The implementation is **Node-first, ESM, strict TypeScript, async-friendly**, an
 Your app exposes exactly one tool:
 
 ```ts
-const runtime = await buildRuntime(...);
+const runtime = await createAgentCLI(...);
 
 async function runTool(command: string): Promise<string> {
   return runtime.run(command);
@@ -63,25 +67,36 @@ That keeps tool results compact, navigable, and recoverable.
 ## Project layout
 
 ```text
-cli_agent_runtime_ts/
+one-tool/
 ├─ package.json
 ├─ tsconfig.json
 ├─ README.md
 ├─ src/
-│  ├─ node-shims.d.ts
 │  ├─ types.ts
-│  ├─ vfs.ts
 │  ├─ memory.ts
 │  ├─ parser.ts
 │  ├─ utils.ts
 │  ├─ commands.ts
 │  ├─ runtime.ts
+│  ├─ tool-schema.ts
+│  └─ index.ts
+├─ src/vfs/
+│  ├─ interface.ts
+│  ├─ path-utils.ts
+│  ├─ memory-vfs.ts
+│  ├─ node-vfs.ts
+│  ├─ browser-vfs.ts
+│  └─ index.ts
+├─ examples/
 │  ├─ demo-adapters.ts
 │  ├─ demo-runtime.ts
 │  ├─ demo-app.ts
-│  └─ index.ts
+│  └─ agent.ts
 └─ test/
-   └─ runtime.test.ts
+   ├─ runtime.test.ts
+   ├─ memory-vfs.test.ts
+   ├─ browser-vfs.test.ts
+   └─ node-vfs.test.ts
 ```
 
 ---
@@ -281,7 +296,7 @@ This runtime already includes two adapter slots:
 ### Search adapter example
 
 ```ts
-import type { SearchAdapter, SearchHit } from './src/index.js';
+import type { SearchAdapter, SearchHit } from 'one-tool';
 
 class MySearch implements SearchAdapter {
   async search(query: string, limit = 10): Promise<SearchHit[]> {
@@ -299,7 +314,7 @@ class MySearch implements SearchAdapter {
 ### Fetch adapter example
 
 ```ts
-import type { FetchAdapter, FetchResponse } from './src/index.js';
+import type { FetchAdapter, FetchResponse } from 'one-tool';
 
 class MyFetch implements FetchAdapter {
   async fetch(resource: string): Promise<FetchResponse> {
@@ -316,10 +331,10 @@ class MyFetch implements FetchAdapter {
 ### Build your runtime
 
 ```ts
-import { createAgentCLI, RootedVFS, SimpleMemory } from './src/index.js';
+import { createAgentCLI, NodeVFS, SimpleMemory, buildToolDefinition } from 'one-tool';
 
 const runtime = await createAgentCLI({
-  vfs: new RootedVFS('./agent_state'),
+  vfs: new NodeVFS('./agent_state'),
   adapters: {
     search: new MySearch(),
     fetch: new MyFetch(),
@@ -336,10 +351,10 @@ export async function run(command: string): Promise<string> {
 }
 ```
 
-And build the tool description dynamically:
+And build the model-facing tool definition dynamically:
 
 ```ts
-const description = runtime.buildToolDescription();
+const tool = buildToolDefinition(runtime);
 ```
 
 ---
@@ -364,7 +379,7 @@ But there is:
 - no direct host filesystem access outside the root
 - no wildcard expansion
 
-Everything is routed through `RootedVFS`.
+Everything is routed through a VFS backend such as `NodeVFS`, `MemoryVFS`, or `BrowserVFS`.
 
 That means you can emulate a local file workspace safely while keeping the command pattern the model already understands.
 

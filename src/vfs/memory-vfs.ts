@@ -1,40 +1,39 @@
 import type { VFS, VFileInfo } from './interface.js';
 import { guessMediaType } from './interface.js';
+import { posixNormalize, parentOf, baseName, isStrictDescendantPath } from './path-utils.js';
 
 interface FileEntry {
   data: Uint8Array;
   mtimeMs: number;
 }
 
-function posixNormalize(inputPath: string): string {
-  const raw = inputPath.startsWith('/') ? inputPath : `/${inputPath}`;
-  const segments: string[] = [];
+export class MemoryVFS implements VFS {
+  private files = new Map<string, FileEntry>();
+  private dirs = new Map<string, number>([['/', Date.now()]]);
 
-  for (const seg of raw.split('/')) {
-    if (seg === '' || seg === '.') continue;
-    if (seg === '..') {
-      segments.pop(); // clamp at root — never goes above /
-    } else {
-      segments.push(seg);
+  private ensureDirectParent(normalizedPath: string): void {
+    const parent = parentOf(normalizedPath);
+    if (this.files.has(parent)) {
+      throw new Error(`ENOTDIR:${parent}`);
+    }
+    if (!this.dirs.has(parent)) {
+      throw new Error(`ENOENT:${parent}`);
     }
   }
 
-  return '/' + segments.join('/');
-}
-
-function parentOf(normalizedPath: string): string {
-  const idx = normalizedPath.lastIndexOf('/');
-  return idx <= 0 ? '/' : normalizedPath.slice(0, idx);
-}
-
-function baseName(normalizedPath: string): string {
-  const idx = normalizedPath.lastIndexOf('/');
-  return normalizedPath.slice(idx + 1);
-}
-
-export class MemoryVFS implements VFS {
-  private files = new Map<string, FileEntry>();
-  private dirs = new Set<string>(['/']);
+  private ensureParents(normalizedPath: string): void {
+    const segments = normalizedPath.split('/').filter(Boolean);
+    let current = '';
+    for (const seg of segments) {
+      current += '/' + seg;
+      if (this.files.has(current)) {
+        throw new Error(`ENOTDIR:${current}`);
+      }
+      if (!this.dirs.has(current)) {
+        this.dirs.set(current, Date.now());
+      }
+    }
+  }
 
   normalize(inputPath: string): string {
     return posixNormalize(inputPath);
@@ -51,20 +50,17 @@ export class MemoryVFS implements VFS {
 
   async mkdir(inputPath: string, parents = true): Promise<string> {
     const p = this.normalize(inputPath);
+    // Collision: a file already exists at this path
+    if (this.files.has(p)) {
+      throw new Error(`EEXIST:${p}`);
+    }
     if (parents) {
-      // Create all ancestors
-      const segments = p.split('/').filter(Boolean);
-      let current = '';
-      for (const seg of segments) {
-        current += '/' + seg;
-        this.dirs.add(current);
-      }
+      this.ensureParents(p);
     } else {
-      const parent = parentOf(p);
-      if (!this.dirs.has(parent)) {
-        throw new Error(`ENOENT:${parent}`);
+      this.ensureDirectParent(p);
+      if (!this.dirs.has(p)) {
+        this.dirs.set(p, Date.now());
       }
-      this.dirs.add(p);
     }
     return p;
   }
@@ -81,7 +77,7 @@ export class MemoryVFS implements VFS {
     const prefix = p === '/' ? '/' : p + '/';
     const entries: Array<{ name: string; isDir: boolean }> = [];
 
-    for (const dirPath of this.dirs) {
+    for (const dirPath of this.dirs.keys()) {
       if (dirPath === p) continue;
       if (!dirPath.startsWith(prefix)) continue;
       // Only direct children (no nested)
@@ -127,8 +123,13 @@ export class MemoryVFS implements VFS {
 
   async writeBytes(inputPath: string, data: Uint8Array, makeParents = true): Promise<string> {
     const p = this.normalize(inputPath);
+    if (this.dirs.has(p)) {
+      throw new Error(`EISDIR:${p}`);
+    }
     if (makeParents) {
-      await this.mkdir(parentOf(p), true);
+      this.ensureParents(parentOf(p));
+    } else {
+      this.ensureDirectParent(p);
     }
     this.files.set(p, { data: new Uint8Array(data), mtimeMs: Date.now() });
     return p;
@@ -136,8 +137,13 @@ export class MemoryVFS implements VFS {
 
   async appendBytes(inputPath: string, data: Uint8Array, makeParents = true): Promise<string> {
     const p = this.normalize(inputPath);
+    if (this.dirs.has(p)) {
+      throw new Error(`EISDIR:${p}`);
+    }
     if (makeParents) {
-      await this.mkdir(parentOf(p), true);
+      this.ensureParents(parentOf(p));
+    } else {
+      this.ensureDirectParent(p);
     }
     const existing = this.files.get(p);
     if (existing) {
@@ -164,7 +170,7 @@ export class MemoryVFS implements VFS {
       for (const key of [...this.files.keys()]) {
         if (key.startsWith(prefix)) this.files.delete(key);
       }
-      for (const key of [...this.dirs]) {
+      for (const key of [...this.dirs.keys()]) {
         if (key === p || key.startsWith(prefix)) this.dirs.delete(key);
       }
       return p;
@@ -183,18 +189,30 @@ export class MemoryVFS implements VFS {
     }
 
     if (this.dirs.has(srcP)) {
+      if (isStrictDescendantPath(srcP, dstP)) {
+        throw new Error(`EINVAL:${dstP}`);
+      }
       if (this.dirs.has(dstP) || this.files.has(dstP)) {
         throw new Error(`EEXIST:${dstP}`);
       }
-      // Copy directory tree
-      this.dirs.add(dstP);
       const prefix = srcP === '/' ? '/' : srcP + '/';
-      for (const dirPath of [...this.dirs]) {
+      const sourceDirs = [...this.dirs.keys()].filter(
+        (dirPath) => dirPath === srcP || dirPath.startsWith(prefix),
+      );
+      const sourceFiles = [...this.files.entries()].filter(([filePath]) => filePath.startsWith(prefix));
+
+      this.ensureParents(parentOf(dstP));
+      this.dirs.set(dstP, Date.now());
+
+      for (const dirPath of sourceDirs) {
+        if (dirPath === srcP) {
+          continue;
+        }
         if (dirPath.startsWith(prefix)) {
-          this.dirs.add(dstP + dirPath.slice(srcP.length));
+          this.dirs.set(dstP + dirPath.slice(srcP.length), Date.now());
         }
       }
-      for (const [filePath, entry] of [...this.files.entries()]) {
+      for (const [filePath, entry] of sourceFiles) {
         if (filePath.startsWith(prefix)) {
           this.files.set(dstP + filePath.slice(srcP.length), {
             data: new Uint8Array(entry.data),
@@ -209,9 +227,17 @@ export class MemoryVFS implements VFS {
   }
 
   async move(src: string, dst: string): Promise<{ src: string; dst: string }> {
-    await this.copy(src, dst);
-    await this.delete(src);
-    return { src: this.normalize(src), dst: this.normalize(dst) };
+    const srcP = this.normalize(src);
+    const dstP = this.normalize(dst);
+    if (srcP === dstP) {
+      return { src: srcP, dst: dstP };
+    }
+    if (this.dirs.has(srcP) && isStrictDescendantPath(srcP, dstP)) {
+      throw new Error(`EINVAL:${dstP}`);
+    }
+    await this.copy(srcP, dstP);
+    await this.delete(srcP);
+    return { src: srcP, dst: dstP };
   }
 
   async stat(inputPath: string): Promise<VFileInfo> {
@@ -224,7 +250,7 @@ export class MemoryVFS implements VFS {
         isDir: true,
         size: 0,
         mediaType: 'inode/directory',
-        modifiedEpochMs: 0,
+        modifiedEpochMs: this.dirs.get(p) ?? 0,
       };
     }
 

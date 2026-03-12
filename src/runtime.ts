@@ -2,8 +2,8 @@ import { parseCommandLine, type ChainNode, type PipelineNode, ParseError } from 
 import { CommandRegistry, registerBuiltinCommands, type CommandContext } from './commands.js';
 import { SimpleMemory } from './memory.js';
 import type { CommandResult, ToolAdapters } from './types.js';
-import { err, ok } from './types.js';
-import { formatDuration, formatSize, looksBinary, decodeText, splitLines } from './utils.js';
+import { err, ok, textDecoder } from './types.js';
+import { errorMessage, formatDuration, formatSize, looksBinary, splitLines } from './utils.js';
 import type { VFS } from './vfs/interface.js';
 
 export interface AgentCLIOptions {
@@ -72,8 +72,7 @@ export class AgentCLI {
       if (caught instanceof ParseError) {
         return this.present(err(caught.message, { exitCode: 2 }), durationMs);
       }
-      const message = caught instanceof Error ? caught.message : String(caught);
-      return this.present(err(`internal runtime error: ${message}`, { exitCode: 1 }), durationMs);
+      return this.present(err(`internal runtime error: ${errorMessage(caught)}`, { exitCode: 1 }), durationMs);
     }
   }
 
@@ -161,7 +160,7 @@ export class AgentCLI {
             `Use: stat ${saved}`,
         );
       } else {
-        const stdoutText = await this.applyOverflow(decodeText(result.stdout));
+        const stdoutText = await this.applyOverflow(textDecoder.decode(result.stdout));
         if (stdoutText.trim().length > 0) {
           parts.push(stdoutText.trimEnd());
         }

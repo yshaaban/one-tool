@@ -72,6 +72,12 @@ test('listdir throws ENOENT for missing path', async () => {
   await assert.rejects(() => vfs.listdir('/missing'), /ENOENT/);
 });
 
+test('listdir throws ENOTDIR for file path', async () => {
+  const vfs = new MemoryVFS();
+  await vfs.writeBytes('/file.txt', new TextEncoder().encode('x'));
+  await assert.rejects(() => vfs.listdir('/file.txt'), /ENOTDIR/);
+});
+
 test('readBytes throws ENOENT for missing file', async () => {
   const vfs = new MemoryVFS();
   await assert.rejects(() => vfs.readBytes('/missing'), /ENOENT/);
@@ -99,7 +105,9 @@ test('stat returns correct info for directory', async () => {
   const info = await vfs.stat('/mydir');
   assert.equal(info.exists, true);
   assert.equal(info.isDir, true);
+  assert.equal(info.size, 0);
   assert.equal(info.mediaType, 'inode/directory');
+  assert.ok(info.modifiedEpochMs > 0);
 });
 
 test('stat returns exists=false for missing path', async () => {
@@ -123,6 +131,11 @@ test('delete removes directory recursively', async () => {
   assert.equal(await vfs.exists('/dir/sub/file.txt'), false);
 });
 
+test('delete root throws', async () => {
+  const vfs = new MemoryVFS();
+  await assert.rejects(() => vfs.delete('/'), /cannot delete root/);
+});
+
 test('copy duplicates file', async () => {
   const vfs = new MemoryVFS();
   await vfs.writeBytes('/a.txt', new TextEncoder().encode('data'));
@@ -139,12 +152,43 @@ test('copy duplicates directory tree', async () => {
   assert.equal(await vfs.exists('/src/main.ts'), true);
 });
 
+test('copy directory creates missing destination parents', async () => {
+  const vfs = new MemoryVFS();
+  await vfs.writeBytes('/src/main.ts', new TextEncoder().encode('code'));
+  await vfs.copy('/src', '/a/b/dst');
+  assert.equal(await vfs.isDir('/a'), true);
+  assert.equal(await vfs.isDir('/a/b'), true);
+  assert.equal(await vfs.readText('/a/b/dst/main.ts'), 'code');
+});
+
+test('copy directory into its own child throws EINVAL', async () => {
+  const vfs = new MemoryVFS();
+  await vfs.writeBytes('/src/main.ts', new TextEncoder().encode('code'));
+  await assert.rejects(() => vfs.copy('/src', '/src/sub'), /EINVAL/);
+});
+
 test('move transfers file', async () => {
   const vfs = new MemoryVFS();
   await vfs.writeBytes('/old.txt', new TextEncoder().encode('data'));
   await vfs.move('/old.txt', '/new.txt');
   assert.equal(await vfs.exists('/old.txt'), false);
   assert.equal(await vfs.readText('/new.txt'), 'data');
+});
+
+test('move transfers directory tree', async () => {
+  const vfs = new MemoryVFS();
+  await vfs.writeBytes('/src/main.ts', new TextEncoder().encode('code'));
+  await vfs.writeBytes('/src/lib/util.ts', new TextEncoder().encode('util'));
+  await vfs.move('/src', '/dst');
+  assert.equal(await vfs.exists('/src'), false);
+  assert.equal(await vfs.readText('/dst/main.ts'), 'code');
+  assert.equal(await vfs.readText('/dst/lib/util.ts'), 'util');
+});
+
+test('move directory into its own child throws EINVAL', async () => {
+  const vfs = new MemoryVFS();
+  await vfs.writeBytes('/src/main.ts', new TextEncoder().encode('code'));
+  await assert.rejects(() => vfs.move('/src', '/src/sub'), /EINVAL/);
 });
 
 test('writeBytes creates parent dirs automatically', async () => {
@@ -155,18 +199,118 @@ test('writeBytes creates parent dirs automatically', async () => {
   assert.equal(await vfs.readText('/deep/nested/file.txt'), 'ok');
 });
 
-test('full runtime works with MemoryVFS', async () => {
-  const { createAgentCLI, MemoryVFS: MV, SimpleMemory } = await import('../src/index.js');
-  const vfs = new MV();
-  const runtime = await createAgentCLI({ vfs, memory: new SimpleMemory() });
+test('writeBytes with makeParents=false throws for missing parent', async () => {
+  const vfs = new MemoryVFS();
+  await assert.rejects(
+    () => vfs.writeBytes('/missing/file.txt', new TextEncoder().encode('x'), false),
+    /ENOENT/,
+  );
+});
 
-  const helpOutput = await runtime.run('help');
-  assert.match(helpOutput, /Available commands/);
+test('appendBytes with makeParents=false throws for missing parent', async () => {
+  const vfs = new MemoryVFS();
+  await assert.rejects(
+    () => vfs.appendBytes('/missing/file.txt', new TextEncoder().encode('x'), false),
+    /ENOENT/,
+  );
+});
 
-  await runtime.run('write /test.txt "hello from memory vfs"');
-  const catOutput = await runtime.run('cat /test.txt');
-  assert.match(catOutput, /hello from memory vfs/);
+// ── File/dir collision guards ───────────────────────────────────
 
-  const grepOutput = await runtime.run('cat /test.txt | grep -c hello');
-  assert.match(grepOutput, /^1\b/m);
+test('writeBytes throws EISDIR when path is a directory', async () => {
+  const vfs = new MemoryVFS();
+  await vfs.mkdir('/mydir', true);
+  await assert.rejects(
+    () => vfs.writeBytes('/mydir', new TextEncoder().encode('x')),
+    /EISDIR/,
+  );
+});
+
+test('appendBytes throws EISDIR when path is a directory', async () => {
+  const vfs = new MemoryVFS();
+  await vfs.mkdir('/mydir', true);
+  await assert.rejects(
+    () => vfs.appendBytes('/mydir', new TextEncoder().encode('x')),
+    /EISDIR/,
+  );
+});
+
+test('mkdir throws EEXIST when path is a file', async () => {
+  const vfs = new MemoryVFS();
+  await vfs.writeBytes('/thing', new TextEncoder().encode('file'));
+  await assert.rejects(() => vfs.mkdir('/thing', true), /EEXIST/);
+  await assert.rejects(() => vfs.mkdir('/thing', false), /EEXIST/);
+});
+
+test('mkdir with parents throws ENOTDIR when ancestor is a file', async () => {
+  const vfs = new MemoryVFS();
+  await vfs.writeBytes('/a', new TextEncoder().encode('file'));
+  await assert.rejects(() => vfs.mkdir('/a/b/c', true), /ENOTDIR/);
+});
+
+test('writeBytes with makeParents throws ENOTDIR when ancestor is a file', async () => {
+  const vfs = new MemoryVFS();
+  await vfs.writeBytes('/a', new TextEncoder().encode('file'));
+  await assert.rejects(
+    () => vfs.writeBytes('/a/b.txt', new TextEncoder().encode('x')),
+    /ENOTDIR/,
+  );
+});
+
+test('appendBytes with makeParents throws ENOTDIR when ancestor is a file', async () => {
+  const vfs = new MemoryVFS();
+  await vfs.writeBytes('/a', new TextEncoder().encode('file'));
+  await assert.rejects(
+    () => vfs.appendBytes('/a/b.txt', new TextEncoder().encode('x')),
+    /ENOTDIR/,
+  );
+});
+
+test('writeBytes with makeParents=false throws ENOTDIR when parent is a file', async () => {
+  const vfs = new MemoryVFS();
+  await vfs.writeBytes('/a', new TextEncoder().encode('file'));
+  await assert.rejects(
+    () => vfs.writeBytes('/a/b.txt', new TextEncoder().encode('x'), false),
+    /ENOTDIR/,
+  );
+});
+
+test('appendBytes with makeParents=false throws ENOTDIR when parent is a file', async () => {
+  const vfs = new MemoryVFS();
+  await vfs.writeBytes('/a', new TextEncoder().encode('file'));
+  await assert.rejects(
+    () => vfs.appendBytes('/a/b.txt', new TextEncoder().encode('x'), false),
+    /ENOTDIR/,
+  );
+});
+
+test('mkdir is idempotent', async () => {
+  const vfs = new MemoryVFS();
+  await vfs.mkdir('/a/b', true);
+  await vfs.mkdir('/a/b', true); // no throw
+  assert.equal(await vfs.isDir('/a/b'), true);
+});
+
+test('listdir on fresh VFS returns empty array', async () => {
+  const vfs = new MemoryVFS();
+  const entries = await vfs.listdir('/');
+  assert.deepEqual(entries, []);
+});
+
+test('exists returns true for files and dirs', async () => {
+  const vfs = new MemoryVFS();
+  await vfs.writeBytes('/file.txt', new TextEncoder().encode('x'));
+  await vfs.mkdir('/dir', true);
+  assert.equal(await vfs.exists('/file.txt'), true);
+  assert.equal(await vfs.exists('/dir'), true);
+  assert.equal(await vfs.exists('/nope'), false);
+});
+
+test('isDir distinguishes files from dirs', async () => {
+  const vfs = new MemoryVFS();
+  await vfs.writeBytes('/file.txt', new TextEncoder().encode('x'));
+  await vfs.mkdir('/dir', true);
+  assert.equal(await vfs.isDir('/file.txt'), false);
+  assert.equal(await vfs.isDir('/dir'), true);
+  assert.equal(await vfs.isDir('/nope'), false);
 });

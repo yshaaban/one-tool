@@ -1,5 +1,9 @@
 import type { FetchAdapter, FetchResponse, SearchAdapter, SearchHit } from '../src/index.js';
-import { tokenizeForSearch } from '../src/utils.js';
+
+function tokenizeForSearch(text: string): Set<string> {
+  const matches = text.toLowerCase().match(/[a-z0-9_]+/g) ?? [];
+  return new Set(matches);
+}
 
 export class DemoSearch implements SearchAdapter {
   private readonly docs: Array<Record<string, string>>;
@@ -23,7 +27,7 @@ export class DemoSearch implements SearchAdapter {
           overlap += 1;
         }
       }
-      if (overlap <= 0) {
+      if (overlap === 0) {
         continue;
       }
 

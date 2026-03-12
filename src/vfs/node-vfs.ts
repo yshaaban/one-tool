@@ -5,10 +5,6 @@ import * as path from 'node:path';
 import type { VFS, VFileInfo } from './interface.js';
 import { guessMediaType } from './interface.js';
 
-function pathExists(target: string): boolean {
-  return existsSync(target);
-}
-
 export class NodeVFS implements VFS {
   public readonly rootDir: string;
 
@@ -38,7 +34,7 @@ export class NodeVFS implements VFS {
   }
 
   async exists(inputPath: string): Promise<boolean> {
-    return pathExists(this.resolve(inputPath));
+    return existsSync(this.resolve(inputPath));
   }
 
   async isDir(inputPath: string): Promise<boolean> {
@@ -58,7 +54,7 @@ export class NodeVFS implements VFS {
 
   async listdir(inputPath = '/'): Promise<string[]> {
     const target = this.resolve(inputPath);
-    if (!pathExists(target)) {
+    if (!existsSync(target)) {
       throw new Error(`ENOENT:${this.normalize(inputPath)}`);
     }
     const stats = await fs.stat(target);
@@ -81,7 +77,7 @@ export class NodeVFS implements VFS {
 
   async readBytes(inputPath: string): Promise<Uint8Array> {
     const target = this.resolve(inputPath);
-    if (!pathExists(target)) {
+    if (!existsSync(target)) {
       throw new Error(`ENOENT:${this.normalize(inputPath)}`);
     }
     const stats = await fs.stat(target);
@@ -115,8 +111,11 @@ export class NodeVFS implements VFS {
   }
 
   async delete(inputPath: string): Promise<string> {
+    if (this.normalize(inputPath) === '/') {
+      throw new Error('cannot delete root');
+    }
     const target = this.resolve(inputPath);
-    if (!pathExists(target)) {
+    if (!existsSync(target)) {
       throw new Error(`ENOENT:${this.normalize(inputPath)}`);
     }
     await fs.rm(target, { recursive: true, force: false });
@@ -125,7 +124,7 @@ export class NodeVFS implements VFS {
 
   async copy(src: string, dst: string): Promise<{ src: string; dst: string }> {
     const srcPath = this.resolve(src);
-    if (!pathExists(srcPath)) {
+    if (!existsSync(srcPath)) {
       throw new Error(`ENOENT:${this.normalize(src)}`);
     }
     const srcStats = await fs.stat(srcPath);
@@ -133,7 +132,7 @@ export class NodeVFS implements VFS {
     await fs.mkdir(path.dirname(dstPath), { recursive: true });
 
     if (srcStats.isDirectory()) {
-      if (pathExists(dstPath)) {
+      if (existsSync(dstPath)) {
         throw new Error(`EEXIST:${this.normalize(dst)}`);
       }
       await fs.cp(srcPath, dstPath, {
@@ -150,7 +149,7 @@ export class NodeVFS implements VFS {
 
   async move(src: string, dst: string): Promise<{ src: string; dst: string }> {
     const srcPath = this.resolve(src);
-    if (!pathExists(srcPath)) {
+    if (!existsSync(srcPath)) {
       throw new Error(`ENOENT:${this.normalize(src)}`);
     }
     const dstPath = this.resolve(dst);
@@ -178,7 +177,7 @@ export class NodeVFS implements VFS {
 
   async stat(inputPath: string): Promise<VFileInfo> {
     const target = this.resolve(inputPath);
-    if (!pathExists(target)) {
+    if (!existsSync(target)) {
       return {
         path: this.normalize(inputPath),
         exists: false,
@@ -194,7 +193,7 @@ export class NodeVFS implements VFS {
       path: this.normalize(inputPath),
       exists: true,
       isDir: stats.isDirectory(),
-      size: Number(stats.size),
+      size: stats.isDirectory() ? 0 : Number(stats.size),
       mediaType: guessMediaType(path.basename(target), stats.isDirectory()),
       modifiedEpochMs: Math.floor(stats.mtimeMs),
     };
