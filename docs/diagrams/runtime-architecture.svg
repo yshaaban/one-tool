@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+  <title id="title">one-tool runtime architecture</title>
+  <desc id="desc">Detailed architecture showing the model, run tool, AgentCLI, command registry, VFS backends, adapters, memory, and final presentation flow.</desc>
+  <defs>
+    <linearGradient id="canvas" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#eef2ff"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
+      <path d="M2 2 L10 6 L2 10 Z" fill="#475569"/>
+    </marker>
+    <style>
+      .title { font: 700 30px Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 400 16px Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; fill: #475569; }
+      .h { font: 700 20px Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; fill: #0f172a; }
+      .b { font: 400 14px Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; fill: #334155; }
+      .s { font: 600 13px Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; fill: #1e293b; }
+      .mono { font: 600 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #1e293b; }
+    </style>
+  </defs>
+
+  <rect x="16" y="16" width="1168" height="728" rx="26" fill="url(#canvas)" stroke="#cbd5e1"/>
+  <text x="48" y="62" class="title">Runtime architecture</text>
+  <text x="48" y="91" class="subtitle">Everything flows through one tool call, then splits cleanly across commands, storage, adapters, and final presentation.</text>
+
+  <rect x="80" y="132" width="220" height="108" rx="22" fill="#ffffff" stroke="#cbd5e1" filter="url(#shadow)"/>
+  <text x="112" y="172" class="h">LLM / agent</text>
+  <text x="112" y="198" class="b">Plans, retries, and composes work</text>
+  <text x="112" y="218" class="b">through one stable tool contract.</text>
+
+  <rect x="360" y="148" width="240" height="76" rx="20" fill="#dbeafe" stroke="#93c5fd" filter="url(#shadow)"/>
+  <text x="390" y="183" class="h">tool: run(command)</text>
+  <text x="390" y="205" class="mono">{ command: string }</text>
+
+  <rect x="320" y="278" width="560" height="238" rx="26" fill="#1d4ed8" filter="url(#shadow)"/>
+  <text x="356" y="324" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="28" font-weight="700" fill="#ffffff">AgentCLI</text>
+  <text x="356" y="352" class="b" fill="#dbeafe">Owns the command registry, runtime context, and final response formatting.</text>
+
+  <rect x="356" y="376" width="226" height="112" rx="18" fill="#eff6ff"/>
+  <text x="382" y="408" class="h">Execution core</text>
+  <text x="382" y="433" class="b">parse command line</text>
+  <text x="382" y="455" class="b">run chains and pipelines</text>
+  <text x="382" y="477" class="b">dispatch handlers by name</text>
+
+  <rect x="618" y="376" width="226" height="112" rx="18" fill="#eef2ff"/>
+  <text x="644" y="408" class="h">Presentation layer</text>
+  <text x="644" y="433" class="b">detect binary output</text>
+  <text x="644" y="455" class="b">store large output overflow</text>
+  <text x="644" y="477" class="b">append stderr and exit footer</text>
+
+  <rect x="70" y="326" width="180" height="136" rx="20" fill="#ffffff" stroke="#cbd5e1" filter="url(#shadow)"/>
+  <text x="98" y="360" class="h">CommandRegistry</text>
+  <text x="98" y="384" class="b">Built-ins + custom</text>
+  <text x="98" y="406" class="b">`help`, `ls`, `cat`,</text>
+  <text x="98" y="428" class="b">`search`, `json`, ...</text>
+
+  <rect x="930" y="298" width="200" height="136" rx="20" fill="#ffffff" stroke="#cbd5e1" filter="url(#shadow)"/>
+  <text x="960" y="332" class="h">Rooted VFS</text>
+  <text x="960" y="358" class="b">NodeVFS</text>
+  <text x="960" y="380" class="b">MemoryVFS</text>
+  <text x="960" y="402" class="b">BrowserVFS</text>
+
+  <rect x="930" y="462" width="200" height="172" rx="20" fill="#ffffff" stroke="#cbd5e1" filter="url(#shadow)"/>
+  <text x="960" y="496" class="h">Adapters + memory</text>
+  <text x="960" y="522" class="b">search adapter</text>
+  <text x="960" y="544" class="b">fetch adapter</text>
+  <text x="960" y="566" class="b">SimpleMemory</text>
+  <rect x="960" y="586" width="136" height="26" rx="13" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="976" y="603" class="s">user integrations</text>
+
+  <rect x="328" y="570" width="544" height="108" rx="22" fill="#ffffff" stroke="#cbd5e1" filter="url(#shadow)"/>
+  <text x="360" y="606" class="h">Final model-facing response</text>
+  <text x="360" y="632" class="b">Text output, guided errors, binary guard notices, overflow file pointers, and `[exit:N | duration]`.</text>
+
+  <path d="M300 186 C325 186, 330 186, 360 186" fill="none" stroke="#475569" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M480 224 L480 278" fill="none" stroke="#475569" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M250 394 C278 394, 290 394, 320 394" fill="none" stroke="#475569" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M880 364 C900 364, 905 364, 930 364" fill="none" stroke="#475569" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M880 462 C900 485, 905 520, 930 548" fill="none" stroke="#475569" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M600 516 L600 570" fill="none" stroke="#475569" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M1030 634 C960 680, 870 690, 760 690" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-dasharray="8 8" marker-end="url(#arrow)"/>
+
+  <text x="84" y="486" class="s">registry lookup</text>
+  <text x="896" y="287" class="s">files</text>
+  <text x="888" y="449" class="s">capabilities</text>
+</svg>

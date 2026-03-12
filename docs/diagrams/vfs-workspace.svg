@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="650" viewBox="0 0 1200 650" role="img" aria-labelledby="title desc">
+  <title id="title">Virtual workspace and backend mapping</title>
+  <desc id="desc">A rooted virtual workspace tree mapped to NodeVFS, MemoryVFS, and BrowserVFS backends, showing that the model sees the same filesystem shape regardless of storage implementation.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#ecfeff"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
+      <path d="M2 2 L10 6 L2 10 Z" fill="#334155"/>
+    </marker>
+    <style>
+      .title { font: 700 30px Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 400 16px Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; fill: #475569; }
+      .h { font: 700 20px Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; fill: #0f172a; }
+      .b { font: 400 15px Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; fill: #334155; }
+      .mono { font: 600 15px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #1e293b; }
+    </style>
+  </defs>
+
+  <rect x="16" y="16" width="1168" height="618" rx="26" fill="url(#bg)" stroke="#cbd5e1"/>
+  <text x="48" y="62" class="title">One rooted workspace, multiple storage backends</text>
+  <text x="48" y="92" class="subtitle">The command layer always sees the same file tree. Only the backing storage changes.</text>
+
+  <rect x="56" y="124" width="480" height="470" rx="24" fill="#ffffff" stroke="#cbd5e1" filter="url(#shadow)"/>
+  <text x="88" y="164" class="h">Virtual workspace presented to the model</text>
+  <rect x="88" y="190" width="416" height="372" rx="18" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="116" y="228" class="mono">/</text>
+  <text x="146" y="260" class="mono">notes/</text>
+  <text x="180" y="290" class="mono">todo.txt</text>
+  <text x="146" y="330" class="mono">logs/</text>
+  <text x="180" y="360" class="mono">app.log</text>
+  <text x="146" y="400" class="mono">config/</text>
+  <text x="180" y="430" class="mono">default.json</text>
+  <text x="180" y="460" class="mono">prod.json</text>
+  <text x="146" y="500" class="mono">reports/</text>
+  <path d="M126 236 V510" fill="none" stroke="#94a3b8" stroke-width="2"/>
+  <path d="M126 260 H138" fill="none" stroke="#94a3b8" stroke-width="2"/>
+  <path d="M160 290 H172" fill="none" stroke="#94a3b8" stroke-width="2"/>
+  <path d="M126 330 H138" fill="none" stroke="#94a3b8" stroke-width="2"/>
+  <path d="M160 360 H172" fill="none" stroke="#94a3b8" stroke-width="2"/>
+  <path d="M126 400 H138" fill="none" stroke="#94a3b8" stroke-width="2"/>
+  <path d="M160 430 H172" fill="none" stroke="#94a3b8" stroke-width="2"/>
+  <path d="M160 460 H172" fill="none" stroke="#94a3b8" stroke-width="2"/>
+  <path d="M126 500 H138" fill="none" stroke="#94a3b8" stroke-width="2"/>
+  <text x="298" y="548" class="b" text-anchor="middle">All paths stay rooted under `/`.</text>
+
+  <rect x="640" y="136" width="480" height="124" rx="22" fill="#ffffff" stroke="#cbd5e1" filter="url(#shadow)"/>
+  <text x="672" y="176" class="h">NodeVFS</text>
+  <text x="672" y="202" class="b">Server-side agents and CLIs.</text>
+  <text x="672" y="226" class="b">Backed by a real host directory under a chosen root.</text>
+
+  <rect x="640" y="284" width="480" height="124" rx="22" fill="#ffffff" stroke="#cbd5e1" filter="url(#shadow)"/>
+  <text x="672" y="324" class="h">MemoryVFS</text>
+  <text x="672" y="350" class="b">Tests, demos, and ephemeral sessions.</text>
+  <text x="672" y="374" class="b">Fast in-memory state with the same path semantics.</text>
+
+  <rect x="640" y="432" width="480" height="124" rx="22" fill="#ffffff" stroke="#cbd5e1" filter="url(#shadow)"/>
+  <text x="672" y="472" class="h">BrowserVFS</text>
+  <text x="672" y="498" class="b">Browser-based agents.</text>
+  <text x="672" y="522" class="b">Persisted in IndexedDB and isolated by database name.</text>
+
+  <path d="M536 222 C588 222, 590 198, 640 198" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M536 360 C588 360, 590 346, 640 346" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M536 496 C588 496, 590 494, 640 494" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+</svg>
