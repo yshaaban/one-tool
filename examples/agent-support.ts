@@ -133,7 +133,7 @@ function buildSystemPrompt(runtime: AgentCLI): string {
   return [
     'You are a helpful agent with access to a single tool called `run`.',
     'It executes CLI-style commands over a virtual file system and registered adapters.',
-    'Use the tool to answer the user\'s questions. You can chain multiple calls.',
+    "Use the tool to answer the user's questions. You can chain multiple calls.",
     'When the task asks about files, logs, search, fetch, or memory, inspect the runtime with the tool before answering.',
     '',
     runtime.buildToolDescription(),
@@ -191,8 +191,8 @@ async function chatCompletion(
       });
     } catch (caught) {
       if (attempt === 2) {
-        const cause = caught instanceof Error && caught.cause ? ` (${caught.cause})` : '';
-        throw new Error(`Network error calling ${url}: ${errorMessage(caught)}${cause}`);
+        const message = `Network error calling ${url}: ${errorMessage(caught)}`;
+        throw new Error(message, { cause: caught });
       }
       await delayMs(500 * (attempt + 1));
       continue;

@@ -1,9 +1,5 @@
 import type { FetchAdapter, FetchResponse, SearchAdapter, SearchHit } from '../src/index.js';
-
-function tokenizeForSearch(text: string): Set<string> {
-  const matches = text.toLowerCase().match(/[a-z0-9_]+/g) ?? [];
-  return new Set(matches);
-}
+import { tokenizeForSearch } from '../src/utils.js';
 
 export class DemoSearch implements SearchAdapter {
   private readonly docs: Array<Record<string, string>>;

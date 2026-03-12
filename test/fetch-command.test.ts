@@ -57,7 +57,7 @@ test('fetch pretty-prints object payloads', async () => {
 
 test('fetch pretty-prints array payloads', async () => {
   const output = await runFetch(['a', 'b'], 'application/json');
-  assert.match(output, /\[\n  "a",\n  "b"\n\]/);
+  assert.match(output, /\[\n {2}"a",\n {2}"b"\n\]/);
   assert.match(output, /\[exit:0 \| /);
 });
 

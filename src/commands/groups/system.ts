@@ -48,17 +48,15 @@ async function cmdMemory(ctx: CommandContext, args: string[], stdin: Uint8Array)
   const sub = args[0]!;
 
   if (sub === 'store') {
-    let text = '';
     if (args.length > 1) {
-      text = args.slice(1).join(' ');
-    } else if (stdin.length > 0) {
-      text = textDecoder.decode(stdin);
-    } else {
-      return err('memory store: provide text inline or via stdin');
+      const item = ctx.memory.store(args.slice(1).join(' '));
+      return ok(`stored memory #${item.id}`);
     }
-
-    const item = ctx.memory.store(text);
-    return ok(`stored memory #${item.id}`);
+    if (stdin.length > 0) {
+      const item = ctx.memory.store(textDecoder.decode(stdin));
+      return ok(`stored memory #${item.id}`);
+    }
+    return err('memory store: provide text inline or via stdin');
   }
 
   if (sub === 'recent') {

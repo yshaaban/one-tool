@@ -257,12 +257,12 @@ The runtime intentionally makes discovery cheap:
 
 ### Supported operators
 
-| Operator | Meaning |
-|---|---|
-| `|` | pipe stdout to the next command |
-| `&&` | run the next pipeline only if the previous one succeeded |
-| `||` | run the next pipeline only if the previous one failed |
-| `;` | always run the next pipeline |
+| Operator | Meaning                                                  |
+| -------- | -------------------------------------------------------- | ------------------------------- | ----------------------------------------------------- |
+| `        | `                                                        | pipe stdout to the next command |
+| `&&`     | run the next pipeline only if the previous one succeeded |
+| `        |                                                          | `                               | run the next pipeline only if the previous one failed |
+| `;`      | always run the next pipeline                             |
 
 Examples:
 
@@ -343,10 +343,10 @@ The runtime ships with 18 built-in commands. They are grouped in code under `src
 
 ### System commands
 
-| Command | Usage | Stdin | Purpose |
-|---|---|---:|---|
-| `help` | `help [command]` | no | List commands or show detailed help |
-| `memory` | `memory search <query> | memory recent [N] | memory store <text>` | yes | Store and search lightweight working memory |
+| Command  | Usage                  |             Stdin | Purpose                             |
+| -------- | ---------------------- | ----------------: | ----------------------------------- | --- | ------------------------------------------- |
+| `help`   | `help [command]`       |                no | List commands or show detailed help |
+| `memory` | `memory search <query> | memory recent [N] | memory store <text>`                | yes | Store and search lightweight working memory |
 
 Examples:
 
@@ -359,17 +359,17 @@ memory recent 5
 
 ### Filesystem commands
 
-| Command | Usage | Stdin | Purpose |
-|---|---|---:|---|
-| `ls` | `ls [path]` | no | List a directory |
-| `stat` | `stat <path>` | no | Show file metadata |
-| `cat` | `cat <path>` | no | Read a text file |
-| `write` | `write <path> [content]` | yes | Write a file from inline content or stdin |
-| `append` | `append <path> [content]` | yes | Append to a file |
-| `mkdir` | `mkdir <path>` | no | Create a directory and missing parents |
-| `cp` | `cp <src> <dst>` | no | Copy a file or directory |
-| `mv` | `mv <src> <dst>` | no | Move or rename a file or directory |
-| `rm` | `rm <path>` | no | Delete a file or directory recursively |
+| Command  | Usage                     | Stdin | Purpose                                   |
+| -------- | ------------------------- | ----: | ----------------------------------------- |
+| `ls`     | `ls [path]`               |    no | List a directory                          |
+| `stat`   | `stat <path>`             |    no | Show file metadata                        |
+| `cat`    | `cat <path>`              |    no | Read a text file                          |
+| `write`  | `write <path> [content]`  |   yes | Write a file from inline content or stdin |
+| `append` | `append <path> [content]` |   yes | Append to a file                          |
+| `mkdir`  | `mkdir <path>`            |    no | Create a directory and missing parents    |
+| `cp`     | `cp <src> <dst>`          |    no | Copy a file or directory                  |
+| `mv`     | `mv <src> <dst>`          |    no | Move or rename a file or directory        |
+| `rm`     | `rm <path>`               |    no | Delete a file or directory recursively    |
 
 Examples:
 
@@ -388,11 +388,11 @@ rm /scratch
 
 ### Text commands
 
-| Command | Usage | Stdin | Purpose |
-|---|---|---:|---|
-| `grep` | `grep [-i] [-v] [-c] [-n] <pattern> [path]` | yes | Filter lines by regex |
-| `head` | `head [-n N] [path]` | yes | Show first N lines |
-| `tail` | `tail [-n N] [path]` | yes | Show last N lines |
+| Command | Usage                                       | Stdin | Purpose               |
+| ------- | ------------------------------------------- | ----: | --------------------- |
+| `grep`  | `grep [-i] [-v] [-c] [-n] <pattern> [path]` |   yes | Filter lines by regex |
+| `head`  | `head [-n N] [path]`                        |   yes | Show first N lines    |
+| `tail`  | `tail [-n N] [path]`                        |   yes | Show last N lines     |
 
 Examples:
 
@@ -405,10 +405,10 @@ tail -n 50 /logs/app.log
 
 ### Data commands
 
-| Command | Usage | Stdin | Purpose |
-|---|---|---:|---|
-| `json` | `json pretty [path] | json keys [path] | json get <field.path> [path]` | yes | Inspect JSON |
-| `calc` | `calc <expression>` | no | Evaluate safe arithmetic |
+| Command | Usage               |            Stdin | Purpose                       |
+| ------- | ------------------- | ---------------: | ----------------------------- | --- | ------------ |
+| `json`  | `json pretty [path] | json keys [path] | json get <field.path> [path]` | yes | Inspect JSON |
+| `calc`  | `calc <expression>` |               no | Evaluate safe arithmetic      |
 
 Examples:
 
@@ -421,10 +421,10 @@ calc (1499 * 1.2) / 100
 
 ### Adapter-backed commands
 
-| Command | Usage | Stdin | Purpose |
-|---|---|---:|---|
-| `search` | `search <query>` | no | Query the configured search adapter |
-| `fetch` | `fetch <resource>` | no | Query the configured fetch adapter |
+| Command  | Usage              | Stdin | Purpose                             |
+| -------- | ------------------ | ----: | ----------------------------------- |
+| `search` | `search <query>`   |    no | Query the configured search adapter |
+| `fetch`  | `fetch <resource>` |    no | Query the configured fetch adapter  |
 
 Examples:
 
@@ -659,6 +659,15 @@ import { BrowserVFS } from 'one-tool/vfs/browser';
 
 You can also import `BrowserVFS` from the root entrypoint when your environment supports it, but the subpath is the clearest browser-specific import.
 
+### Package exports
+
+| Import path            | Contents                                                                 |
+| ---------------------- | ------------------------------------------------------------------------ |
+| `one-tool`             | Core runtime, types, command registry, tool schema, and all VFS backends |
+| `one-tool/vfs/node`    | `NodeVFS` and deprecated `RootedVFS`                                     |
+| `one-tool/vfs/memory`  | `MemoryVFS`                                                              |
+| `one-tool/vfs/browser` | `BrowserVFS`                                                             |
+
 ---
 
 ## VFS backends
@@ -698,11 +707,11 @@ interface VFileInfo {
 
 ### Backend comparison
 
-| Backend | Best for | Persistence | Notes |
-|---|---|---|---|
-| `NodeVFS` | server/runtime agents | host filesystem under a chosen root | safest default for Node integrations |
-| `MemoryVFS` | tests, demos, ephemeral agents | none | fast and deterministic |
-| `BrowserVFS` | browser agents | IndexedDB | persistent client-side filesystem |
+| Backend      | Best for                       | Persistence                         | Notes                                |
+| ------------ | ------------------------------ | ----------------------------------- | ------------------------------------ |
+| `NodeVFS`    | server/runtime agents          | host filesystem under a chosen root | safest default for Node integrations |
+| `MemoryVFS`  | tests, demos, ephemeral agents | none                                | fast and deterministic               |
+| `BrowserVFS` | browser agents                 | IndexedDB                           | persistent client-side filesystem    |
 
 ### `NodeVFS`
 
@@ -941,6 +950,9 @@ npm test
 The suite covers:
 
 - runtime parsing, chaining, and piping
+- parser tokenization and AST structure
+- utility helpers and arithmetic evaluation
+- in-memory working memory behavior
 - VFS parity across backends
 - built-in command behavior
 - metadata-driven command conformance
@@ -984,7 +996,9 @@ npm run test:live:openai
 ```text
 one-tool/
 ├─ .env.example
+├─ CHANGELOG.md
 ├─ COMMANDS.md
+├─ LICENSE
 ├─ package.json
 ├─ README.md
 ├─ docs/
@@ -1021,6 +1035,8 @@ one-tool/
 │  ├─ agent-support.ts
 │  └─ agent.ts
 └─ test/
+   ├─ parser.test.ts
+   ├─ memory.test.ts
    ├─ runtime.test.ts
    ├─ fetch-command.test.ts
    ├─ utils.test.ts
