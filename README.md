@@ -30,6 +30,7 @@ Code examples below use package-style imports such as `import { createAgentCLI }
 - [Choose your path](#choose-your-path)
 - [Quick start](#quick-start)
 - [Five-minute integration](#five-minute-integration)
+- [FAQ](#faq)
 - [How it works](#how-it-works)
 - [Command language](#command-language)
 - [Built-in commands](#built-in-commands)
@@ -37,9 +38,11 @@ Code examples below use package-style imports such as `import { createAgentCLI }
 - [VFS backends](#vfs-backends)
 - [Output model](#output-model)
 - [Provider-backed agent example](#provider-backed-agent-example)
+- [Security model](#security-model)
 - [Adding commands](#adding-commands)
 - [Testing](#testing)
 - [Project layout](#project-layout)
+- [Known limitations](#known-limitations)
 - [Design choices and non-goals](#design-choices-and-non-goals)
 
 ---
@@ -210,6 +213,84 @@ For a missing file:
 
 [exit:1 | 0ms]
 ```
+
+---
+
+## FAQ
+
+### Why one tool instead of many?
+
+Because the model usually reasons better over one composable tool than a large menu of narrow tools.
+
+- one `run(command)` tool means one schema to understand
+- command discovery happens inside the runtime through `help`, usage text, and errors
+- compositions like `cat /logs/app.log | grep ERROR | head -n 5` stay in one tool call instead of three
+- fewer round trips usually means less brittle planning and less context churn
+
+This is not a claim that one tool is always superior. It is a deliberate tradeoff for agent workflows that benefit from CLI-style composition.
+
+### How do I choose which commands to enable?
+
+Start with presets:
+
+- `full` for the complete built-in surface
+- `readOnly` for inspection-only agents
+- `filesystem` for file operations plus text utilities
+- `textOnly` for text-processing workflows
+- `dataOnly` for adapter-backed retrieval plus `json` and `calc`
+
+Then refine with explicit excludes if needed:
+
+```ts
+import { createAgentCLI, NodeVFS } from 'one-tool';
+
+const runtime = await createAgentCLI({
+  vfs: new NodeVFS('./agent_state'),
+  builtinCommands: {
+    preset: 'readOnly',
+    excludeCommands: ['fetch'],
+  },
+});
+```
+
+If you need full control, pass a custom `registry` or build one with `createCommandRegistry(...)`.
+
+`readOnly` removes mutating built-in commands. It does not guarantee your adapters are read-only.
+
+### Can I add custom commands?
+
+Yes. You can:
+
+- register them after runtime creation with `runtime.registry.register(spec)`
+- pass them in `commands` so they register during startup
+- replace built-ins by name with `commands` or `registerCommands(..., { onConflict: 'replace' })`
+
+If the runtime will expose a tool definition to the model, register custom commands before calling `buildToolDefinition(runtime)`.
+
+### Which VFS should I use?
+
+Use this rule of thumb:
+
+| Scenario               | Backend      | Why                                      |
+| ---------------------- | ------------ | ---------------------------------------- |
+| Server-side agent      | `NodeVFS`    | Persists to disk and survives restarts   |
+| Unit tests             | `MemoryVFS`  | Fast, deterministic, no cleanup required |
+| Browser agent          | `BrowserVFS` | IndexedDB-backed persistence             |
+| Ephemeral/stateless    | `MemoryVFS`  | No persistence overhead                  |
+| Long-lived local agent | `NodeVFS`    | Workspace survives process restarts      |
+
+The detailed backend behavior is covered in [VFS backends](#vfs-backends).
+
+### Does this work with my model provider?
+
+The runtime itself is provider-agnostic. It exposes a string-in, string-out execution API and an OpenAI-compatible tool definition.
+
+- OpenAI: tested example included in `examples/agent.ts`
+- Groq: tested example included in `examples/agent.ts`
+- Anthropic / Claude: should work in agent loops that accept OpenAI-style tool schemas
+- Local OpenAI-compatible endpoints: should work if the model supports tool calling
+
+The maintained examples in this repo target OpenAI-compatible chat-completions APIs.
 
 ---
 
@@ -489,8 +570,16 @@ interface AgentCLIOptions {
   registry?: CommandRegistry;
   builtinCommands?: BuiltinCommandSelection | false;
   commands?: Iterable<CommandSpec>;
+  outputLimits?: AgentCLIOutputLimits;
+}
+
+interface AgentCLIOutputLimits {
+  maxLines?: number;
+  maxBytes?: number;
 }
 ```
+
+`maxLines` and `maxBytes` must be non-negative integers.
 
 Default behavior:
 
@@ -498,6 +587,7 @@ Default behavior:
 - if you pass `builtinCommands`, only the selected built-ins are registered
 - if you pass `commands`, they are registered after built-ins and replace built-ins with the same name
 - if you pass `registry`, it is used as-is and cannot be combined with `builtinCommands` or `commands`
+- if you pass `outputLimits`, they override the default 200-line / 50KB truncation policy
 
 #### `AgentCLI`
 
@@ -678,8 +768,7 @@ For selective built-in enablement:
 import { createCommandRegistry } from 'one-tool';
 
 const registry = createCommandRegistry({
-  includeGroups: ['system', 'text'],
-  excludeCommands: ['memory'],
+  preset: 'textOnly',
 });
 ```
 
@@ -692,6 +781,16 @@ Valid built-in group names are:
 - `'data'`
 
 The `includeGroups` names come from `builtinCommandGroups`. The exported group arrays use the names `systemCommands`, `fsCommands`, `textCommands`, `adapterCommands`, and `dataCommands`.
+
+Built-in preset names are:
+
+- `'full'`
+- `'readOnly'`
+- `'filesystem'`
+- `'textOnly'`
+- `'dataOnly'`
+
+Presets are exported through `builtinCommandPresets` and `builtinCommandPresetNames`.
 
 For easy overrides:
 
@@ -726,18 +825,46 @@ They are also available through `builtinCommandGroups`.
 
 ### Command testing helpers
 
-The package exports reusable metadata-driven conformance helpers:
+The package exports stable testing helpers under `one-tool/testing`:
 
 ```ts
-import { createCommandConformanceCases } from 'one-tool/testing';
+import {
+  createCommandConformanceCases,
+  createTestCommandContext,
+  createTestCommandRegistry,
+  runRegisteredCommand,
+  stdinText,
+  stdoutText,
+} from 'one-tool/testing';
 ```
 
-The helper returns test cases you can plug into your own test runner:
+For a focused command test:
+
+```ts
+import assert from 'node:assert/strict';
+import {
+  createTestCommandContext,
+  createTestCommandRegistry,
+  runRegisteredCommand,
+  stdoutText,
+} from 'one-tool/testing';
+
+const registry = createTestCommandRegistry({
+  includeGroups: ['system'],
+  excludeCommands: ['memory'],
+});
+
+const ctx = createTestCommandContext({ registry });
+const { result } = await runRegisteredCommand('help', ['help'], { ctx });
+assert.match(stdoutText(result), /Usage: help \\[command\\]/);
+```
+
+For metadata-driven conformance coverage:
 
 ```ts
 const cases = createCommandConformanceCases({
   registry,
-  makeCtx,
+  makeCtx: createTestCommandContext,
 });
 ```
 
@@ -765,7 +892,7 @@ You can also import `BrowserVFS` from the root entrypoint when your environment 
 | ---------------------- | ------------------------------------------------------------------------------------- |
 | `one-tool`             | Core runtime, types, command APIs, testing helpers, tool schema, and all VFS backends |
 | `one-tool/commands`    | Command registry helpers, built-in command groups, and command specs                  |
-| `one-tool/testing`     | Reusable command conformance helpers                                                  |
+| `one-tool/testing`     | Stable command-testing helpers and reusable command conformance helpers               |
 | `one-tool/vfs/node`    | `NodeVFS` and deprecated `RootedVFS`                                                  |
 | `one-tool/vfs/memory`  | `MemoryVFS`                                                                           |
 | `one-tool/vfs/browser` | `BrowserVFS`                                                                          |
@@ -922,7 +1049,7 @@ Use: stat /.system/cmd-output/cmd-0001.bin
 
 ### Overflow handling
 
-If output exceeds 200 lines or 50KB, the runtime stores the full text and returns a preview:
+If output exceeds 200 lines or 50KB by default, the runtime stores the full text and returns a preview:
 
 ```text
 [first preview chunk]
@@ -936,6 +1063,22 @@ Explore: cat /.system/cmd-output/cmd-0003.txt | grep <pattern>
 ```
 
 This is a major part of the design: large results become explorable, not destructive to the context window.
+
+You can tune those thresholds:
+
+```ts
+import { createAgentCLI, MemoryVFS } from 'one-tool';
+
+const runtime = await createAgentCLI({
+  vfs: new MemoryVFS(),
+  outputLimits: {
+    maxLines: 100,
+    maxBytes: 20 * 1024,
+  },
+});
+```
+
+Both values must be non-negative integers.
 
 ---
 
@@ -990,6 +1133,35 @@ Optional endpoint overrides:
 - `GROQ_BASE_URL` overrides the Groq endpoint
 - `OPENAI_BASE_URL` overrides the OpenAI endpoint
 
+Compatibility notes:
+
+- the example agent is maintained against OpenAI-compatible APIs
+- Groq and OpenAI are covered by examples and live test entrypoints
+- other providers can be used if your agent loop can send OpenAI-style tool definitions and tool calls
+- the runtime itself does not depend on a provider SDK
+
+---
+
+## Security model
+
+The runtime is intentionally safer than exposing a real shell, but it is not a complete sandbox.
+
+What it does:
+
+- roots all file paths under `/`
+- blocks path escape through normalization
+- rejects shell features such as redirection, subshells, backticks, and environment expansion
+- never spawns host processes
+- routes network access through explicit developer-supplied adapters
+
+What still matters:
+
+- `NodeVFS` touches a real host directory under the root you choose
+- `fetch` and `search` can reach real systems if your adapters do
+- custom commands can do anything your code does
+
+For production use, treat adapters and custom commands as your trust boundary.
+
 ---
 
 ## Adding commands
@@ -1040,11 +1212,21 @@ If you expose tool definitions to the model, register custom commands before cal
 If you want custom commands to receive the same conformance coverage pattern, use the exported helper:
 
 ```ts
-import { createCommandConformanceCases } from 'one-tool/testing';
+import {
+  createCommandConformanceCases,
+  createTestCommandContext,
+  createTestCommandRegistry,
+} from 'one-tool/testing';
+
+const registry = createTestCommandRegistry({
+  includeGroups: ['system'],
+  excludeCommands: ['memory'],
+  commands: [echo],
+});
 
 const cases = createCommandConformanceCases({
   registry,
-  makeCtx,
+  makeCtx: createTestCommandContext,
 });
 ```
 
@@ -1083,6 +1265,14 @@ The suite covers:
 - adapter error behavior when declared
 
 The same logic is exported through `createCommandConformanceCases(...)` for consumer test suites.
+
+The public `one-tool/testing` helpers also include:
+
+- `createTestCommandRegistry(...)`
+- `createTestCommandContext(...)`
+- `runRegisteredCommand(...)`
+- `stdinText(...)`
+- `stdoutText(...)`
 
 ### Demo commands
 
@@ -1136,6 +1326,10 @@ one-tool/
 │  │  ├─ index.ts
 │  │  ├─ groups/
 │  │  └─ shared/
+│  ├─ testing/
+│  │  ├─ command-conformance.ts
+│  │  ├─ command-harness.ts
+│  │  └─ index.ts
 │  └─ vfs/
 │     ├─ index.ts
 │     ├─ interface.ts
@@ -1153,6 +1347,8 @@ one-tool/
    ├─ parser.test.ts
    ├─ memory.test.ts
    ├─ runtime.test.ts
+   ├─ runtime-options.test.ts
+   ├─ testing-helpers.test.ts
    ├─ fetch-command.test.ts
    ├─ utils.test.ts
    ├─ memory-vfs.test.ts
@@ -1163,12 +1359,25 @@ one-tool/
    └─ commands/
       ├─ harness.ts
       ├─ conformance.test.ts
+      ├─ conformance-helper.test.ts
+      ├─ registry.test.ts
       ├─ system.test.ts
       ├─ fs.test.ts
       ├─ text.test.ts
       ├─ data.test.ts
       └─ adapters.test.ts
 ```
+
+---
+
+## Known limitations
+
+- `run(...)` returns a complete formatted string, not a streaming result
+- output formatting is fixed even though the overflow thresholds are configurable
+- built-in adapters are limited to `search` and `fetch`; other integrations should be custom commands
+- the runtime does not track model tokens, conversation size, or provider cost
+- access control is at command granularity; if you need subcommand-level policy, expose a narrower command
+- the library does not manage your outer agent loop, retries, or multi-tool orchestration
 
 ---
 

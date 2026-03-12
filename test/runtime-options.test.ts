@@ -28,6 +28,16 @@ const overridingHelp: CommandSpec = {
   },
 };
 
+const burst: CommandSpec = {
+  name: 'burst',
+  summary: 'Emit a large block of text.',
+  usage: 'burst',
+  details: 'Examples:\n  burst',
+  async handler() {
+    return ok('first line\nsecond line\nthird line');
+  },
+};
+
 test('AgentCLI can start with a selective built-in set', async function (): Promise<void> {
   const runtime = new AgentCLI({
     vfs: new MemoryVFS(),
@@ -44,6 +54,19 @@ test('AgentCLI can start with a selective built-in set', async function (): Prom
 
   const result = await runtime.run('ls');
   assert.match(result, /unknown command: ls/);
+});
+
+test('AgentCLI supports builtin command presets', async function (): Promise<void> {
+  const runtime = new AgentCLI({
+    vfs: new MemoryVFS(),
+    builtinCommands: { preset: 'readOnly' },
+  });
+  await runtime.initialize();
+
+  assert.equal(runtime.registry.has('rm'), false);
+  assert.equal(runtime.registry.has('write'), false);
+  assert.equal(runtime.registry.has('cat'), true);
+  assert.equal(runtime.registry.has('help'), true);
 });
 
 test('AgentCLI can run with only custom commands and no built-ins', async function (): Promise<void> {
@@ -85,6 +108,74 @@ test('AgentCLI extra commands replace built-ins by default', async function (): 
 
   const result = await runtime.run('help');
   assert.match(result, /^override help/m);
+});
+
+test('AgentCLI output limits can force truncation earlier', async function (): Promise<void> {
+  const runtime = new AgentCLI({
+    vfs: new MemoryVFS(),
+    builtinCommands: false,
+    commands: [burst],
+    outputLimits: { maxLines: 1, maxBytes: 1024 },
+  });
+  await runtime.initialize();
+
+  const output = await runtime.run('burst');
+  assert.match(output, /^first line/m);
+  assert.match(output, /output truncated \(3 lines,/);
+  assert.equal(await runtime.ctx.vfs.exists('/.system/cmd-output/cmd-0001.txt'), true);
+});
+
+test('AgentCLI output byte limits can truncate long single-line output', async function (): Promise<void> {
+  const longLine: CommandSpec = {
+    name: 'longline',
+    summary: 'Emit one long line.',
+    usage: 'longline',
+    details: 'Examples:\n  longline',
+    async handler() {
+      return ok('abcdefghijklmnopqrstuvwxyz');
+    },
+  };
+  const runtime = new AgentCLI({
+    vfs: new MemoryVFS(),
+    builtinCommands: false,
+    commands: [longLine],
+    outputLimits: { maxLines: 100, maxBytes: 8 },
+  });
+  await runtime.initialize();
+
+  const output = await runtime.run('longline');
+  assert.match(output, /output truncated \(1 lines,/);
+  assert.match(output, /Full output: \/.system\/cmd-output\/cmd-0001\.txt/);
+});
+
+test('AgentCLI output limits support zero-line previews without leading blank output', async function (): Promise<void> {
+  const runtime = new AgentCLI({
+    vfs: new MemoryVFS(),
+    builtinCommands: false,
+    commands: [burst],
+    outputLimits: { maxLines: 0, maxBytes: 1024 },
+  });
+  await runtime.initialize();
+
+  const output = await runtime.run('burst');
+  assert.equal(output.startsWith('\n'), false);
+  assert.match(output, /^--- output truncated \(3 lines,/);
+});
+
+test('AgentCLI rejects invalid output limit values', function (): void {
+  assert.throws(function (): AgentCLI {
+    return new AgentCLI({
+      vfs: new MemoryVFS(),
+      outputLimits: { maxLines: -1 },
+    });
+  }, /outputLimits\.maxLines must be a non-negative integer/);
+
+  assert.throws(function (): AgentCLI {
+    return new AgentCLI({
+      vfs: new MemoryVFS(),
+      outputLimits: { maxBytes: Number.POSITIVE_INFINITY },
+    });
+  }, /outputLimits\.maxBytes must be a non-negative integer/);
 });
 
 test('AgentCLI can use a caller-owned registry', async function (): Promise<void> {

@@ -3,6 +3,8 @@ import test from 'node:test';
 
 import {
   CommandRegistry,
+  builtinCommandPresetNames,
+  builtinCommandPresets,
   createCommandRegistry,
   listBuiltinCommands,
   registerBuiltinCommands,
@@ -47,12 +49,63 @@ test('createCommandRegistry supports group selection and command exclusion', fun
   );
 });
 
+test('builtin command presets expose stable, useful default selections', function (): void {
+  assert.deepEqual(builtinCommandPresetNames, ['full', 'readOnly', 'filesystem', 'textOnly', 'dataOnly']);
+  assert.deepEqual(builtinCommandPresets.textOnly.excludeCommands, ['memory']);
+  assert.equal(Object.isFrozen(builtinCommandPresetNames), true);
+  assert.equal(Object.isFrozen(builtinCommandPresets), true);
+  assert.equal(Object.isFrozen(builtinCommandPresets.textOnly.excludeCommands), true);
+
+  assert.deepEqual(createCommandRegistry({ preset: 'readOnly' }).names(), [
+    'calc',
+    'cat',
+    'fetch',
+    'grep',
+    'head',
+    'help',
+    'json',
+    'ls',
+    'search',
+    'stat',
+    'tail',
+  ]);
+  assert.deepEqual(createCommandRegistry({ preset: 'filesystem' }).names(), [
+    'append',
+    'cat',
+    'cp',
+    'grep',
+    'head',
+    'help',
+    'ls',
+    'mkdir',
+    'mv',
+    'rm',
+    'stat',
+    'tail',
+    'write',
+  ]);
+  assert.deepEqual(
+    listBuiltinCommands({ preset: 'dataOnly' }).map(function (spec) {
+      return spec.name;
+    }),
+    ['help', 'search', 'fetch', 'json', 'calc'],
+  );
+});
+
 test('createCommandRegistry rejects unknown builtin groups safely', function (): void {
   assert.throws(function (): CommandRegistry {
     return createCommandRegistry({
       includeGroups: ['__proto__' as never],
     });
   }, /unknown builtin command group: __proto__/);
+});
+
+test('createCommandRegistry rejects unknown builtin presets safely', function (): void {
+  assert.throws(function (): CommandRegistry {
+    return createCommandRegistry({
+      preset: '__proto__' as never,
+    });
+  }, /unknown builtin command preset: __proto__/);
 });
 
 test('registerCommands can replace existing built-ins on conflict', async function (): Promise<void> {

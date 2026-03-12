@@ -22,11 +22,12 @@ export const builtinCommandGroups = {
 
 export type BuiltinCommandGroupName = keyof typeof builtinCommandGroups;
 
-export const builtinCommandGroupNames: BuiltinCommandGroupName[] = Object.keys(
-  builtinCommandGroups,
-) as BuiltinCommandGroupName[];
+export const builtinCommandGroupNames: readonly BuiltinCommandGroupName[] = Object.freeze(
+  Object.keys(builtinCommandGroups) as BuiltinCommandGroupName[],
+);
 
 export interface BuiltinCommandSelection {
+  preset?: BuiltinCommandPresetName;
   includeGroups?: BuiltinCommandGroupName[];
   excludeCommands?: string[];
 }
@@ -35,8 +36,58 @@ export interface CreateCommandRegistryOptions extends BuiltinCommandSelection, R
   commands?: Iterable<CommandSpec>;
 }
 
+export const builtinCommandPresets = {
+  full: {},
+  readOnly: {
+    includeGroups: ['system', 'fs', 'text', 'adapters', 'data'],
+    excludeCommands: ['append', 'cp', 'memory', 'mkdir', 'mv', 'rm', 'write'],
+  },
+  filesystem: {
+    includeGroups: ['system', 'fs', 'text'],
+    excludeCommands: ['memory'],
+  },
+  textOnly: {
+    includeGroups: ['system', 'text'],
+    excludeCommands: ['memory'],
+  },
+  dataOnly: {
+    includeGroups: ['system', 'adapters', 'data'],
+    excludeCommands: ['memory'],
+  },
+} as const satisfies Record<string, Omit<BuiltinCommandSelection, 'preset'>>;
+
+export type BuiltinCommandPresetName = keyof typeof builtinCommandPresets;
+
+export const builtinCommandPresetNames: readonly BuiltinCommandPresetName[] = Object.freeze(
+  Object.keys(builtinCommandPresets) as BuiltinCommandPresetName[],
+);
+
+freezeBuiltinSelections(builtinCommandPresets);
+
 function isBuiltinCommandGroupName(value: string): value is BuiltinCommandGroupName {
   return Object.hasOwn(builtinCommandGroups, value);
+}
+
+function isBuiltinCommandPresetName(value: string): value is BuiltinCommandPresetName {
+  return Object.hasOwn(builtinCommandPresets, value);
+}
+
+function getBuiltinCommandPreset(name: BuiltinCommandPresetName): Omit<BuiltinCommandSelection, 'preset'> {
+  if (!isBuiltinCommandPresetName(name)) {
+    throw new Error(`unknown builtin command preset: ${String(name)}`);
+  }
+  return builtinCommandPresets[name];
+}
+
+function resolveBuiltinSelection(selection: BuiltinCommandSelection): Required<BuiltinCommandSelection> {
+  const preset = selection.preset;
+  const baseSelection = preset ? getBuiltinCommandPreset(preset) : undefined;
+
+  return {
+    preset: preset ?? 'full',
+    includeGroups: selection.includeGroups ?? baseSelection?.includeGroups ?? [...builtinCommandGroupNames],
+    excludeCommands: [...(baseSelection?.excludeCommands ?? []), ...(selection.excludeCommands ?? [])],
+  };
 }
 
 function selectedGroupNames(includeGroups: BuiltinCommandGroupName[] | undefined): BuiltinCommandGroupName[] {
@@ -59,10 +110,11 @@ function selectedGroupNames(includeGroups: BuiltinCommandGroupName[] | undefined
 }
 
 export function listBuiltinCommands(selection: BuiltinCommandSelection = {}): CommandSpec[] {
-  const excluded = new Set(selection.excludeCommands ?? []);
+  const resolved = resolveBuiltinSelection(selection);
+  const excluded = new Set(resolved.excludeCommands);
   const specs: CommandSpec[] = [];
 
-  for (const groupName of selectedGroupNames(selection.includeGroups)) {
+  for (const groupName of selectedGroupNames(resolved.includeGroups)) {
     for (const spec of builtinCommandGroups[groupName]) {
       if (!excluded.has(spec.name)) {
         specs.push(spec);
@@ -112,12 +164,22 @@ export function createCommandRegistry(options: CreateCommandRegistryOptions = {}
   registerBuiltinCommands(registry, selection);
 
   if (commands !== undefined) {
-    const registerOptions: RegisterCommandsOptions = {};
-    if (onConflict !== undefined) {
-      registerOptions.onConflict = onConflict;
-    }
-    registerCommands(registry, commands, registerOptions);
+    registerCommands(registry, commands, onConflict === undefined ? {} : { onConflict });
   }
 
   return registry;
+}
+
+function freezeBuiltinSelections(selections: Record<string, Omit<BuiltinCommandSelection, 'preset'>>): void {
+  for (const selection of Object.values(selections)) {
+    if (selection.includeGroups !== undefined) {
+      Object.freeze(selection.includeGroups);
+    }
+    if (selection.excludeCommands !== undefined) {
+      Object.freeze(selection.excludeCommands);
+    }
+    Object.freeze(selection);
+  }
+
+  Object.freeze(selections);
 }

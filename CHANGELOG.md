@@ -13,7 +13,9 @@
 - OpenAI-compatible tool schema generation
 - Metadata-driven command conformance tests
 - Public command selection and registry helpers
+- Built-in command presets for common runtime shapes
 - Reusable command conformance helper exported at `one-tool/testing`
+- Stable public command-testing helpers exported at `one-tool/testing`
 - `COMMANDS.md` developer guide for adding commands
 - 300+ automated tests across runtime, commands, parser, VFS, provider support, memory, and utilities
 

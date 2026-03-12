@@ -15,6 +15,7 @@ For consumers outside this repo, the public command-registration API lives in:
 
 - `one-tool/commands`
 - root exports from `one-tool`
+- stable test helpers live in `one-tool/testing`
 
 Built-in group selection uses these string names:
 
@@ -96,15 +97,47 @@ Generated from metadata:
 The same logic is exported for downstream consumers:
 
 ```ts
-import { createCommandConformanceCases } from 'one-tool/testing';
+import {
+  createCommandConformanceCases,
+  createTestCommandContext,
+  createTestCommandRegistry,
+} from 'one-tool/testing';
+
+const registry = createTestCommandRegistry({
+  includeGroups: ['system'],
+  excludeCommands: ['memory'],
+  commands: [echo],
+});
 
 const cases = createCommandConformanceCases({
   registry,
-  makeCtx,
+  makeCtx: createTestCommandContext,
 });
 ```
 
 Each case exposes `commandName`, `name`, and `run()`.
+
+For focused command-level tests, use:
+
+```ts
+import assert from 'node:assert/strict';
+import {
+  createTestCommandContext,
+  createTestCommandRegistry,
+  runRegisteredCommand,
+  stdoutText,
+} from 'one-tool/testing';
+
+const registry = createTestCommandRegistry({
+  includeGroups: ['system'],
+  excludeCommands: ['memory'],
+  commands: [echo],
+});
+
+const ctx = createTestCommandContext({ registry });
+const { result } = await runRegisteredCommand('echo', ['hello', 'world'], { ctx });
+assert.equal(stdoutText(result), 'hello world');
+```
 
 ## Handler Contract
 

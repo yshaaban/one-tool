@@ -20,14 +20,22 @@ export interface AgentCLIOptions {
   registry?: CommandRegistry;
   builtinCommands?: BuiltinCommandSelection | false;
   commands?: Iterable<CommandSpec>;
+  outputLimits?: AgentCLIOutputLimits;
+}
+
+export interface AgentCLIOutputLimits {
+  maxLines?: number;
+  maxBytes?: number;
 }
 
 export class AgentCLI {
   public readonly registry: CommandRegistry;
   public readonly ctx: CommandContext;
+  private readonly outputLimits: Required<AgentCLIOutputLimits>;
 
   constructor(options: AgentCLIOptions) {
     this.registry = resolveRegistry(options);
+    this.outputLimits = resolveOutputLimits(options.outputLimits);
     this.ctx = {
       vfs: options.vfs,
       adapters: options.adapters ?? {},
@@ -202,9 +210,9 @@ export class AgentCLI {
   }
 
   private async applyOverflow(text: string): Promise<string> {
-    const maxLines = 200;
-    const maxBytes = 50 * 1024;
-    const encoded = new TextEncoder().encode(text);
+    const { maxLines, maxBytes } = this.outputLimits;
+    const encoder = new TextEncoder();
+    const encoded = encoder.encode(text);
     const lines = splitLines(text);
 
     if (lines.length <= maxLines && encoded.length <= maxBytes) {
@@ -214,7 +222,7 @@ export class AgentCLI {
     const saved = await this.storeOverflowText(text);
     let preview = lines.slice(0, maxLines).join('\n');
 
-    while (new TextEncoder().encode(preview).length > maxBytes && preview.length > 0) {
+    while (encoder.encode(preview).length > maxBytes && preview.length > 0) {
       preview = preview.slice(0, -1);
     }
 
@@ -223,6 +231,10 @@ export class AgentCLI {
       `Full output: ${saved}\n` +
       `Explore: cat ${saved} | grep <pattern>\n` +
       `         cat ${saved} | tail -n 100`;
+
+    if (preview.length === 0) {
+      return meta;
+    }
 
     return `${preview}\n\n${meta}`;
   }
@@ -278,4 +290,20 @@ function resolveRegistry(options: AgentCLIOptions): CommandRegistry {
     registryOptions.commands = options.commands;
   }
   return createCommandRegistry(registryOptions);
+}
+
+function resolveOutputLimits(outputLimits: AgentCLIOutputLimits | undefined): Required<AgentCLIOutputLimits> {
+  const maxLines = outputLimits?.maxLines ?? 200;
+  const maxBytes = outputLimits?.maxBytes ?? 50 * 1024;
+
+  assertNonNegativeInteger(maxLines, 'outputLimits.maxLines');
+  assertNonNegativeInteger(maxBytes, 'outputLimits.maxBytes');
+
+  return { maxLines, maxBytes };
+}
+
+function assertNonNegativeInteger(value: number, label: string): void {
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error(`${label} must be a non-negative integer`);
+  }
 }

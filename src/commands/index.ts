@@ -4,6 +4,8 @@ export type { CommandContext, CommandHandler, CommandSpec } from './core.js';
 export {
   builtinCommandGroupNames,
   builtinCommandGroups,
+  builtinCommandPresetNames,
+  builtinCommandPresets,
   createCommandRegistry,
   listBuiltinCommands,
   registerBuiltinCommands,
@@ -11,6 +13,7 @@ export {
 } from './register.js';
 export type {
   BuiltinCommandGroupName,
+  BuiltinCommandPresetName,
   BuiltinCommandSelection,
   CreateCommandRegistryOptions,
   RegisterCommandsOptions,

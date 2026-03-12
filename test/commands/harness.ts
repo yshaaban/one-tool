@@ -1,33 +1,24 @@
 import assert from 'node:assert/strict';
 
+import { CommandRegistry, type CommandContext, type CommandSpec } from '../../src/commands/index.js';
 import {
-  CommandRegistry,
-  createCommandRegistry,
-  type CommandContext,
-  type CommandSpec,
-} from '../../src/commands/index.js';
-import { SimpleMemory } from '../../src/memory.js';
-import { textDecoder, textEncoder, type CommandResult, type ToolAdapters } from '../../src/types.js';
-import { MemoryVFS } from '../../src/vfs/memory-vfs.js';
+  NO_STDIN,
+  createTestCommandContext,
+  createTestCommandRegistry,
+  runRegisteredCommand,
+  stdoutText,
+  stdinText,
+  type RunRegisteredCommandResult,
+} from '../../src/testing/index.js';
 
-export const NO_STDIN = new Uint8Array();
+export { NO_STDIN, stdinText, stdoutText };
 
 export function makeRegistry(): CommandRegistry {
-  return createCommandRegistry();
+  return createTestCommandRegistry();
 }
 
-export function makeCtx(
-  overrides: Partial<CommandContext> & { adapters?: ToolAdapters } = {},
-): CommandContext {
-  const registry = overrides.registry ?? makeRegistry();
-  return {
-    vfs: overrides.vfs ?? new MemoryVFS(),
-    adapters: overrides.adapters ?? {},
-    memory: overrides.memory ?? new SimpleMemory(),
-    registry,
-    outputDir: overrides.outputDir ?? '/output',
-    outputCounter: overrides.outputCounter ?? 0,
-  };
+export function makeCtx(overrides: Partial<CommandContext> = {}): CommandContext {
+  return createTestCommandContext(overrides);
 }
 
 export function getSpec(name: string, registry: CommandRegistry): CommandSpec {
@@ -40,17 +31,6 @@ export async function runCommand(
   name: string,
   args: string[] = [],
   options: { ctx?: CommandContext; stdin?: Uint8Array } = {},
-): Promise<{ ctx: CommandContext; result: CommandResult; spec: CommandSpec }> {
-  const ctx = options.ctx ?? makeCtx();
-  const spec = getSpec(name, ctx.registry);
-  const result = await spec.handler(ctx, args, options.stdin ?? NO_STDIN);
-  return { ctx, result, spec };
-}
-
-export function stdoutText(result: CommandResult | Uint8Array): string {
-  return textDecoder.decode(result instanceof Uint8Array ? result : result.stdout);
-}
-
-export function stdinText(text: string): Uint8Array {
-  return textEncoder.encode(text);
+): Promise<RunRegisteredCommandResult> {
+  return runRegisteredCommand(name, args, options);
 }

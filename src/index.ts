@@ -1,6 +1,6 @@
 // Core runtime
 export { AgentCLI, createAgentCLI } from './runtime.js';
-export type { AgentCLIOptions } from './runtime.js';
+export type { AgentCLIOptions, AgentCLIOutputLimits } from './runtime.js';
 
 // VFS interface + backends
 export type { VFS, VFileInfo } from './vfs/interface.js';
@@ -14,6 +14,8 @@ export {
   append,
   builtinCommandGroupNames,
   builtinCommandGroups,
+  builtinCommandPresetNames,
+  builtinCommandPresets,
   calc,
   cat,
   CommandRegistry,
@@ -43,6 +45,7 @@ export {
 } from './commands/index.js';
 export type {
   BuiltinCommandGroupName,
+  BuiltinCommandPresetName,
   BuiltinCommandSelection,
   CommandSpec,
   CommandHandler,
@@ -72,5 +75,20 @@ export { buildToolDefinition } from './tool-schema.js';
 export type { ToolDefinition } from './tool-schema.js';
 
 // Testing helpers
-export { createCommandConformanceCases } from './testing/index.js';
-export type { CommandConformanceCase, CommandConformanceOptions } from './testing/index.js';
+export {
+  NO_STDIN,
+  createCommandConformanceCases,
+  createTestCommandContext,
+  createTestCommandRegistry,
+  getRegisteredCommand,
+  runRegisteredCommand,
+  stdinText,
+  stdoutText,
+} from './testing/index.js';
+export type {
+  CommandConformanceCase,
+  CommandConformanceOptions,
+  CreateTestCommandContextOptions,
+  RunRegisteredCommandOptions,
+  RunRegisteredCommandResult,
+} from './testing/index.js';
