@@ -9,8 +9,48 @@ export { NodeVFS, RootedVFS } from './vfs/node-vfs.js';
 export { BrowserVFS } from './vfs/browser-vfs.js';
 
 // Commands
-export { CommandRegistry, registerBuiltinCommands } from './commands/index.js';
-export type { CommandSpec, CommandHandler, CommandContext } from './commands/index.js';
+export {
+  adapterCommands,
+  append,
+  builtinCommandGroupNames,
+  builtinCommandGroups,
+  calc,
+  cat,
+  CommandRegistry,
+  cp,
+  createCommandRegistry,
+  dataCommands,
+  fetch,
+  fsCommands,
+  grep,
+  head,
+  help,
+  json,
+  listBuiltinCommands,
+  ls,
+  memory,
+  mkdir,
+  mv,
+  registerBuiltinCommands,
+  registerCommands,
+  rm,
+  search,
+  stat,
+  systemCommands,
+  tail,
+  textCommands,
+  write,
+} from './commands/index.js';
+export type {
+  BuiltinCommandGroupName,
+  BuiltinCommandSelection,
+  CommandSpec,
+  CommandHandler,
+  CommandContext,
+  CreateCommandRegistryOptions,
+  RegisterCommandsOptions,
+  RegisterConflictMode,
+} from './commands/index.js';
 
 // Types
 export type {
@@ -30,3 +70,7 @@ export { SimpleMemory } from './memory.js';
 // Tool schema helpers
 export { buildToolDefinition } from './tool-schema.js';
 export type { ToolDefinition } from './tool-schema.js';
+
+// Testing helpers
+export { createCommandConformanceCases } from './testing/index.js';
+export type { CommandConformanceCase, CommandConformanceOptions } from './testing/index.js';

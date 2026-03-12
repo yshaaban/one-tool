@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 
 import {
   CommandRegistry,
-  registerBuiltinCommands,
+  createCommandRegistry,
   type CommandContext,
   type CommandSpec,
 } from '../../src/commands/index.js';
@@ -13,9 +13,7 @@ import { MemoryVFS } from '../../src/vfs/memory-vfs.js';
 export const NO_STDIN = new Uint8Array();
 
 export function makeRegistry(): CommandRegistry {
-  const registry = new CommandRegistry();
-  registerBuiltinCommands(registry);
-  return registry;
+  return createCommandRegistry();
 }
 
 export function makeCtx(

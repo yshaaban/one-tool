@@ -35,8 +35,23 @@ export class CommandRegistry {
     this.commands.set(spec.name, spec);
   }
 
+  has(name: string): boolean {
+    return this.commands.has(name);
+  }
+
   get(name: string): CommandSpec | undefined {
     return this.commands.get(name);
+  }
+
+  replace(spec: CommandSpec): void {
+    if (!this.commands.has(spec.name)) {
+      throw new Error(`command not registered: ${spec.name}`);
+    }
+    this.commands.set(spec.name, spec);
+  }
+
+  unregister(name: string): boolean {
+    return this.commands.delete(name);
   }
 
   all(): CommandSpec[] {

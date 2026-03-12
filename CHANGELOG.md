@@ -12,6 +12,8 @@
 - Lightweight working memory with store, search, and recent operations
 - OpenAI-compatible tool schema generation
 - Metadata-driven command conformance tests
+- Public command selection and registry helpers
+- Reusable command conformance helper exported at `one-tool/testing`
 - `COMMANDS.md` developer guide for adding commands
 - 300+ automated tests across runtime, commands, parser, VFS, provider support, memory, and utilities
 

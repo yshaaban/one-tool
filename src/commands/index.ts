@@ -1,3 +1,24 @@
 export { CommandRegistry } from './core.js';
 export type { CommandContext, CommandHandler, CommandSpec } from './core.js';
-export { registerBuiltinCommands } from './register.js';
+
+export {
+  builtinCommandGroupNames,
+  builtinCommandGroups,
+  createCommandRegistry,
+  listBuiltinCommands,
+  registerBuiltinCommands,
+  registerCommands,
+} from './register.js';
+export type {
+  BuiltinCommandGroupName,
+  BuiltinCommandSelection,
+  CreateCommandRegistryOptions,
+  RegisterCommandsOptions,
+  RegisterConflictMode,
+} from './register.js';
+
+export { adapterCommands, fetch, search } from './groups/adapters.js';
+export { calc, dataCommands, json } from './groups/data.js';
+export { append, cat, cp, fsCommands, ls, mkdir, mv, rm, stat, write } from './groups/fs.js';
+export { help, memory, systemCommands } from './groups/system.js';
+export { grep, head, tail, textCommands } from './groups/text.js';

@@ -34,7 +34,11 @@ async function cmdJson(ctx: CommandContext, args: string[], stdin: Uint8Array) {
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
       return err('json keys: input must be a JSON object');
     }
-    return ok(Object.keys(value as Record<string, unknown>).sort().join('\n'));
+    return ok(
+      Object.keys(value as Record<string, unknown>)
+        .sort()
+        .join('\n'),
+    );
   }
 
   if (sub === 'get') {

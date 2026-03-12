@@ -1,5 +1,12 @@
 import { parseCommandLine, type ChainNode, type PipelineNode, ParseError } from './parser.js';
-import { CommandRegistry, registerBuiltinCommands, type CommandContext } from './commands/index.js';
+import {
+  CommandRegistry,
+  createCommandRegistry,
+  type BuiltinCommandSelection,
+  type CommandContext,
+  type CommandSpec,
+  type CreateCommandRegistryOptions,
+} from './commands/index.js';
 import { SimpleMemory } from './memory.js';
 import type { CommandResult, ToolAdapters } from './types.js';
 import { err, ok, textDecoder } from './types.js';
@@ -10,6 +17,9 @@ export interface AgentCLIOptions {
   vfs: VFS;
   adapters?: ToolAdapters;
   memory?: SimpleMemory;
+  registry?: CommandRegistry;
+  builtinCommands?: BuiltinCommandSelection | false;
+  commands?: Iterable<CommandSpec>;
 }
 
 export class AgentCLI {
@@ -17,7 +27,7 @@ export class AgentCLI {
   public readonly ctx: CommandContext;
 
   constructor(options: AgentCLIOptions) {
-    this.registry = new CommandRegistry();
+    this.registry = resolveRegistry(options);
     this.ctx = {
       vfs: options.vfs,
       adapters: options.adapters ?? {},
@@ -26,7 +36,6 @@ export class AgentCLI {
       outputDir: '/.system/cmd-output',
       outputCounter: 0,
     };
-    registerBuiltinCommands(this.registry);
   }
 
   async initialize(): Promise<void> {
@@ -34,6 +43,7 @@ export class AgentCLI {
   }
 
   buildToolDescription(): string {
+    const commands = this.registry.all();
     const lines = [
       'Run CLI-style commands over registered tools and a rooted virtual file system.',
       'This is not a real shell. Only registered commands are allowed.',
@@ -44,17 +54,24 @@ export class AgentCLI {
       'Available commands:',
     ];
 
-    for (const spec of this.registry.all()) {
+    if (commands.length === 0) {
+      lines.push('  (no commands registered)');
+      lines.push('', 'Register built-in or custom commands before exposing the run tool.');
+      return lines.join('\n');
+    }
+
+    for (const spec of commands) {
       lines.push(`  ${spec.name.padEnd(8, ' ')} — ${spec.summary}`);
     }
 
-    lines.push(
-      '',
-      'Discovery pattern:',
-      "  - run 'help' to list commands",
-      "  - run '<command>' with no args for usage",
-      '  - use pipes for composition',
-    );
+    const discovery = ['Discovery pattern:'];
+    if (this.registry.has('help')) {
+      discovery.push("  - run 'help' to list commands");
+    }
+    discovery.push("  - run '<command>' with no args for usage");
+    discovery.push('  - use pipes for composition');
+
+    lines.push('', ...discovery);
 
     return lines.join('\n');
   }
@@ -72,7 +89,10 @@ export class AgentCLI {
       if (caught instanceof ParseError) {
         return this.present(err(caught.message, { exitCode: 2 }), durationMs);
       }
-      return this.present(err(`internal runtime error: ${errorMessage(caught)}`, { exitCode: 1 }), durationMs);
+      return this.present(
+        err(`internal runtime error: ${errorMessage(caught)}`, { exitCode: 1 }),
+        durationMs,
+      );
     }
   }
 
@@ -141,9 +161,13 @@ export class AgentCLI {
   private async dispatch(argv: string[], stdin: Uint8Array): Promise<CommandResult> {
     const spec = this.registry.get(argv[0]!);
     if (!spec) {
-      return err(`unknown command: ${argv[0]!}\nAvailable: ${this.registry.names().join(', ')}`, {
-        exitCode: 127,
-      });
+      const available = this.registry.names();
+      return err(
+        `unknown command: ${argv[0]!}\nAvailable: ${available.length > 0 ? available.join(', ') : '(none)'}`,
+        {
+          exitCode: 127,
+        },
+      );
     }
     return spec.handler(this.ctx, argv.slice(1), stdin);
   }
@@ -222,4 +246,36 @@ export async function createAgentCLI(options: AgentCLIOptions): Promise<AgentCLI
   const runtime = new AgentCLI(options);
   await runtime.initialize();
   return runtime;
+}
+
+function resolveRegistry(options: AgentCLIOptions): CommandRegistry {
+  if (options.registry !== undefined) {
+    if (options.builtinCommands !== undefined) {
+      throw new Error('AgentCLIOptions.registry cannot be combined with builtinCommands');
+    }
+    if (options.commands !== undefined) {
+      throw new Error('AgentCLIOptions.registry cannot be combined with commands');
+    }
+    return options.registry;
+  }
+
+  if (options.builtinCommands === false) {
+    const registryOptions: CreateCommandRegistryOptions = {
+      includeGroups: [],
+      onConflict: 'replace',
+    };
+    if (options.commands !== undefined) {
+      registryOptions.commands = options.commands;
+    }
+    return createCommandRegistry(registryOptions);
+  }
+
+  const registryOptions: CreateCommandRegistryOptions = {
+    ...(options.builtinCommands ?? {}),
+    onConflict: 'replace',
+  };
+  if (options.commands !== undefined) {
+    registryOptions.commands = options.commands;
+  }
+  return createCommandRegistry(registryOptions);
 }

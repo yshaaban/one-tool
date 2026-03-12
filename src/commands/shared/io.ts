@@ -54,15 +54,9 @@ export async function readTextFromFileOrStdin(
   };
 }
 
-export type ContentInput =
-  | { ok: true; content: Uint8Array }
-  | { ok: false; error: CommandResult };
+export type ContentInput = { ok: true; content: Uint8Array } | { ok: false; error: CommandResult };
 
-export function contentFromArgsOrStdin(
-  args: string[],
-  stdin: Uint8Array,
-  commandName: string,
-): ContentInput {
+export function contentFromArgsOrStdin(args: string[], stdin: Uint8Array, commandName: string): ContentInput {
   if (args.length > 1) {
     return { ok: true, content: textEncoder.encode(args.slice(1).join(' ')) };
   }

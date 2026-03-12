@@ -44,6 +44,13 @@ function liveSkipReason(
   return false;
 }
 
+function liveTestSkip(provider: 'groq' | 'openai'): false | string {
+  if (provider === 'groq') {
+    return liveSkipReason('groq', hasGroqKey, 'GROQ_API_KEY');
+  }
+  return liveSkipReason('openai', hasOpenAIKey, 'OPENAI_API_KEY');
+}
+
 function extractJsonObject(text: string): Record<string, unknown> {
   const trimmed = text.trim();
   const match = trimmed.match(/\{[\s\S]*\}/);
@@ -73,9 +80,7 @@ test(
   `live agent: ${liveProvider} can use the runtime tool to answer grounded questions`,
   {
     timeout: 120_000,
-    skip: liveProvider === 'groq'
-      ? liveSkipReason('groq', hasGroqKey, 'GROQ_API_KEY')
-      : liveSkipReason('openai', hasOpenAIKey, 'OPENAI_API_KEY'),
+    skip: liveTestSkip(liveProvider),
   },
   async () => {
     await runLiveAgent(liveProvider);

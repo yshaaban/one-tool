@@ -98,7 +98,11 @@ async function cmdHead(ctx: CommandContext, args: string[], stdin: Uint8Array) {
     return error;
   }
 
-  return ok(splitLines(text ?? '').slice(0, value).join('\n'));
+  return ok(
+    splitLines(text ?? '')
+      .slice(0, value)
+      .join('\n'),
+  );
 }
 
 export const head: CommandSpec = {

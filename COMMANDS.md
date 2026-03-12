@@ -11,6 +11,21 @@ The command system is metadata-driven. A new built-in command should be easy to 
 5. Update the command-name snapshot in `test/commands/system.test.ts`.
 6. Run `npm test`.
 
+For consumers outside this repo, the public command-registration API lives in:
+
+- `one-tool/commands`
+- root exports from `one-tool`
+
+Built-in group selection uses these string names:
+
+- `'system'`
+- `'fs'`
+- `'text'`
+- `'adapters'`
+- `'data'`
+
+These correspond to the exported arrays `systemCommands`, `fsCommands`, `textCommands`, `adapterCommands`, and `dataCommands`.
+
 ## Minimal Example
 
 ```ts
@@ -78,6 +93,19 @@ Generated from metadata:
 - `maxArgs` → too many args returns exit `1`
 - `requiresAdapter` → missing adapter returns a helpful error
 
+The same logic is exported for downstream consumers:
+
+```ts
+import { createCommandConformanceCases } from 'one-tool/testing';
+
+const cases = createCommandConformanceCases({
+  registry,
+  makeCtx,
+});
+```
+
+Each case exposes `commandName`, `name`, and `run()`.
+
 ## Handler Contract
 
 - Signature: `(ctx, args, stdin) => CommandResult | Promise<CommandResult>`
@@ -129,3 +157,4 @@ test('echo writes arguments back out', async () => {
 - `src/commands/register.ts` updated if needed
 - `test/commands/system.test.ts` snapshot updated
 - command-specific tests added when behavior needs more than baseline conformance coverage
+- reusable conformance coverage still passes through `createCommandConformanceCases(...)`

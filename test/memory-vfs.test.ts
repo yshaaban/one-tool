@@ -220,19 +220,13 @@ test('appendBytes with makeParents=false throws for missing parent', async () =>
 test('writeBytes throws EISDIR when path is a directory', async () => {
   const vfs = new MemoryVFS();
   await vfs.mkdir('/mydir', true);
-  await assert.rejects(
-    () => vfs.writeBytes('/mydir', new TextEncoder().encode('x')),
-    /EISDIR/,
-  );
+  await assert.rejects(() => vfs.writeBytes('/mydir', new TextEncoder().encode('x')), /EISDIR/);
 });
 
 test('appendBytes throws EISDIR when path is a directory', async () => {
   const vfs = new MemoryVFS();
   await vfs.mkdir('/mydir', true);
-  await assert.rejects(
-    () => vfs.appendBytes('/mydir', new TextEncoder().encode('x')),
-    /EISDIR/,
-  );
+  await assert.rejects(() => vfs.appendBytes('/mydir', new TextEncoder().encode('x')), /EISDIR/);
 });
 
 test('mkdir throws EEXIST when path is a file', async () => {
@@ -251,37 +245,25 @@ test('mkdir with parents throws ENOTDIR when ancestor is a file', async () => {
 test('writeBytes with makeParents throws ENOTDIR when ancestor is a file', async () => {
   const vfs = new MemoryVFS();
   await vfs.writeBytes('/a', new TextEncoder().encode('file'));
-  await assert.rejects(
-    () => vfs.writeBytes('/a/b.txt', new TextEncoder().encode('x')),
-    /ENOTDIR/,
-  );
+  await assert.rejects(() => vfs.writeBytes('/a/b.txt', new TextEncoder().encode('x')), /ENOTDIR/);
 });
 
 test('appendBytes with makeParents throws ENOTDIR when ancestor is a file', async () => {
   const vfs = new MemoryVFS();
   await vfs.writeBytes('/a', new TextEncoder().encode('file'));
-  await assert.rejects(
-    () => vfs.appendBytes('/a/b.txt', new TextEncoder().encode('x')),
-    /ENOTDIR/,
-  );
+  await assert.rejects(() => vfs.appendBytes('/a/b.txt', new TextEncoder().encode('x')), /ENOTDIR/);
 });
 
 test('writeBytes with makeParents=false throws ENOTDIR when parent is a file', async () => {
   const vfs = new MemoryVFS();
   await vfs.writeBytes('/a', new TextEncoder().encode('file'));
-  await assert.rejects(
-    () => vfs.writeBytes('/a/b.txt', new TextEncoder().encode('x'), false),
-    /ENOTDIR/,
-  );
+  await assert.rejects(() => vfs.writeBytes('/a/b.txt', new TextEncoder().encode('x'), false), /ENOTDIR/);
 });
 
 test('appendBytes with makeParents=false throws ENOTDIR when parent is a file', async () => {
   const vfs = new MemoryVFS();
   await vfs.writeBytes('/a', new TextEncoder().encode('file'));
-  await assert.rejects(
-    () => vfs.appendBytes('/a/b.txt', new TextEncoder().encode('x'), false),
-    /ENOTDIR/,
-  );
+  await assert.rejects(() => vfs.appendBytes('/a/b.txt', new TextEncoder().encode('x'), false), /ENOTDIR/);
 });
 
 test('mkdir is idempotent', async () => {

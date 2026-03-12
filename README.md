@@ -479,15 +479,25 @@ memory search "Acme owner"
 import { createAgentCLI, type AgentCLIOptions } from 'one-tool';
 ```
 
-Creates a fully initialized runtime with built-in commands registered.
+Creates a fully initialized runtime with the configured command registry.
 
 ```ts
 interface AgentCLIOptions {
   vfs: VFS;
   adapters?: ToolAdapters;
   memory?: SimpleMemory;
+  registry?: CommandRegistry;
+  builtinCommands?: BuiltinCommandSelection | false;
+  commands?: Iterable<CommandSpec>;
 }
 ```
+
+Default behavior:
+
+- if you pass neither `registry` nor `builtinCommands`, all built-in commands are registered
+- if you pass `builtinCommands`, only the selected built-ins are registered
+- if you pass `commands`, they are registered after built-ins and replace built-ins with the same name
+- if you pass `registry`, it is used as-is and cannot be combined with `builtinCommands` or `commands`
 
 #### `AgentCLI`
 
@@ -634,20 +644,110 @@ The metadata fields are optional in the public type, but built-in commands in th
 The command system is also exported directly:
 
 ```ts
-import { CommandRegistry, registerBuiltinCommands } from 'one-tool';
+import { CommandRegistry, createCommandRegistry, registerBuiltinCommands, registerCommands } from 'one-tool';
 
 const registry = new CommandRegistry();
 registerBuiltinCommands(registry);
 ```
 
+You can also register only part of the built-in surface, and control collisions:
+
+```ts
+registerBuiltinCommands(
+  registry,
+  { includeGroups: ['system', 'text'], excludeCommands: ['memory'] },
+  { onConflict: 'replace' },
+);
+```
+
 `CommandRegistry` supports:
 
 - `register(spec)` to add a command
+- `has(name)` to check whether a command is registered
 - `get(name)` to look up a command
+- `replace(spec)` to replace an existing command by name
+- `unregister(name)` to remove a command
 - `all()` to list all registered specs in sorted order
 - `names()` to list command names in sorted order
 
 Most applications do not need to create a separate registry because `AgentCLI` already creates one and exposes it as `runtime.registry`.
+
+For selective built-in enablement:
+
+```ts
+import { createCommandRegistry } from 'one-tool';
+
+const registry = createCommandRegistry({
+  includeGroups: ['system', 'text'],
+  excludeCommands: ['memory'],
+});
+```
+
+Valid built-in group names are:
+
+- `'system'`
+- `'fs'`
+- `'text'`
+- `'adapters'`
+- `'data'`
+
+The `includeGroups` names come from `builtinCommandGroups`. The exported group arrays use the names `systemCommands`, `fsCommands`, `textCommands`, `adapterCommands`, and `dataCommands`.
+
+For easy overrides:
+
+```ts
+import { createCommandRegistry, ok, registerCommands, type CommandSpec } from 'one-tool';
+
+const customSearch: CommandSpec = {
+  name: 'search',
+  summary: 'Search a private corpus.',
+  usage: 'search <query>',
+  details: 'Examples:\n  search renewal risk',
+  async handler(_ctx, args) {
+    return ok(`private search for: ${args.join(' ')}`);
+  },
+};
+
+const registry = createCommandRegistry();
+registerCommands(registry, [customSearch], { onConflict: 'replace' });
+```
+
+`createCommandRegistry({ commands })` uses `onConflict: 'error'` unless you set a different mode explicitly.
+
+Built-in command groups are exported as:
+
+- `systemCommands`
+- `fsCommands`
+- `textCommands`
+- `adapterCommands`
+- `dataCommands`
+
+They are also available through `builtinCommandGroups`.
+
+### Command testing helpers
+
+The package exports reusable metadata-driven conformance helpers:
+
+```ts
+import { createCommandConformanceCases } from 'one-tool/testing';
+```
+
+The helper returns test cases you can plug into your own test runner:
+
+```ts
+const cases = createCommandConformanceCases({
+  registry,
+  makeCtx,
+});
+```
+
+Each case has:
+
+- `commandName`
+- `name`
+- `run()`
+
+The repo uses this same helper for `test/commands/conformance.test.ts`.
 
 ### Browser import path
 
@@ -661,12 +761,14 @@ You can also import `BrowserVFS` from the root entrypoint when your environment 
 
 ### Package exports
 
-| Import path            | Contents                                                                 |
-| ---------------------- | ------------------------------------------------------------------------ |
-| `one-tool`             | Core runtime, types, command registry, tool schema, and all VFS backends |
-| `one-tool/vfs/node`    | `NodeVFS` and deprecated `RootedVFS`                                     |
-| `one-tool/vfs/memory`  | `MemoryVFS`                                                              |
-| `one-tool/vfs/browser` | `BrowserVFS`                                                             |
+| Import path            | Contents                                                                              |
+| ---------------------- | ------------------------------------------------------------------------------------- |
+| `one-tool`             | Core runtime, types, command APIs, testing helpers, tool schema, and all VFS backends |
+| `one-tool/commands`    | Command registry helpers, built-in command groups, and command specs                  |
+| `one-tool/testing`     | Reusable command conformance helpers                                                  |
+| `one-tool/vfs/node`    | `NodeVFS` and deprecated `RootedVFS`                                                  |
+| `one-tool/vfs/memory`  | `MemoryVFS`                                                                           |
+| `one-tool/vfs/browser` | `BrowserVFS`                                                                          |
 
 ---
 
@@ -935,7 +1037,18 @@ runtime.registry.register(echo);
 
 If you expose tool definitions to the model, register custom commands before calling `buildToolDefinition(runtime)`.
 
-If you want custom commands to receive the same conformance coverage pattern, build a test registry that includes them and run the same style of metadata-driven tests described in `COMMANDS.md`.
+If you want custom commands to receive the same conformance coverage pattern, use the exported helper:
+
+```ts
+import { createCommandConformanceCases } from 'one-tool/testing';
+
+const cases = createCommandConformanceCases({
+  registry,
+  makeCtx,
+});
+```
+
+Then register each returned case with your test runner.
 
 ---
 
@@ -968,6 +1081,8 @@ The suite covers:
 - stdin rejection when declared
 - arg bound enforcement when declared
 - adapter error behavior when declared
+
+The same logic is exported through `createCommandConformanceCases(...)` for consumer test suites.
 
 ### Demo commands
 

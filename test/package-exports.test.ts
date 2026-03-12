@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+
+test('package exports resolve the documented entrypoints', async function (): Promise<void> {
+  const root = await import('one-tool');
+  const commands = await import('one-tool/commands');
+  const testing = await import('one-tool/testing');
+  const memoryVfs = await import('one-tool/vfs/memory');
+  const nodeVfs = await import('one-tool/vfs/node');
+  const browserVfs = await import('one-tool/vfs/browser');
+
+  assert.equal(typeof root.createAgentCLI, 'function');
+  assert.equal(typeof root.createCommandRegistry, 'function');
+  assert.equal(typeof root.createCommandConformanceCases, 'function');
+
+  assert.equal(typeof commands.createCommandRegistry, 'function');
+  assert.ok(Array.isArray(commands.fsCommands));
+  assert.ok(Array.isArray(commands.textCommands));
+  assert.ok(Array.isArray(commands.systemCommands));
+
+  assert.equal(typeof testing.createCommandConformanceCases, 'function');
+
+  assert.equal(typeof memoryVfs.MemoryVFS, 'function');
+  assert.equal(typeof nodeVfs.NodeVFS, 'function');
+  assert.equal(typeof browserVfs.BrowserVFS, 'function');
+});

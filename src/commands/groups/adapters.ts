@@ -55,9 +55,7 @@ async function cmdFetch(ctx: CommandContext, args: string[], stdin: Uint8Array) 
     return err('fetch: usage: fetch <resource>');
   }
   if (!ctx.adapters.fetch) {
-    return err(
-      'fetch: no fetch adapter configured. Attach one to ToolAdapters(fetch: yourFetchAdapter).',
-    );
+    return err('fetch: no fetch adapter configured. Attach one to ToolAdapters(fetch: yourFetchAdapter).');
   }
 
   try {

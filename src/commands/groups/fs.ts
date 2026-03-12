@@ -79,7 +79,9 @@ export const stat: CommandSpec = {
 
 async function cmdCat(ctx: CommandContext, args: string[], stdin: Uint8Array) {
   if (stdin.length > 0) {
-    return err('cat: does not accept stdin in this implementation. Use pipe targets like grep/head/tail/write.');
+    return err(
+      'cat: does not accept stdin in this implementation. Use pipe targets like grep/head/tail/write.',
+    );
   }
   if (args.length !== 1) {
     return err('cat: usage: cat <path>');
@@ -161,7 +163,8 @@ export const write: CommandSpec = {
   name: 'write',
   summary: 'Write a file from inline content or stdin.',
   usage: 'write <path> [content]',
-  details: 'Examples:\n  write /notes/todo.txt "line one"\n  search "refund issue" | write /reports/refund.txt',
+  details:
+    'Examples:\n  write /notes/todo.txt "line one"\n  search "refund issue" | write /reports/refund.txt',
   handler: cmdWrite,
   acceptsStdin: true,
   minArgs: 1,

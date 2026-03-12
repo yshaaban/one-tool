@@ -14,6 +14,14 @@
       "types": "./dist/src/index.d.ts",
       "default": "./dist/src/index.js"
     },
+    "./commands": {
+      "types": "./dist/src/commands/index.d.ts",
+      "default": "./dist/src/commands/index.js"
+    },
+    "./testing": {
+      "types": "./dist/src/testing/index.d.ts",
+      "default": "./dist/src/testing/index.js"
+    },
     "./vfs/memory": {
       "types": "./dist/src/vfs/memory-vfs.d.ts",
       "default": "./dist/src/vfs/memory-vfs.js"
