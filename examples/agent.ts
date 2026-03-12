@@ -1,233 +1,40 @@
 /**
- * LLM Agent Loop — Groq / OpenAI-compatible tool-calling loop.
+ * LLM Agent Loop — Groq first, OpenAI optional.
  *
- * Wires the single-tool CLI runtime to a real LLM via Groq's
- * OpenAI-compatible /chat/completions endpoint with tool_use.
+ * Wires the single-tool CLI runtime to a real LLM via an
+ * OpenAI-compatible /chat/completions endpoint.
  *
  * Usage:
  *   GROQ_API_KEY=gsk_... npm run agent
- *   GROQ_API_KEY=gsk_... npm run agent -- "count error lines in /logs/app.log"
+ *   OPENAI_API_KEY=sk-... AGENT_PROVIDER=openai OPENAI_MODEL=gpt-5.2 npm run agent
  */
 
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import * as path from 'node:path';
 import readline from 'node:readline/promises';
 import process from 'node:process';
 
 import { buildDemoRuntime } from './demo-runtime.js';
-import type { AgentCLI } from '../src/index.js';
-import { buildToolDefinition } from '../src/index.js';
+import { createAgentSession, loadConfig, loadEnvFile, runAgentTurn } from './agent-support.js';
 import { errorMessage } from '../src/utils.js';
-
-/* ------------------------------------------------------------------ */
-/*  Types for the OpenAI chat completions response                    */
-/* ------------------------------------------------------------------ */
-
-interface ToolCall {
-  id: string;
-  type: 'function';
-  function: { name: string; arguments: string };
-}
-
-interface Choice {
-  index: number;
-  message: {
-    role: 'assistant';
-    content: string | null;
-    tool_calls?: ToolCall[];
-  };
-  finish_reason: string;
-}
-
-interface ChatCompletionResponse {
-  id: string;
-  choices: Choice[];
-  usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
-}
-
-interface ChatMessage {
-  role: 'system' | 'user' | 'assistant' | 'tool';
-  content: string | null;
-  tool_calls?: ToolCall[];
-  tool_call_id?: string;
-}
-
-/* ------------------------------------------------------------------ */
-/*  Config from env                                                   */
-/* ------------------------------------------------------------------ */
-
-function loadEnvFile(): void {
-  try {
-    // From dist/examples/ go up two levels to project root
-    const thisDir = path.dirname(fileURLToPath(import.meta.url));
-    const envPath = path.resolve(thisDir, '..', '..', '.env');
-    const envText = readFileSync(envPath, 'utf-8');
-    for (const line of envText.split('\n')) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith('#')) continue;
-      const eq = trimmed.indexOf('=');
-      if (eq === -1) continue;
-      const key = trimmed.slice(0, eq).trim();
-      const val = trimmed.slice(eq + 1).trim();
-      if (!process.env[key]) {
-        process.env[key] = val;
-      }
-    }
-  } catch { /* .env is optional if vars are already set */ }
-}
-
-interface AgentConfig {
-  apiKey: string;
-  model: string;
-  baseUrl: string;
-}
-
-function loadConfig(): AgentConfig {
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) {
-    console.error('GROQ_API_KEY is required. Set it in .env or as an environment variable.');
-    process.exit(1);
-  }
-
-  return {
-    apiKey,
-    model: process.env.GROQ_MODEL ?? 'openai/gpt-oss-120b',
-    baseUrl: process.env.GROQ_BASE_URL ?? 'https://api.groq.com/openai/v1',
-  };
-}
-
-/* ------------------------------------------------------------------ */
-/*  Chat completions call                                             */
-/* ------------------------------------------------------------------ */
-
-async function chatCompletion(
-  config: AgentConfig,
-  messages: ChatMessage[],
-  tools: ReturnType<typeof buildToolDefinition>[],
-): Promise<ChatCompletionResponse> {
-  const url = `${config.baseUrl}/chat/completions`;
-  let res: Response;
-  try {
-    res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${config.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: config.model,
-        messages,
-        tools,
-        tool_choice: 'auto',
-      }),
-    });
-  } catch (e) {
-    const cause = e instanceof Error && e.cause ? ` (${e.cause})` : '';
-    throw new Error(`Network error calling ${url}: ${errorMessage(e)}${cause}`);
-  }
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Groq API ${res.status}: ${body}`);
-  }
-
-  return (await res.json()) as ChatCompletionResponse;
-}
-
-/* ------------------------------------------------------------------ */
-/*  Agent loop: send → tool_call → execute → repeat                   */
-/* ------------------------------------------------------------------ */
-
-const MAX_TOOL_ROUNDS = 20;
-
-async function agentLoop(
-  runtime: AgentCLI,
-  config: ReturnType<typeof loadConfig>,
-  userMessage: string,
-  messages: ChatMessage[],
-  tools: ReturnType<typeof buildToolDefinition>[],
-): Promise<string> {
-  messages.push({ role: 'user', content: userMessage });
-
-  for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-    const response = await chatCompletion(config, messages, tools);
-    const choice = response.choices[0];
-    if (!choice) throw new Error('empty response from model');
-
-    const assistantMsg = choice.message;
-
-    // Push the assistant message into history
-    const historyEntry: ChatMessage = {
-      role: 'assistant',
-      content: assistantMsg.content,
-    };
-    if (assistantMsg.tool_calls?.length) {
-      historyEntry.tool_calls = assistantMsg.tool_calls;
-    }
-    messages.push(historyEntry);
-
-    // If no tool calls, we're done
-    if (!assistantMsg.tool_calls?.length) {
-      return assistantMsg.content ?? '(no response)';
-    }
-
-    // Execute each tool call
-    for (const tc of assistantMsg.tool_calls) {
-      let result: string;
-      try {
-        const args = JSON.parse(tc.function.arguments) as { command?: string };
-        const command = args.command ?? '';
-        console.log(`  \x1b[2m> ${command}\x1b[0m`);
-        result = await runtime.run(command);
-      } catch (e) {
-        result = `tool error: ${errorMessage(e)}`;
-      }
-
-      messages.push({
-        role: 'tool',
-        tool_call_id: tc.id,
-        content: result,
-      });
-    }
-  }
-
-  return '(max tool rounds reached)';
-}
-
-/* ------------------------------------------------------------------ */
-/*  Main: interactive REPL or one-shot                                */
-/* ------------------------------------------------------------------ */
 
 async function main(): Promise<void> {
   loadEnvFile();
   const config = loadConfig();
   const runtime = await buildDemoRuntime();
-  const tools = [buildToolDefinition(runtime)];
+  const session = createAgentSession(runtime);
 
-  const systemPrompt = [
-    'You are a helpful agent with access to a single tool called `run`.',
-    'It executes CLI-style commands over a virtual file system and registered adapters.',
-    'Use the tool to answer the user\'s questions. You can chain multiple calls.',
-    '',
-    runtime.buildToolDescription(),
-  ].join('\n');
-
-  const messages: ChatMessage[] = [
-    { role: 'system', content: systemPrompt },
-  ];
-
-  // One-shot mode: pass a prompt as CLI arg
   const inlinePrompt = process.argv.slice(2).join(' ').trim();
   if (inlinePrompt) {
     console.log(`\x1b[36mYou:\x1b[0m ${inlinePrompt}\n`);
-    const reply = await agentLoop(runtime, config, inlinePrompt, messages, tools);
+    const { reply } = await runAgentTurn(runtime, config, inlinePrompt, session, {
+      onToolCall(command) {
+        console.log(`  \x1b[2m> ${command}\x1b[0m`);
+      },
+    });
     console.log(`\n\x1b[33mAgent:\x1b[0m ${reply}`);
     return;
   }
 
-  // Interactive REPL
-  console.log('One-Tool Agent (Groq: %s)', config.model);
+  console.log('One-Tool Agent (%s: %s)', config.provider, config.model);
   console.log('Type a question or task. The agent will use the CLI runtime to answer.');
   console.log("Type 'quit' to exit.\n");
 
@@ -239,14 +46,22 @@ async function main(): Promise<void> {
   try {
     for (;;) {
       const raw = (await rl.question('\x1b[36mYou:\x1b[0m ')).trim();
-      if (raw === 'quit' || raw === 'exit') break;
-      if (!raw) continue;
+      if (raw === 'quit' || raw === 'exit') {
+        break;
+      }
+      if (!raw) {
+        continue;
+      }
 
       try {
-        const reply = await agentLoop(runtime, config, raw, messages, tools);
+        const { reply } = await runAgentTurn(runtime, config, raw, session, {
+          onToolCall(command) {
+            console.log(`  \x1b[2m> ${command}\x1b[0m`);
+          },
+        });
         console.log(`\n\x1b[33mAgent:\x1b[0m ${reply}\n`);
-      } catch (e) {
-        console.error(`\n\x1b[31mError:\x1b[0m ${errorMessage(e)}\n`);
+      } catch (caught) {
+        console.error(`\n\x1b[31mError:\x1b[0m ${errorMessage(caught)}\n`);
       }
     }
   } finally {
@@ -254,4 +69,9 @@ async function main(): Promise<void> {
   }
 }
 
-await main();
+try {
+  await main();
+} catch (caught) {
+  console.error(errorMessage(caught));
+  process.exit(1);
+}

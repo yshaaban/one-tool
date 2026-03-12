@@ -68,6 +68,7 @@ That keeps tool results compact, navigable, and recoverable.
 
 ```text
 one-tool/
+├─ .env.example
 ├─ package.json
 ├─ tsconfig.json
 ├─ README.md
@@ -96,9 +97,17 @@ one-tool/
 │  ├─ demo-adapters.ts
 │  ├─ demo-runtime.ts
 │  ├─ demo-app.ts
+│  ├─ agent-support.ts
 │  └─ agent.ts
 └─ test/
-   └─ commands/
+   ├─ agent-live.integration.ts
+   ├─ commands/
+   │  ├─ adapters.test.ts
+   │  ├─ data.test.ts
+   │  ├─ fs.test.ts
+   │  ├─ harness.ts
+   │  ├─ system.test.ts
+   │  └─ text.test.ts
    ├─ runtime.test.ts
    ├─ memory-vfs.test.ts
    ├─ browser-vfs.test.ts
@@ -124,6 +133,14 @@ cat /logs/app.log | grep -c ERROR
 fetch order:123 | json get customer.email
 search "refund timeout incident" | write /reports/refund.txt
 ```
+
+For the real provider-backed agent or live integration tests, start from the checked-in env sample:
+
+```bash
+cp .env.example .env
+```
+
+Then edit `.env` and fill either the Groq block or the OpenAI block.
 
 ---
 
@@ -420,6 +437,37 @@ search "Acme renewal risk" | write /notes/acme-risk.txt
 cat /notes/acme-risk.txt
 memory store "Acme wants tighter weekly updates"
 memory search "Acme updates"
+```
+
+To run the provider-backed agent example:
+
+```bash
+npm run agent
+# or force OpenAI explicitly
+AGENT_PROVIDER=openai npm run agent
+```
+
+The example prefers Groq when both keys are present. Set `AGENT_PROVIDER=openai` to switch providers explicitly.
+
+Recommended `.env` setups:
+
+```bash
+# Groq
+GROQ_API_KEY=gsk_...
+GROQ_MODEL=openai/gpt-oss-120b
+
+# OpenAI
+AGENT_PROVIDER=openai
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-5.2
+```
+
+The live integration test is opt-in and follows the same provider resolution as the agent: Groq first when both keys are present, otherwise OpenAI. Use the provider-specific scripts to force one side explicitly:
+
+```bash
+npm run test:live
+npm run test:live:groq
+npm run test:live:openai
 ```
 
 ---

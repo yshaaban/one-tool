@@ -19,10 +19,13 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "rm -rf dist && tsc -p tsconfig.json",
     "demo": "npm run build && node --enable-source-maps dist/examples/demo-app.js",
     "agent": "npm run build && node --enable-source-maps dist/examples/agent.js",
     "test": "npm run build && node --test dist/test/*.test.js dist/test/commands/*.test.js",
+    "test:live": "npm run build && LIVE_AGENT_TESTS=1 node --test dist/test/agent-live.integration.js",
+    "test:live:groq": "npm run build && LIVE_AGENT_TESTS=1 AGENT_PROVIDER=groq node --test dist/test/agent-live.integration.js",
+    "test:live:openai": "npm run build && LIVE_AGENT_TESTS=1 AGENT_PROVIDER=openai node --test dist/test/agent-live.integration.js",
     "clean": "rm -rf dist agent_state"
   },
   "devDependencies": {
