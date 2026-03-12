@@ -20,8 +20,6 @@ It is designed for the common agent problem:
 
 > You want the power of CLI-style composition without exposing a real shell.
 
-Code examples below use package-style imports such as `import { createAgentCLI } from 'one-tool'` for consumer clarity. When working inside this repo, see `examples/` for the local relative-import versions.
-
 ---
 
 ## Table of contents
@@ -227,8 +225,6 @@ Because the model usually reasons better over one composable tool than a large m
 - compositions like `cat /logs/app.log | grep ERROR | head -n 5` stay in one tool call instead of three
 - fewer round trips usually means less brittle planning and less context churn
 
-This is not a claim that one tool is always superior. It is a deliberate tradeoff for agent workflows that benefit from CLI-style composition.
-
 ### How do I choose which commands to enable?
 
 Start with presets:
@@ -259,13 +255,7 @@ If you need full control, pass a custom `registry` or build one with `createComm
 
 ### Can I add custom commands?
 
-Yes. You can:
-
-- register them after runtime creation with `runtime.registry.register(spec)`
-- pass them in `commands` so they register during startup
-- replace built-ins by name with `commands` or `registerCommands(..., { onConflict: 'replace' })`
-
-If the runtime will expose a tool definition to the model, register custom commands before calling `buildToolDefinition(runtime)`.
+Yes. See [Adding commands](#adding-commands) for the runtime registration flow and `COMMANDS.md` for the full authoring guide.
 
 ### Which VFS should I use?
 
@@ -279,18 +269,13 @@ Use this rule of thumb:
 | Ephemeral/stateless    | `MemoryVFS`  | No persistence overhead                  |
 | Long-lived local agent | `NodeVFS`    | Workspace survives process restarts      |
 
-The detailed backend behavior is covered in [VFS backends](#vfs-backends).
-
 ### Does this work with my model provider?
 
-The runtime itself is provider-agnostic. It exposes a string-in, string-out execution API and an OpenAI-compatible tool definition.
+The runtime is provider-agnostic. It exposes a string-in, string-out execution API and an OpenAI-compatible tool definition.
 
-- OpenAI: tested example included in `examples/agent.ts`
-- Groq: tested example included in `examples/agent.ts`
-- Anthropic / Claude: should work in agent loops that accept OpenAI-style tool schemas
-- Local OpenAI-compatible endpoints: should work if the model supports tool calling
-
-The maintained examples in this repo target OpenAI-compatible chat-completions APIs.
+- OpenAI: example and live-test entrypoint included
+- Groq: example and live-test entrypoint included
+- Other OpenAI-compatible providers: often usable if they support tool calling, but not covered by maintained examples or tests in this repo
 
 ---
 
@@ -338,12 +323,12 @@ The runtime intentionally makes discovery cheap:
 
 ### Supported operators
 
-| Operator | Meaning                                                  |
-| -------- | -------------------------------------------------------- | ------------------------------- | ----------------------------------------------------- |
-| `        | `                                                        | pipe stdout to the next command |
-| `&&`     | run the next pipeline only if the previous one succeeded |
-| `        |                                                          | `                               | run the next pipeline only if the previous one failed |
-| `;`      | always run the next pipeline                             |
+| Operator            | Meaning                                                  |
+| ------------------- | -------------------------------------------------------- |
+| `<code>\|</code>`   | pipe stdout to the next command                          |
+| `&&`                | run the next pipeline only if the previous one succeeded |
+| `<code>\|\|</code>` | run the next pipeline only if the previous one failed    |
+| `;`                 | always run the next pipeline                             |
 
 Examples:
 
@@ -424,10 +409,10 @@ The runtime ships with 18 built-in commands. They are grouped in code under `src
 
 ### System commands
 
-| Command  | Usage                  |             Stdin | Purpose                             |
-| -------- | ---------------------- | ----------------: | ----------------------------------- | --- | ------------------------------------------- |
-| `help`   | `help [command]`       |                no | List commands or show detailed help |
-| `memory` | `memory search <query> | memory recent [N] | memory store <text>`                | yes | Store and search lightweight working memory |
+| Command  | Usage                                                                                                                | Stdin | Purpose                                     |
+| -------- | -------------------------------------------------------------------------------------------------------------------- | ----: | ------------------------------------------- |
+| `help`   | `help [command]`                                                                                                     |    no | List commands or show detailed help         |
+| `memory` | <code>memory search &lt;query&gt;</code><br><code>memory recent [N]</code><br><code>memory store &lt;text&gt;</code> |   yes | Store and search lightweight working memory |
 
 Examples:
 
@@ -486,10 +471,10 @@ tail -n 50 /logs/app.log
 
 ### Data commands
 
-| Command | Usage               |            Stdin | Purpose                       |
-| ------- | ------------------- | ---------------: | ----------------------------- | --- | ------------ |
-| `json`  | `json pretty [path] | json keys [path] | json get <field.path> [path]` | yes | Inspect JSON |
-| `calc`  | `calc <expression>` |               no | Evaluate safe arithmetic      |
+| Command | Usage                                                                                                               | Stdin | Purpose                  |
+| ------- | ------------------------------------------------------------------------------------------------------------------- | ----: | ------------------------ |
+| `json`  | <code>json pretty [path]</code><br><code>json keys [path]</code><br><code>json get &lt;field.path&gt; [path]</code> |   yes | Inspect JSON             |
+| `calc`  | `calc <expression>`                                                                                                 |    no | Evaluate safe arithmetic |
 
 Examples:
 
@@ -780,8 +765,6 @@ Valid built-in group names are:
 - `'adapters'`
 - `'data'`
 
-The `includeGroups` names come from `builtinCommandGroups`. The exported group arrays use the names `systemCommands`, `fsCommands`, `textCommands`, `adapterCommands`, and `dataCommands`.
-
 Built-in preset names are:
 
 - `'full'`
@@ -821,8 +804,6 @@ Built-in command groups are exported as:
 - `adapterCommands`
 - `dataCommands`
 
-They are also available through `builtinCommandGroups`.
-
 ### Command testing helpers
 
 The package exports stable testing helpers under `one-tool/testing`:
@@ -833,12 +814,11 @@ import {
   createTestCommandContext,
   createTestCommandRegistry,
   runRegisteredCommand,
-  stdinText,
   stdoutText,
 } from 'one-tool/testing';
 ```
 
-For a focused command test:
+Use `runRegisteredCommand(...)` for focused command tests:
 
 ```ts
 import assert from 'node:assert/strict';
@@ -859,7 +839,7 @@ const { result } = await runRegisteredCommand('help', ['help'], { ctx });
 assert.match(stdoutText(result), /Usage: help \\[command\\]/);
 ```
 
-For metadata-driven conformance coverage:
+Use `createCommandConformanceCases(...)` for metadata-driven baseline coverage:
 
 ```ts
 const cases = createCommandConformanceCases({
@@ -874,7 +854,7 @@ Each case has:
 - `name`
 - `run()`
 
-The repo uses this same helper for `test/commands/conformance.test.ts`.
+For full command-authoring and test patterns, see `COMMANDS.md`.
 
 ### Browser import path
 
@@ -1137,7 +1117,7 @@ Compatibility notes:
 
 - the example agent is maintained against OpenAI-compatible APIs
 - Groq and OpenAI are covered by examples and live test entrypoints
-- other providers can be used if your agent loop can send OpenAI-style tool definitions and tool calls
+- other providers may be usable if your agent loop can send OpenAI-style tool definitions and tool calls, but they are not covered by maintained examples or tests in this repo
 - the runtime itself does not depend on a provider SDK
 
 ---
@@ -1175,11 +1155,9 @@ Each `CommandSpec` can declare:
 - adapter dependencies
 - representative sample args for automatic conformance tests
 
-The repo conformance suite at `test/commands/conformance.test.ts` generates baseline tests automatically for every registered built-in command in the registry under test.
+Built-in command conformance coverage is metadata-driven through `test/commands/conformance.test.ts`.
 
-For the full workflow, examples, and checklist, see:
-
-- `COMMANDS.md`
+For the full workflow, examples, and checklist, see `COMMANDS.md`.
 
 ### Registering a custom command at runtime
 
@@ -1208,29 +1186,6 @@ runtime.registry.register(echo);
 ```
 
 If you expose tool definitions to the model, register custom commands before calling `buildToolDefinition(runtime)`.
-
-If you want custom commands to receive the same conformance coverage pattern, use the exported helper:
-
-```ts
-import {
-  createCommandConformanceCases,
-  createTestCommandContext,
-  createTestCommandRegistry,
-} from 'one-tool/testing';
-
-const registry = createTestCommandRegistry({
-  includeGroups: ['system'],
-  excludeCommands: ['memory'],
-  commands: [echo],
-});
-
-const cases = createCommandConformanceCases({
-  registry,
-  makeCtx: createTestCommandContext,
-});
-```
-
-Then register each returned case with your test runner.
 
 ---
 
@@ -1264,15 +1219,16 @@ The suite covers:
 - arg bound enforcement when declared
 - adapter error behavior when declared
 
-The same logic is exported through `createCommandConformanceCases(...)` for consumer test suites.
-
-The public `one-tool/testing` helpers also include:
+For consumer suites, `one-tool/testing` exports:
 
 - `createTestCommandRegistry(...)`
 - `createTestCommandContext(...)`
+- `createCommandConformanceCases(...)`
 - `runRegisteredCommand(...)`
 - `stdinText(...)`
 - `stdoutText(...)`
+
+`COMMANDS.md` shows the recommended patterns for using them together.
 
 ### Demo commands
 
@@ -1418,48 +1374,3 @@ But commands can await:
 - RPC systems
 
 without changing the model-facing tool shape.
-
----
-
-## Suggested next extensions
-
-If you want to grow this runtime, useful next command families include:
-
-- `find`
-- `sort`
-- `uniq`
-- `wc`
-- `template`
-- `table`
-- `csv`
-- `http`
-- `sql`
-- richer memory primitives
-- topic-scoped file roots
-- per-command auth policies
-- rate limits and cost budgets
-
----
-
-## Core takeaway
-
-Expose one tool:
-
-```ts
-run(command: string)
-```
-
-Make discovery happen through:
-
-- command help
-- usage text
-- explicit errors
-- consistent output format
-
-Keep execution shell-free.
-
-Keep files rooted.
-
-Keep outputs model-friendly.
-
-That preserves most of the value of CLI composition without inheriting the risks of a real shell.
