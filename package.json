@@ -1,0 +1,27 @@
+{
+  "name": "cli-agent-runtime-ts",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Single-tool CLI runtime for LLM agents without a real shell",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20.11"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "demo": "npm run build && node --enable-source-maps dist/src/demo-app.js",
+    "agent": "npm run build && node --enable-source-maps dist/src/agent.js",
+    "test": "npm run build && node --test dist/test/runtime.test.js",
+    "clean": "rm -rf dist agent_state"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}
