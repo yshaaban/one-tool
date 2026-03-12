@@ -126,23 +126,30 @@ function buildToolDef(runtime: AgentCLI) {
 /* ------------------------------------------------------------------ */
 
 async function chatCompletion(
-  config: ReturnType<typeof loadConfig>,
+  config: AgentConfig,
   messages: ChatMessage[],
   tools: ReturnType<typeof buildToolDef>,
 ): Promise<ChatCompletionResponse> {
-  const res = await fetch(`${config.baseUrl}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${config.apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: config.model,
-      messages,
-      tools,
-      tool_choice: 'auto',
-    }),
-  });
+  const url = `${config.baseUrl}/chat/completions`;
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: config.model,
+        messages,
+        tools,
+        tool_choice: 'auto',
+      }),
+    });
+  } catch (e) {
+    const cause = e instanceof Error && e.cause ? ` (${e.cause})` : '';
+    throw new Error(`Network error calling ${url}: ${e instanceof Error ? e.message : String(e)}${cause}`);
+  }
 
   if (!res.ok) {
     const body = await res.text();
