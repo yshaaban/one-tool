@@ -81,6 +81,41 @@ for (const backend of backends) {
     });
   });
 
+  test(`${backend.name}: rejects write with no content`, async () => {
+    await backend.withRuntime(async (runtime) => {
+      const output = await runtime.run('write /tmp/empty.txt');
+      assert.match(output, /write: no content provided/);
+      assert.match(output, /\[exit:1 \| /);
+    });
+  });
+
+  test(`${backend.name}: rejects append with no content`, async () => {
+    await backend.withRuntime(async (runtime) => {
+      const output = await runtime.run('append /tmp/empty.txt');
+      assert.match(output, /append: no content provided/);
+      assert.match(output, /\[exit:1 \| /);
+    });
+  });
+
+  test(`${backend.name}: writes piped stdin content to a file`, async () => {
+    await backend.withRuntime(async (runtime) => {
+      const output = await runtime.run('fetch text:runbook | write /tmp/runbook.txt && cat /tmp/runbook.txt');
+      assert.match(output, /Escalate payment timeouts to the checkout on-call/);
+      assert.match(output, /\[exit:0 \| /);
+    });
+  });
+
+  test(`${backend.name}: appends piped stdin content to a file`, async () => {
+    await backend.withRuntime(async (runtime) => {
+      const output = await runtime.run(
+        'write /tmp/notes.txt start && fetch text:runbook | append /tmp/notes.txt && cat /tmp/notes.txt',
+      );
+      assert.match(output, /start/);
+      assert.match(output, /Escalate payment timeouts to the checkout on-call/);
+      assert.match(output, /\[exit:0 \| /);
+    });
+  });
+
   test(`${backend.name}: guards binary output and suggests inspection`, async () => {
     await backend.withRuntime(async (runtime) => {
       const output = await runtime.run('cat /images/logo.png');

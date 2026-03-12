@@ -1,5 +1,3 @@
-import { parentOf, posixNormalize } from './vfs/path-utils.js';
-
 export function errorMessage(caught: unknown): string {
   return caught instanceof Error ? caught.message : String(caught);
 }
@@ -75,7 +73,11 @@ export function looksBinary(data: Uint8Array): boolean {
 }
 
 export function parentPath(inputPath: string): string {
-  return parentOf(posixNormalize(inputPath));
+  const candidate = inputPath.startsWith('/') ? inputPath : `/${inputPath}`;
+  const normalized = candidate.replace(/\/+/g, '/');
+  const trimmed = normalized.endsWith('/') && normalized !== '/' ? normalized.slice(0, -1) : normalized;
+  const index = trimmed.lastIndexOf('/');
+  return index <= 0 ? '/' : trimmed.slice(0, index);
 }
 
 type ArithmeticToken =

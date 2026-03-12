@@ -145,18 +145,23 @@ async function readTextFromFileOrStdin(
   };
 }
 
+type ContentInput =
+  | { ok: true; content: Uint8Array }
+  | { ok: false; error: CommandResult };
+
 function contentFromArgsOrStdin(
   args: string[],
   stdin: Uint8Array,
   commandName: string,
-): { content?: Uint8Array; error?: CommandResult } {
+): ContentInput {
   if (args.length > 1) {
-    return { content: textEncoder.encode(args.slice(1).join(' ')) };
+    return { ok: true, content: textEncoder.encode(args.slice(1).join(' ')) };
   }
   if (stdin.length > 0) {
-    return { content: stdin };
+    return { ok: true, content: stdin };
   }
   return {
+    ok: false,
     error: err(`${commandName}: no content provided. Pass content inline or pipe it via stdin.`),
   };
 }
@@ -361,15 +366,14 @@ async function cmdWrite(ctx: CommandContext, args: string[], stdin: Uint8Array):
     return err('write: usage: write <path> [content]');
   }
 
-  const { content, error } = contentFromArgsOrStdin(args, stdin, 'write');
-  if (error) {
-    return error;
+  const input = contentFromArgsOrStdin(args, stdin, 'write');
+  if (!input.ok) {
+    return input.error;
   }
 
   try {
-    const bytes = content!;
-    const saved = await ctx.vfs.writeBytes(args[0]!, bytes);
-    return ok(`wrote ${formatSize(bytes.length)} to ${saved}`);
+    const saved = await ctx.vfs.writeBytes(args[0]!, input.content);
+    return ok(`wrote ${formatSize(input.content.length)} to ${saved}`);
   } catch (caught) {
     const code = errorCode(caught);
     const message = errorMessage(caught);
@@ -403,15 +407,14 @@ async function cmdAppend(ctx: CommandContext, args: string[], stdin: Uint8Array)
     return err('append: usage: append <path> [content]');
   }
 
-  const { content, error } = contentFromArgsOrStdin(args, stdin, 'append');
-  if (error) {
-    return error;
+  const input = contentFromArgsOrStdin(args, stdin, 'append');
+  if (!input.ok) {
+    return input.error;
   }
 
   try {
-    const bytes = content!;
-    const saved = await ctx.vfs.appendBytes(args[0]!, bytes);
-    return ok(`appended ${formatSize(bytes.length)} to ${saved}`);
+    const saved = await ctx.vfs.appendBytes(args[0]!, input.content);
+    return ok(`appended ${formatSize(input.content.length)} to ${saved}`);
   } catch (caught) {
     const code = errorCode(caught);
     const message = errorMessage(caught);
@@ -702,6 +705,16 @@ async function cmdSearch(ctx: CommandContext, args: string[], stdin: Uint8Array)
   return ok(blocks.join('\n\n'));
 }
 
+function renderFetchPayload(payload: unknown, contentType: string): CommandResult {
+  if (payload instanceof Uint8Array) {
+    return okBytes(payload, contentType);
+  }
+  if (typeof payload === 'object' && payload !== null) {
+    return ok(JSON.stringify(payload, null, 2), { contentType: 'application/json' });
+  }
+  return ok(String(payload ?? 'null'), { contentType });
+}
+
 async function cmdFetch(ctx: CommandContext, args: string[], stdin: Uint8Array): Promise<CommandResult> {
   if (stdin.length > 0) {
     return err('fetch: does not accept stdin');
@@ -717,15 +730,7 @@ async function cmdFetch(ctx: CommandContext, args: string[], stdin: Uint8Array):
 
   try {
     const response = await ctx.adapters.fetch.fetch(args[0]!);
-    const { contentType, payload } = response;
-
-    if (payload instanceof Uint8Array) {
-      return okBytes(payload, contentType);
-    }
-    if (typeof payload === 'object' && payload !== null) {
-      return ok(JSON.stringify(payload, null, 2), { contentType: 'application/json' });
-    }
-    return ok(String(payload ?? 'null'), { contentType });
+    return renderFetchPayload(response.payload, response.contentType);
   } catch (caught) {
     const message = errorMessage(caught);
     if (message.includes('not found')) {
