@@ -68,6 +68,9 @@ export const json: CommandSpec = {
   details:
     'Examples:\n  fetch order:123 | json pretty\n  fetch order:123 | json get customer.email\n  json keys /config/default.json',
   handler: cmdJson,
+  acceptsStdin: true,
+  minArgs: 1,
+  conformanceArgs: ['pretty'],
 };
 
 async function cmdCalc(_ctx: CommandContext, args: string[], stdin: Uint8Array) {
@@ -92,6 +95,9 @@ export const calc: CommandSpec = {
   usage: 'calc <expression>',
   details: 'Examples:\n  calc 41 + 1\n  calc (12 * 8) / 3',
   handler: cmdCalc,
+  acceptsStdin: false,
+  minArgs: 1,
+  conformanceArgs: ['1+1'],
 };
 
 export const dataCommands: CommandSpec[] = [json, calc];

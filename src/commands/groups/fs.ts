@@ -35,6 +35,10 @@ export const ls: CommandSpec = {
   usage: 'ls [path]',
   details: 'Examples:\n  ls\n  ls /logs\n  ls notes',
   handler: cmdLs,
+  acceptsStdin: false,
+  minArgs: 0,
+  maxArgs: 1,
+  conformanceArgs: ['/'],
 };
 
 async function cmdStat(ctx: CommandContext, args: string[], stdin: Uint8Array) {
@@ -67,6 +71,10 @@ export const stat: CommandSpec = {
   usage: 'stat <path>',
   details: 'Examples:\n  stat /logs/app.log\n  stat notes/todo.txt',
   handler: cmdStat,
+  acceptsStdin: false,
+  minArgs: 1,
+  maxArgs: 1,
+  conformanceArgs: ['/missing'],
 };
 
 async function cmdCat(ctx: CommandContext, args: string[], stdin: Uint8Array) {
@@ -102,6 +110,10 @@ export const cat: CommandSpec = {
   usage: 'cat <path>',
   details: 'Examples:\n  cat /notes/todo.txt\n  cat logs/app.log',
   handler: cmdCat,
+  acceptsStdin: false,
+  minArgs: 1,
+  maxArgs: 1,
+  conformanceArgs: ['/missing'],
 };
 
 async function cmdWrite(ctx: CommandContext, args: string[], stdin: Uint8Array) {
@@ -151,6 +163,9 @@ export const write: CommandSpec = {
   usage: 'write <path> [content]',
   details: 'Examples:\n  write /notes/todo.txt "line one"\n  search "refund issue" | write /reports/refund.txt',
   handler: cmdWrite,
+  acceptsStdin: true,
+  minArgs: 1,
+  conformanceArgs: ['/t.txt', 'x'],
 };
 
 async function cmdAppend(ctx: CommandContext, args: string[], stdin: Uint8Array) {
@@ -200,6 +215,9 @@ export const append: CommandSpec = {
   usage: 'append <path> [content]',
   details: 'Examples:\n  append /notes/todo.txt "next item"\n  cat /tmp/out.txt | append /notes/archive.txt',
   handler: cmdAppend,
+  acceptsStdin: true,
+  minArgs: 1,
+  conformanceArgs: ['/t.txt', 'x'],
 };
 
 async function cmdMkdir(ctx: CommandContext, args: string[], stdin: Uint8Array) {
@@ -234,6 +252,10 @@ export const mkdir: CommandSpec = {
   usage: 'mkdir <path>',
   details: 'Examples:\n  mkdir /reports\n  mkdir notes/archive/2026',
   handler: cmdMkdir,
+  acceptsStdin: false,
+  minArgs: 1,
+  maxArgs: 1,
+  conformanceArgs: ['/tmp'],
 };
 
 async function cmdCp(ctx: CommandContext, args: string[], stdin: Uint8Array) {
@@ -280,6 +302,10 @@ export const cp: CommandSpec = {
   usage: 'cp <src> <dst>',
   details: 'Examples:\n  cp /drafts/qbr.md /reports/qbr-v1.md',
   handler: cmdCp,
+  acceptsStdin: false,
+  minArgs: 2,
+  maxArgs: 2,
+  conformanceArgs: ['/a', '/b'],
 };
 
 async function cmdMv(ctx: CommandContext, args: string[], stdin: Uint8Array) {
@@ -326,6 +352,10 @@ export const mv: CommandSpec = {
   usage: 'mv <src> <dst>',
   details: 'Examples:\n  mv /drafts/qbr.md /archive/qbr.md',
   handler: cmdMv,
+  acceptsStdin: false,
+  minArgs: 2,
+  maxArgs: 2,
+  conformanceArgs: ['/a', '/b'],
 };
 
 async function cmdRm(ctx: CommandContext, args: string[], stdin: Uint8Array) {
@@ -357,6 +387,10 @@ export const rm: CommandSpec = {
   usage: 'rm <path>',
   details: 'Examples:\n  rm /tmp/out.txt\n  rm /scratch',
   handler: cmdRm,
+  acceptsStdin: false,
+  minArgs: 1,
+  maxArgs: 1,
+  conformanceArgs: ['/missing'],
 };
 
 export const fsCommands: CommandSpec[] = [ls, stat, cat, write, append, mkdir, cp, mv, rm];

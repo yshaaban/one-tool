@@ -41,6 +41,10 @@ export const search: CommandSpec = {
   usage: 'search <query>',
   details: 'Examples:\n  search "refund timeout incident"\n  search "acme renewal risk" | head -n 5',
   handler: cmdSearch,
+  acceptsStdin: false,
+  minArgs: 1,
+  requiresAdapter: 'search',
+  conformanceArgs: ['query'],
 };
 
 async function cmdFetch(ctx: CommandContext, args: string[], stdin: Uint8Array) {
@@ -74,6 +78,11 @@ export const fetch: CommandSpec = {
   usage: 'fetch <resource>',
   details: 'Examples:\n  fetch order:123\n  fetch crm/customer/acme | json get owner.email',
   handler: cmdFetch,
+  acceptsStdin: false,
+  minArgs: 1,
+  maxArgs: 1,
+  requiresAdapter: 'fetch',
+  conformanceArgs: ['res:1'],
 };
 
 export const adapterCommands: CommandSpec[] = [search, fetch];

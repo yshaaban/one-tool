@@ -69,6 +69,7 @@ That keeps tool results compact, navigable, and recoverable.
 ```text
 one-tool/
 ├─ .env.example
+├─ COMMANDS.md
 ├─ package.json
 ├─ tsconfig.json
 ├─ README.md
@@ -103,6 +104,7 @@ one-tool/
    ├─ agent-live.integration.ts
    ├─ commands/
    │  ├─ adapters.test.ts
+   │  ├─ conformance.test.ts
    │  ├─ data.test.ts
    │  ├─ fs.test.ts
    │  ├─ harness.ts
@@ -141,6 +143,14 @@ cp .env.example .env
 ```
 
 Then edit `.env` and fill either the Groq block or the OpenAI block.
+
+For adding or modifying built-in commands, see `COMMANDS.md`.
+
+## Command development
+
+Built-in commands are metadata-driven. Each `CommandSpec` can declare stdin behavior, arg bounds, adapter requirements, and representative sample args. The conformance suite in `test/commands/conformance.test.ts` uses that metadata to generate baseline tests automatically for every registered command.
+
+Use `COMMANDS.md` for the exact workflow and checklist.
 
 ---
 

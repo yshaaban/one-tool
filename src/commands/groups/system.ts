@@ -34,6 +34,10 @@ export const help: CommandSpec = {
   usage: 'help [command]',
   details: 'Examples:\n  help\n  help grep\n  grep',
   handler: cmdHelp,
+  acceptsStdin: false,
+  minArgs: 0,
+  maxArgs: 1,
+  conformanceArgs: [],
 };
 
 async function cmdMemory(ctx: CommandContext, args: string[], stdin: Uint8Array) {
@@ -99,6 +103,9 @@ export const memory: CommandSpec = {
   details:
     'Examples:\n  memory store "Acme prefers Monday follow-ups"\n  memory search "Acme follow-up"\n  memory recent 5',
   handler: cmdMemory,
+  acceptsStdin: true,
+  minArgs: 1,
+  conformanceArgs: ['recent'],
 };
 
 export const systemCommands: CommandSpec[] = [help, memory];

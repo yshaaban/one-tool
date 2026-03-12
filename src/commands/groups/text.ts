@@ -78,6 +78,9 @@ export const grep: CommandSpec = {
   details:
     'Examples:\n  grep ERROR /logs/app.log\n  cat /logs/app.log | grep -i timeout\n  grep -c "payment failed" /logs/app.log',
   handler: cmdGrep,
+  acceptsStdin: true,
+  minArgs: 1,
+  conformanceArgs: ['pattern'],
 };
 
 async function cmdHead(ctx: CommandContext, args: string[], stdin: Uint8Array) {
@@ -104,6 +107,9 @@ export const head: CommandSpec = {
   usage: 'head [-n N] [path]',
   details: 'Examples:\n  head -n 20 /logs/app.log\n  search "refund API" | head -n 5',
   handler: cmdHead,
+  acceptsStdin: true,
+  minArgs: 0,
+  conformanceArgs: [],
 };
 
 async function cmdTail(ctx: CommandContext, args: string[], stdin: Uint8Array) {
@@ -131,6 +137,9 @@ export const tail: CommandSpec = {
   usage: 'tail [-n N] [path]',
   details: 'Examples:\n  tail -n 20 /logs/app.log\n  cat /logs/app.log | tail -n 50',
   handler: cmdTail,
+  acceptsStdin: true,
+  minArgs: 0,
+  conformanceArgs: [],
 };
 
 export const textCommands: CommandSpec[] = [grep, head, tail];

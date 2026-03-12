@@ -8,6 +8,15 @@ export interface CommandSpec {
   usage: string;
   details: string;
   handler: CommandHandler;
+  /**
+   * Optional metadata used by the command guide and conformance tests.
+   * Built-in commands in this repo are expected to provide the applicable fields.
+   */
+  acceptsStdin?: boolean;
+  minArgs?: number;
+  maxArgs?: number;
+  requiresAdapter?: keyof ToolAdapters;
+  conformanceArgs?: string[];
 }
 
 export type CommandHandler = (
