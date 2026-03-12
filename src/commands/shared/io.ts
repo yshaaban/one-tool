@@ -1,0 +1,100 @@
+import type { CommandResult } from '../../types.js';
+import { err, textDecoder, textEncoder } from '../../types.js';
+import { formatSize, looksBinary, parentPath } from '../../utils.js';
+import type { CommandContext, CommandSpec } from '../core.js';
+
+export function renderHelp(spec: CommandSpec): string {
+  return `${spec.name}: ${spec.summary}\nUsage: ${spec.usage}\n\n${spec.details}`;
+}
+
+export async function readTextFromFileOrStdin(
+  ctx: CommandContext,
+  filePath: string | undefined,
+  stdin: Uint8Array,
+  commandName: string,
+): Promise<{ text?: string; error?: CommandResult }> {
+  if (filePath) {
+    const info = await ctx.vfs.stat(filePath);
+    const normalized = ctx.vfs.normalize(filePath);
+    if (!info.exists) {
+      return {
+        error: err(`${commandName}: file not found: ${normalized}. Use: ls / or ls ${parentPath(filePath)}`),
+      };
+    }
+    if (info.isDir) {
+      return {
+        error: err(`${commandName}: path is a directory: ${normalized}. Use: ls ${normalized}`),
+      };
+    }
+    const raw = await ctx.vfs.readBytes(filePath);
+    if (looksBinary(raw)) {
+      return {
+        error: err(
+          `${commandName}: binary file (${formatSize(raw.length)}): ${normalized}. Use: stat ${normalized}`,
+        ),
+      };
+    }
+    return { text: textDecoder.decode(raw) };
+  }
+
+  if (stdin.length > 0) {
+    if (looksBinary(stdin)) {
+      return {
+        error: err(
+          `${commandName}: stdin is binary (${formatSize(stdin.length)}). ` +
+            'Pipe text only, or save binary data to a file and inspect with stat.',
+        ),
+      };
+    }
+    return { text: textDecoder.decode(stdin) };
+  }
+
+  return {
+    error: err(`${commandName}: no input provided. Usage: see 'help ${commandName}'`),
+  };
+}
+
+export type ContentInput =
+  | { ok: true; content: Uint8Array }
+  | { ok: false; error: CommandResult };
+
+export function contentFromArgsOrStdin(
+  args: string[],
+  stdin: Uint8Array,
+  commandName: string,
+): ContentInput {
+  if (args.length > 1) {
+    return { ok: true, content: textEncoder.encode(args.slice(1).join(' ')) };
+  }
+  if (stdin.length > 0) {
+    return { ok: true, content: stdin };
+  }
+  return {
+    ok: false,
+    error: err(`${commandName}: no content provided. Pass content inline or pipe it via stdin.`),
+  };
+}
+
+export function parseNFlag(
+  args: string[],
+  defaultValue: number,
+): { value: number; remaining: string[]; error?: CommandResult } {
+  if (args.length === 0) {
+    return { value: defaultValue, remaining: [] };
+  }
+  if (args[0] !== '-n') {
+    return { value: defaultValue, remaining: args };
+  }
+  if (args.length < 2) {
+    return { value: defaultValue, remaining: args, error: err('missing value for -n') };
+  }
+  const parsed = Number.parseInt(args[1] ?? '', 10);
+  if (!Number.isFinite(parsed)) {
+    return {
+      value: defaultValue,
+      remaining: args,
+      error: err(`invalid integer for -n: ${args[1]}`),
+    };
+  }
+  return { value: parsed, remaining: args.slice(2) };
+}

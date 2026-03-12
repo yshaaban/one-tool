@@ -1,5 +1,5 @@
 import { parseCommandLine, type ChainNode, type PipelineNode, ParseError } from './parser.js';
-import { CommandRegistry, registerBuiltinCommands, type CommandContext } from './commands.js';
+import { CommandRegistry, registerBuiltinCommands, type CommandContext } from './commands/index.js';
 import { SimpleMemory } from './memory.js';
 import type { CommandResult, ToolAdapters } from './types.js';
 import { err, ok, textDecoder } from './types.js';

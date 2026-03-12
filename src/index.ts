@@ -9,8 +9,8 @@ export { NodeVFS, RootedVFS } from './vfs/node-vfs.js';
 export { BrowserVFS } from './vfs/browser-vfs.js';
 
 // Commands
-export { CommandRegistry, registerBuiltinCommands } from './commands.js';
-export type { CommandSpec, CommandHandler, CommandContext } from './commands.js';
+export { CommandRegistry, registerBuiltinCommands } from './commands/index.js';
+export type { CommandSpec, CommandHandler, CommandContext } from './commands/index.js';
 
 // Types
 export type {

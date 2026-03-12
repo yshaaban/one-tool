@@ -76,7 +76,12 @@ one-tool/
 │  ├─ memory.ts
 │  ├─ parser.ts
 │  ├─ utils.ts
-│  ├─ commands.ts
+│  ├─ commands/
+│  │  ├─ core.ts
+│  │  ├─ register.ts
+│  │  ├─ index.ts
+│  │  ├─ groups/
+│  │  └─ shared/
 │  ├─ runtime.ts
 │  ├─ tool-schema.ts
 │  └─ index.ts
@@ -93,6 +98,7 @@ one-tool/
 │  ├─ demo-app.ts
 │  └─ agent.ts
 └─ test/
+   └─ commands/
    ├─ runtime.test.ts
    ├─ memory-vfs.test.ts
    ├─ browser-vfs.test.ts

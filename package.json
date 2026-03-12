@@ -22,7 +22,7 @@
     "build": "tsc -p tsconfig.json",
     "demo": "npm run build && node --enable-source-maps dist/examples/demo-app.js",
     "agent": "npm run build && node --enable-source-maps dist/examples/agent.js",
-    "test": "npm run build && node --test dist/test/**/*.test.js",
+    "test": "npm run build && node --test dist/test/*.test.js dist/test/commands/*.test.js",
     "clean": "rm -rf dist agent_state"
   },
   "devDependencies": {
