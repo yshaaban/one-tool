@@ -1,5 +1,5 @@
-import type { FetchAdapter, FetchResponse, SearchAdapter, SearchHit } from './types.js';
-import { tokenizeForSearch } from './utils.js';
+import type { FetchAdapter, FetchResponse, SearchAdapter, SearchHit } from '../src/index.js';
+import { tokenizeForSearch } from '../src/utils.js';
 
 export class DemoSearch implements SearchAdapter {
   private readonly docs: Array<Record<string, string>>;

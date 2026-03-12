@@ -1,9 +1,34 @@
-export * from './commands.js';
-export * from './demo-adapters.js';
-export * from './demo-runtime.js';
-export * from './memory.js';
-export * from './parser.js';
-export * from './runtime.js';
-export * from './types.js';
-export * from './utils.js';
-export * from './vfs.js';
+// Core runtime
+export { AgentCLI, createAgentCLI } from './runtime.js';
+export type { AgentCLIOptions } from './runtime.js';
+
+// VFS interface + backends
+export type { VFS, VFileInfo } from './vfs/interface.js';
+export { MemoryVFS } from './vfs/memory-vfs.js';
+export { NodeVFS, RootedVFS } from './vfs/node-vfs.js';
+
+// Commands
+export { CommandRegistry, registerBuiltinCommands } from './commands.js';
+export type { CommandSpec, CommandHandler, CommandContext } from './commands.js';
+
+// Types
+export type {
+  CommandResult,
+  SearchAdapter,
+  FetchAdapter,
+  ToolAdapters,
+  SearchHit,
+  FetchResponse,
+  MemoryItem,
+} from './types.js';
+export { ok, err, okBytes } from './types.js';
+
+// Parser
+export { parseCommandLine, tokenizeCommandLine, ParseError } from './parser.js';
+
+// Memory
+export { SimpleMemory } from './memory.js';
+
+// Tool schema helpers
+export { buildToolDefinition } from './tool-schema.js';
+export type { ToolDefinition } from './tool-schema.js';

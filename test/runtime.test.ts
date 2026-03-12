@@ -4,7 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import test from 'node:test';
 
-import { buildDemoRuntime } from '../src/demo-runtime.js';
+import { buildDemoRuntime } from '../examples/demo-runtime.js';
 
 async function withRuntime(runTest: (runtime: Awaited<ReturnType<typeof buildDemoRuntime>>) => Promise<void>): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), 'cli-agent-runtime-ts-'));

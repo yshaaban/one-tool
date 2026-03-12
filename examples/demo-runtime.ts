@@ -1,9 +1,7 @@
-import { createAgentCLI, type AgentCLI } from './runtime.js';
+import { createAgentCLI, type AgentCLI, type VFS, NodeVFS, SimpleMemory } from '../src/index.js';
 import { DemoFetch, DemoSearch } from './demo-adapters.js';
-import { SimpleMemory } from './memory.js';
-import { RootedVFS } from './vfs.js';
 
-export async function seedVfs(vfs: RootedVFS): Promise<void> {
+export async function seedVfs(vfs: VFS): Promise<void> {
   await vfs.writeBytes(
     '/notes/todo.txt',
     new TextEncoder().encode(
@@ -93,7 +91,7 @@ export function seedMemory(memory: SimpleMemory): void {
 }
 
 export async function buildDemoRuntime(rootDir = './agent_state'): Promise<AgentCLI> {
-  const vfs = new RootedVFS(rootDir);
+  const vfs = new NodeVFS(rootDir);
   await seedVfs(vfs);
 
   const searchDocs = [

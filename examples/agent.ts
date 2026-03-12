@@ -16,7 +16,8 @@ import readline from 'node:readline/promises';
 import process from 'node:process';
 
 import { buildDemoRuntime } from './demo-runtime.js';
-import type { AgentCLI } from './runtime.js';
+import type { AgentCLI } from '../src/index.js';
+import { buildToolDefinition } from '../src/index.js';
 
 /* ------------------------------------------------------------------ */
 /*  Types for the OpenAI chat completions response                    */
@@ -57,7 +58,7 @@ interface ChatMessage {
 
 function loadEnvFile(): void {
   try {
-    // From dist/src/ go up two levels to project root
+    // From dist/examples/ go up two levels to project root
     const thisDir = path.dirname(fileURLToPath(import.meta.url));
     const envPath = path.resolve(thisDir, '..', '..', '.env');
     const envText = readFileSync(envPath, 'utf-8');
@@ -96,39 +97,13 @@ function loadConfig(): AgentConfig {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Tool definition (single tool: run)                                */
-/* ------------------------------------------------------------------ */
-
-function buildToolDef(runtime: AgentCLI) {
-  return [
-    {
-      type: 'function' as const,
-      function: {
-        name: 'run',
-        description: runtime.buildToolDescription(),
-        parameters: {
-          type: 'object',
-          properties: {
-            command: {
-              type: 'string',
-              description: 'The CLI command to execute.',
-            },
-          },
-          required: ['command'],
-        },
-      },
-    },
-  ];
-}
-
-/* ------------------------------------------------------------------ */
 /*  Chat completions call                                             */
 /* ------------------------------------------------------------------ */
 
 async function chatCompletion(
   config: AgentConfig,
   messages: ChatMessage[],
-  tools: ReturnType<typeof buildToolDef>,
+  tools: ReturnType<typeof buildToolDefinition>[],
 ): Promise<ChatCompletionResponse> {
   const url = `${config.baseUrl}/chat/completions`;
   let res: Response;
@@ -170,7 +145,7 @@ async function agentLoop(
   config: ReturnType<typeof loadConfig>,
   userMessage: string,
   messages: ChatMessage[],
-  tools: ReturnType<typeof buildToolDef>,
+  tools: ReturnType<typeof buildToolDefinition>[],
 ): Promise<string> {
   messages.push({ role: 'user', content: userMessage });
 
@@ -227,7 +202,7 @@ async function main(): Promise<void> {
   loadEnvFile();
   const config = loadConfig();
   const runtime = await buildDemoRuntime();
-  const tools = buildToolDef(runtime);
+  const tools = [buildToolDefinition(runtime)];
 
   const systemPrompt = [
     'You are a helpful agent with access to a single tool called `run`.',

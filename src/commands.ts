@@ -1,6 +1,6 @@
 import type { MaybePromise, CommandResult, ToolAdapters } from './types.js';
 import { err, ok, okBytes } from './types.js';
-import type { RootedVFS } from './vfs.js';
+import type { VFS } from './vfs/interface.js';
 import { SimpleMemory } from './memory.js';
 import {
   decodeText,
@@ -50,7 +50,7 @@ export class CommandRegistry {
 }
 
 export interface CommandContext {
-  vfs: RootedVFS;
+  vfs: VFS;
   adapters: ToolAdapters;
   memory: SimpleMemory;
   registry: CommandRegistry;

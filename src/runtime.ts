@@ -4,10 +4,10 @@ import { SimpleMemory } from './memory.js';
 import type { CommandResult, ToolAdapters } from './types.js';
 import { err, ok } from './types.js';
 import { formatDuration, formatSize, looksBinary, decodeText, splitLines } from './utils.js';
-import { RootedVFS } from './vfs.js';
+import type { VFS } from './vfs/interface.js';
 
 export interface AgentCLIOptions {
-  vfs: RootedVFS;
+  vfs: VFS;
   adapters?: ToolAdapters;
   memory?: SimpleMemory;
 }

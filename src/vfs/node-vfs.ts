@@ -2,57 +2,14 @@ import { existsSync, mkdirSync } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
-export interface VFileInfo {
-  path: string;
-  exists: boolean;
-  isDir: boolean;
-  size: number;
-  mediaType: string;
-  modifiedEpochMs: number;
-}
-
-const MIME_BY_EXTENSION: Record<string, string> = {
-  '.csv': 'text/csv',
-  '.gif': 'image/gif',
-  '.html': 'text/html',
-  '.jpeg': 'image/jpeg',
-  '.jpg': 'image/jpeg',
-  '.json': 'application/json',
-  '.md': 'text/markdown',
-  '.pdf': 'application/pdf',
-  '.png': 'image/png',
-  '.svg': 'image/svg+xml',
-  '.txt': 'text/plain',
-  '.webp': 'image/webp',
-  '.xml': 'application/xml',
-  '.yaml': 'application/yaml',
-  '.yml': 'application/yaml',
-};
-
-interface DirentLike {
-  name: string;
-  isDirectory(): boolean;
-}
-
-interface StatLike {
-  isDirectory(): boolean;
-  size: number;
-  mtimeMs: number;
-}
+import type { VFS, VFileInfo } from './interface.js';
+import { guessMediaType } from './interface.js';
 
 function pathExists(target: string): boolean {
   return existsSync(target);
 }
 
-function guessMediaType(fileName: string, isDir: boolean): string {
-  if (isDir) {
-    return 'inode/directory';
-  }
-  const extension = path.extname(fileName).toLowerCase();
-  return MIME_BY_EXTENSION[extension] ?? 'application/octet-stream';
-}
-
-export class RootedVFS {
+export class NodeVFS implements VFS {
   public readonly rootDir: string;
 
   constructor(rootDir: string) {
@@ -86,7 +43,7 @@ export class RootedVFS {
 
   async isDir(inputPath: string): Promise<boolean> {
     try {
-      const stats = (await fs.stat(this.resolve(inputPath))) as StatLike;
+      const stats = await fs.stat(this.resolve(inputPath));
       return stats.isDirectory();
     } catch {
       return false;
@@ -104,12 +61,12 @@ export class RootedVFS {
     if (!pathExists(target)) {
       throw new Error(`ENOENT:${this.normalize(inputPath)}`);
     }
-    const stats = (await fs.stat(target)) as StatLike;
+    const stats = await fs.stat(target);
     if (!stats.isDirectory()) {
       throw new Error(`ENOTDIR:${this.normalize(inputPath)}`);
     }
 
-    const entries = (await fs.readdir(target, { withFileTypes: true })) as DirentLike[];
+    const entries = await fs.readdir(target, { withFileTypes: true });
     entries.sort((a, b) => {
       const aDir = a.isDirectory();
       const bDir = b.isDirectory();
@@ -127,11 +84,11 @@ export class RootedVFS {
     if (!pathExists(target)) {
       throw new Error(`ENOENT:${this.normalize(inputPath)}`);
     }
-    const stats = (await fs.stat(target)) as StatLike;
+    const stats = await fs.stat(target);
     if (stats.isDirectory()) {
       throw new Error(`EISDIR:${this.normalize(inputPath)}`);
     }
-    return (await fs.readFile(target)) as Uint8Array;
+    return new Uint8Array(await fs.readFile(target));
   }
 
   async readText(inputPath: string): Promise<string> {
@@ -171,7 +128,7 @@ export class RootedVFS {
     if (!pathExists(srcPath)) {
       throw new Error(`ENOENT:${this.normalize(src)}`);
     }
-    const srcStats = (await fs.stat(srcPath)) as StatLike;
+    const srcStats = await fs.stat(srcPath);
     const dstPath = this.resolve(dst);
     await fs.mkdir(path.dirname(dstPath), { recursive: true });
 
@@ -206,7 +163,7 @@ export class RootedVFS {
       if (!message.includes('EXDEV')) {
         throw error;
       }
-      const srcStats = (await fs.stat(srcPath)) as StatLike;
+      const srcStats = await fs.stat(srcPath);
       if (srcStats.isDirectory()) {
         await fs.cp(srcPath, dstPath, { recursive: true, force: true });
         await fs.rm(srcPath, { recursive: true, force: false });
@@ -232,7 +189,7 @@ export class RootedVFS {
       };
     }
 
-    const stats = (await fs.stat(target)) as StatLike;
+    const stats = await fs.stat(target);
     return {
       path: this.normalize(inputPath),
       exists: true,
@@ -243,3 +200,6 @@ export class RootedVFS {
     };
   }
 }
+
+/** @deprecated Use NodeVFS instead */
+export { NodeVFS as RootedVFS };
