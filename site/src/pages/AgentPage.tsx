@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { sourceBaseUrl } from '../config';
-import { createDemoRuntime } from '../runtime/create-runtime';
+import { closeRuntime, createDemoRuntime } from '../runtime/create-runtime';
 import {
   createAgentSession,
   createBrowserConfig,
@@ -49,15 +49,23 @@ export default function AgentPage({ example }: { example: ExampleDef }) {
   // Initialize runtime
   useEffect(() => {
     let cancelled = false;
+    let createdRuntime: AgentCLI | null = null;
     createDemoRuntime()
       .then((rt) => {
-        if (!cancelled) setRuntime(rt);
+        createdRuntime = rt;
+        if (!cancelled) {
+          setRuntime(rt);
+          return;
+        }
+
+        closeRuntime(rt);
       })
       .catch((err: unknown) => {
         if (!cancelled) setRuntimeError(err instanceof Error ? err.message : String(err));
       });
     return () => {
       cancelled = true;
+      closeRuntime(createdRuntime);
     };
   }, []);
 
@@ -130,7 +138,12 @@ export default function AgentPage({ example }: { example: ExampleDef }) {
         </h1>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{example.description}</p>
         <p style={{ fontSize: '0.8rem', marginTop: '0.25rem' }}>
-          <a href={sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-muted)' }}>
+          <a
+            href={sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'var(--text-muted)' }}
+          >
             View source
           </a>
         </p>
@@ -138,8 +151,8 @@ export default function AgentPage({ example }: { example: ExampleDef }) {
 
       {/* Experimental warning */}
       <div style={warningStyle}>
-        <strong>Experimental</strong> &mdash; Your API key is sent directly from your browser to the provider&apos;s
-        API. This is for development and testing only. Never use production API keys.
+        <strong>Experimental</strong> &mdash; Your API key is sent directly from your browser to the
+        provider&apos;s API. This is for development and testing only. Never use production API keys.
       </div>
 
       {/* Runtime error */}
@@ -153,17 +166,26 @@ export default function AgentPage({ example }: { example: ExampleDef }) {
       {/* Config panel */}
       <div style={configPanelStyle}>
         <div
-          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            cursor: 'pointer',
+          }}
           onClick={() => setConfigCollapsed(!configCollapsed)}
         >
           <h3 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', margin: 0 }}>
             Configuration {configCollapsed ? '(click to expand)' : ''}
           </h3>
-          <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{configCollapsed ? '+' : '-'}</span>
+          <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+            {configCollapsed ? '+' : '-'}
+          </span>
         </div>
 
         {!configCollapsed && (
-          <div style={{ marginTop: '0.75rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          <div
+            style={{ marginTop: '0.75rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}
+          >
             <label style={labelStyle}>
               OpenAI API Key
               <input
@@ -181,7 +203,7 @@ export default function AgentPage({ example }: { example: ExampleDef }) {
                 type="text"
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
-                placeholder="gpt-5.3-chat-latest"
+                placeholder="gpt-5.2-chat-latest"
                 style={inputStyle}
               />
             </label>
@@ -203,7 +225,9 @@ export default function AgentPage({ example }: { example: ExampleDef }) {
       {/* Chat messages */}
       <div style={chatContainerStyle}>
         {messages.length === 0 && (
-          <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', padding: '2rem' }}>
+          <div
+            style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', padding: '2rem' }}
+          >
             Enter your API key above, then ask the agent a question.
             <br />
             The runtime is pre-loaded with demo files, search, and fetch adapters.

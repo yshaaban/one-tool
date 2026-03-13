@@ -64,14 +64,10 @@ export interface AgentTurnResult {
 // Defaults (OpenAI only — other providers don't support browser CORS)
 // ---------------------------------------------------------------------------
 
-const DEFAULT_MODEL = 'gpt-5.3-chat-latest';
+const DEFAULT_MODEL = 'gpt-5.2-chat-latest';
 const DEFAULT_BASE_URL = 'https://api.openai.com/v1';
 
-export function createBrowserConfig(
-  apiKey: string,
-  model?: string,
-  baseUrl?: string,
-): AgentConfig {
+export function createBrowserConfig(apiKey: string, model?: string, baseUrl?: string): AgentConfig {
   return {
     apiKey,
     model: model || DEFAULT_MODEL,
@@ -87,7 +83,10 @@ function normalizeBaseUrl(baseUrl: string): string {
 // System prompt
 // ---------------------------------------------------------------------------
 
-function buildSystemPrompt(runtime: AgentCLI, promptVariant: ToolDescriptionVariant = 'full-tool-description'): string {
+function buildSystemPrompt(
+  runtime: AgentCLI,
+  promptVariant: ToolDescriptionVariant = 'full-tool-description',
+): string {
   const toolDescription = runtime.buildToolDescription(promptVariant);
   const lines = [
     'You are a helpful agent with access to a single tool called `run`.',
@@ -170,14 +169,14 @@ async function chatCompletion(
     const body = await res.text();
     const transient = res.status === 429 || res.status >= 500;
     if (!transient || attempt === 2) {
-      throw new Error(`${OpenAI} API ${res.status}: ${body}`);
+      throw new Error(`${config.baseUrl} API ${res.status}: ${body}`);
     }
 
     const retryAfterMs = parseRetryAfter(res.headers.get('retry-after')) ?? 500 * (attempt + 1);
     await delayMs(retryAfterMs);
   }
 
-  throw new Error(`failed to call ${OpenAI} after retries`);
+  throw new Error(`failed to call ${config.baseUrl} after retries`);
 }
 
 // ---------------------------------------------------------------------------

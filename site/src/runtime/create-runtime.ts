@@ -198,3 +198,10 @@ export async function createRuntimeForExample(kind: ExampleRuntimeKind): Promise
       return createBrowserPersistenceRuntime();
   }
 }
+
+export function closeRuntime(runtime: AgentCLI | null | undefined): void {
+  const vfs = runtime?.ctx.vfs;
+  if (vfs && 'close' in vfs && typeof vfs.close === 'function') {
+    vfs.close();
+  }
+}

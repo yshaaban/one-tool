@@ -2,12 +2,8 @@ import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { useParams, Link } from 'react-router-dom';
 import { getExample } from '../examples';
 import { sourceBaseUrl } from '../config';
-import {
-  TerminalComponent,
-  type TerminalHandle,
-  type TerminalPlaybackOptions,
-} from '../components/Terminal';
-import { createRuntimeForExample } from '../runtime/create-runtime';
+import { TerminalComponent, type TerminalHandle, type TerminalPlaybackOptions } from '../components/Terminal';
+import { closeRuntime, createRuntimeForExample } from '../runtime/create-runtime';
 import type { AgentCLI, RunExecution } from 'one-tool/browser';
 
 const AgentPage = lazy(() => import('./AgentPage'));
@@ -26,6 +22,9 @@ function ExamplePage() {
   const [runtimeNonce, setRuntimeNonce] = useState(0);
   const terminalRef = useRef<TerminalHandle | null>(null);
   const sourceUrl = example ? new URL(example.sourceFile, sourceBaseUrl).href : '';
+  const handleTerminalReady = useCallback(() => {
+    setTerminalReady(true);
+  }, []);
 
   useEffect(() => {
     if (!example?.browserRunnable || !example.runtimeKind) {
@@ -51,10 +50,7 @@ function ExamplePage() {
       .then((nextRuntime) => {
         createdRuntime = nextRuntime;
         if (cancelled) {
-          const vfs = nextRuntime.ctx.vfs;
-          if ('close' in vfs && typeof vfs.close === 'function') {
-            vfs.close();
-          }
+          closeRuntime(nextRuntime);
           return;
         }
         setRuntime(nextRuntime);
@@ -67,10 +63,7 @@ function ExamplePage() {
 
     return () => {
       cancelled = true;
-      const vfs = createdRuntime?.ctx.vfs;
-      if (vfs && 'close' in vfs && typeof vfs.close === 'function') {
-        vfs.close();
-      }
+      closeRuntime(createdRuntime);
     };
   }, [example, runtimeNonce]);
 
@@ -108,7 +101,9 @@ function ExamplePage() {
   }, [example, isAutoplaying, runExampleStep, stepIndex]);
 
   useEffect(() => {
-    if (!runtime || !terminalReady || runtimeError || !example?.steps?.length || !example.autoPlay) {
+    const currentExample = example;
+    const steps = example?.steps;
+    if (!runtime || !terminalReady || runtimeError || !steps?.length || !currentExample?.autoPlay) {
       return;
     }
 
@@ -117,16 +112,16 @@ function ExamplePage() {
 
     void (async () => {
       await sleep(AUTO_PLAY_START_DELAY_MS);
-      for (let index = 0; index < example.steps.length; index += 1) {
+      for (let index = 0; index < steps.length; index += 1) {
         if (cancelled) {
           return;
         }
 
         await runExampleStep(index, { animate: true, typingDelayMs: AUTO_PLAY_TYPING_DELAY_MS });
-        if (cancelled || index >= example.steps.length - 1) {
+        if (cancelled || index >= steps.length - 1) {
           continue;
         }
-        await sleep(example.stepDelayMs ?? 800);
+        await sleep(currentExample.stepDelayMs ?? 800);
       }
     })().finally(() => {
       if (!cancelled) {
@@ -206,10 +201,7 @@ function ExamplePage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {example.steps.map((step, i) => {
                   return (
-                    <div
-                      key={i}
-                      style={getStepCardStyle(i, stepIndex, runningStepIndex)}
-                    >
+                    <div key={i} style={getStepCardStyle(i, stepIndex, runningStepIndex)}>
                       <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', minWidth: '1.5rem' }}>
                         {getStepStatusLabel(i, stepIndex, runningStepIndex)}
                       </span>
@@ -228,7 +220,7 @@ function ExamplePage() {
                     style={buttonStyle}
                     disabled={!runtime || Boolean(runtimeError) || isAutoplaying || runningStepIndex !== null}
                   >
-                    {isAutoplaying ? 'Auto-playing...' : runningStepIndex !== null ? 'Running step...' : 'Run next step'}
+                    {getRunStepButtonLabel(isAutoplaying, runningStepIndex)}
                   </button>
                 )}
                 {(stepIndex > 0 || isAutoplaying) && (
@@ -255,8 +247,15 @@ function ExamplePage() {
                 ref={terminalRef}
                 runtime={runtime}
                 readOnly={isAutoplaying}
-                onReady={() => setTerminalReady(true)}
+                onReady={handleTerminalReady}
               />
+            </div>
+          ) : runtimeError ? (
+            <div style={nonInteractiveStyle}>
+              <p>The example runtime could not be initialized.</p>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                Reload the page to retry, or inspect the browser console for details.
+              </p>
             </div>
           ) : (
             <div className="loading">Initializing runtime...</div>
@@ -297,7 +296,11 @@ function formatDetailedExecution(execution: RunExecution): string {
   return lines.join('\n');
 }
 
-function getStepCardStyle(index: number, stepIndex: number, runningStepIndex: number | null): React.CSSProperties {
+function getStepCardStyle(
+  index: number,
+  stepIndex: number,
+  runningStepIndex: number | null,
+): React.CSSProperties {
   const active = index === runningStepIndex;
   const completed = index < stepIndex;
 
@@ -328,6 +331,18 @@ function getStepStatusLabel(index: number, stepIndex: number, runningStepIndex: 
     return '\u2026';
   }
   return `${index + 1}.`;
+}
+
+function getRunStepButtonLabel(isAutoplaying: boolean, runningStepIndex: number | null): string {
+  if (isAutoplaying) {
+    return 'Auto-playing...';
+  }
+
+  if (runningStepIndex !== null) {
+    return 'Running step...';
+  }
+
+  return 'Run next step';
 }
 
 const containerStyle: React.CSSProperties = {

@@ -45,8 +45,18 @@ function sleep(ms: number): Promise<void> {
   });
 }
 
+function ringBell(term: XTerm): void {
+  term.write('\x07');
+}
+
 function isPathToken(token: string): boolean {
-  return token === '' || token.startsWith('/') || token.startsWith('./') || token.startsWith('../') || token.includes('/');
+  return (
+    token === '' ||
+    token.startsWith('/') ||
+    token.startsWith('./') ||
+    token.startsWith('../') ||
+    token.includes('/')
+  );
 }
 
 function getCommonPrefix(values: readonly string[]): string {
@@ -103,7 +113,10 @@ function buildAutocompleteInput(input: string, tokenStart: number, replacement: 
 }
 
 async function getCommandMatches(runtime: AgentCLI, partial: string): Promise<CompletionMatch[]> {
-  const names = runtime.registry.names().filter((name) => name.startsWith(partial)).sort();
+  const names = runtime.registry
+    .names()
+    .filter((name) => name.startsWith(partial))
+    .sort();
   return names.map((name) => ({
     replacement: `${name} `,
     display: name,
@@ -162,6 +175,7 @@ export const TerminalComponent = forwardRef<TerminalHandle, TerminalProps>(funct
   const historyIndexRef = useRef(-1);
   const busyRef = useRef(false);
   const readOnlyRef = useRef(readOnly);
+  const onReadyRef = useRef(onReady);
   const autocompleteStateRef = useRef<{ input: string; showedSuggestions: boolean }>({
     input: '',
     showedSuggestions: false,
@@ -170,6 +184,10 @@ export const TerminalComponent = forwardRef<TerminalHandle, TerminalProps>(funct
   useEffect(() => {
     readOnlyRef.current = readOnly;
   }, [readOnly]);
+
+  useEffect(() => {
+    onReadyRef.current = onReady;
+  }, [onReady]);
 
   const renderInputLine = useCallback((input: string) => {
     const term = termRef.current;
@@ -260,10 +278,17 @@ export const TerminalComponent = forwardRef<TerminalHandle, TerminalProps>(funct
     const currentInput = inputRef.current;
     const tokenStart = getTokenStart(currentInput);
     const currentToken = currentInput.slice(tokenStart);
-    const matches = await getAutocompleteMatches(runtime, currentInput);
+
+    let matches: CompletionMatch[];
+    try {
+      matches = await getAutocompleteMatches(runtime, currentInput);
+    } catch {
+      ringBell(term);
+      return;
+    }
 
     if (matches.length === 0) {
-      term.write('\x07');
+      ringBell(term);
       return;
     }
 
@@ -293,7 +318,7 @@ export const TerminalComponent = forwardRef<TerminalHandle, TerminalProps>(funct
     }
 
     autocompleteStateRef.current = { input: currentInput, showedSuggestions: false };
-    term.write('\x07');
+    ringBell(term);
   }, [renderInputLine, resetAutocompleteState, runtime, showSuggestions]);
 
   const runCommandInTerminal = useCallback(
@@ -412,7 +437,7 @@ export const TerminalComponent = forwardRef<TerminalHandle, TerminalProps>(funct
       term.writeln('');
     }
     renderInputLine('');
-    onReady?.();
+    onReadyRef.current?.();
 
     term.onKey(({ key, domEvent }) => {
       if (busyRef.current || readOnlyRef.current) return;
@@ -490,7 +515,7 @@ export const TerminalComponent = forwardRef<TerminalHandle, TerminalProps>(funct
       term.dispose();
       termRef.current = null;
     };
-  }, [executeTypedCommand, handleAutocomplete, onReady, renderInputLine, resetAutocompleteState, welcomeMessage]);
+  }, [executeTypedCommand, handleAutocomplete, renderInputLine, resetAutocompleteState, welcomeMessage]);
 
   return (
     <div
