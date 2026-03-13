@@ -1,10 +1,11 @@
+import type { CommandResult } from '../../types.js';
 import { err, ok, okBytes } from '../../types.js';
 import { errorMessage, formatSize, looksBinary, parentPath } from '../../utils.js';
 import { toVfsError } from '../../vfs/errors.js';
 import { baseName } from '../../vfs/path-utils.js';
 import type { CommandContext, CommandSpec } from '../core.js';
 import { blockingParentPath, errorCode, errorPath, firstFileInPath } from '../shared/errors.js';
-import { contentFromArgsOrStdin } from '../shared/io.js';
+import { contentFromArgsOrStdin, materializedLimitError } from '../shared/io.js';
 
 function resourceLimitMessage(commandName: string, caught: unknown): string | null {
   const vfsError = toVfsError(caught);
@@ -23,6 +24,18 @@ function resourceLimitMessage(commandName: string, caught: unknown): string | nu
   return `${commandName}: resource limit exceeded (${limitKind}) at ${vfsError.path}`;
 }
 
+function escapePathMessage(commandName: string, caught: unknown, fallbackPath: string): string {
+  return `${commandName}: path escapes workspace root: ${errorPath(caught) || fallbackPath}`;
+}
+
+function escapePathResult(commandName: string, caught: unknown, fallbackPath: string): CommandResult | null {
+  if (errorCode(caught) !== 'EESCAPE') {
+    return null;
+  }
+
+  return err(escapePathMessage(commandName, caught, fallbackPath));
+}
+
 async function cmdLs(ctx: CommandContext, args: string[], stdin: Uint8Array) {
   if (stdin.length > 0) {
     return err('ls: does not accept stdin');
@@ -39,6 +52,9 @@ async function cmdLs(ctx: CommandContext, args: string[], stdin: Uint8Array) {
     const code = errorCode(caught);
     if (code === 'ENOENT') {
       return err(`ls: path not found: ${ctx.vfs.normalize(target)}`);
+    }
+    if (code === 'EESCAPE') {
+      return err(escapePathMessage('ls', caught, ctx.vfs.normalize(target)));
     }
     if (code === 'ENOTDIR') {
       const normalized = ctx.vfs.normalize(target);
@@ -68,20 +84,28 @@ async function cmdStat(ctx: CommandContext, args: string[], stdin: Uint8Array) {
     return err('stat: usage: stat <path>');
   }
 
-  const info = await ctx.vfs.stat(args[0]!);
-  if (!info.exists) {
-    return err(`stat: path not found: ${ctx.vfs.normalize(args[0]!)}`);
+  try {
+    const info = await ctx.vfs.stat(args[0]!);
+    if (!info.exists) {
+      return err(`stat: path not found: ${ctx.vfs.normalize(args[0]!)}`);
+    }
+
+    const lines = [
+      `path: ${info.path}`,
+      `type: ${info.isDir ? 'directory' : 'file'}`,
+      `size: ${info.size} bytes`,
+      `media_type: ${info.mediaType}`,
+      `modified_epoch_ms: ${info.modifiedEpochMs}`,
+    ];
+
+    return ok(lines.join('\n'));
+  } catch (caught) {
+    const escapeResult = escapePathResult('stat', caught, ctx.vfs.normalize(args[0]!));
+    if (escapeResult !== null) {
+      return escapeResult;
+    }
+    return err(`stat: ${errorMessage(caught)}`);
   }
-
-  const lines = [
-    `path: ${info.path}`,
-    `type: ${info.isDir ? 'directory' : 'file'}`,
-    `size: ${info.size} bytes`,
-    `media_type: ${info.mediaType}`,
-    `modified_epoch_ms: ${info.modifiedEpochMs}`,
-  ];
-
-  return ok(lines.join('\n'));
 }
 
 export const stat: CommandSpec = {
@@ -107,22 +131,35 @@ async function cmdCat(ctx: CommandContext, args: string[], stdin: Uint8Array) {
   }
 
   const target = args[0]!;
-  const info = await ctx.vfs.stat(target);
   const normalized = ctx.vfs.normalize(target);
 
-  if (!info.exists) {
-    return err(`cat: file not found: ${normalized}. Use: ls ${parentPath(target)}`);
-  }
-  if (info.isDir) {
-    return err(`cat: path is a directory: ${normalized}. Use: ls ${normalized}`);
-  }
+  try {
+    const info = await ctx.vfs.stat(target);
 
-  const raw = await ctx.vfs.readBytes(target);
-  if (looksBinary(raw)) {
-    return err(`cat: binary file (${formatSize(raw.length)}): ${normalized}. Use: stat ${normalized}`);
-  }
+    if (!info.exists) {
+      return err(`cat: file not found: ${normalized}. Use: ls ${parentPath(target)}`);
+    }
+    if (info.isDir) {
+      return err(`cat: path is a directory: ${normalized}. Use: ls ${normalized}`);
+    }
+    const limitError = materializedLimitError(ctx, 'cat', normalized, info.size);
+    if (limitError !== undefined) {
+      return limitError;
+    }
 
-  return okBytes(raw, 'text/plain');
+    const raw = await ctx.vfs.readBytes(target);
+    if (looksBinary(raw)) {
+      return err(`cat: binary file (${formatSize(raw.length)}): ${normalized}. Use: stat ${normalized}`);
+    }
+
+    return okBytes(raw, 'text/plain');
+  } catch (caught) {
+    const escapeResult = escapePathResult('cat', caught, normalized);
+    if (escapeResult !== null) {
+      return escapeResult;
+    }
+    return err(`cat: ${errorMessage(caught)}`);
+  }
 }
 
 export const cat: CommandSpec = {
@@ -155,6 +192,10 @@ async function cmdWrite(ctx: CommandContext, args: string[], stdin: Uint8Array) 
     const limitMessage = resourceLimitMessage('write', caught);
     if (limitMessage) {
       return err(limitMessage);
+    }
+    const escapeResult = escapePathResult('write', caught, ctx.vfs.normalize(args[0]!));
+    if (escapeResult !== null) {
+      return escapeResult;
     }
     if (code === 'EISDIR') {
       const normalized = ctx.vfs.normalize(args[0]!);
@@ -208,6 +249,10 @@ async function cmdAppend(ctx: CommandContext, args: string[], stdin: Uint8Array)
     if (limitMessage) {
       return err(limitMessage);
     }
+    const escapeResult = escapePathResult('append', caught, ctx.vfs.normalize(args[0]!));
+    if (escapeResult !== null) {
+      return escapeResult;
+    }
     if (code === 'EISDIR') {
       const normalized = ctx.vfs.normalize(args[0]!);
       return err(`append: path is a directory: ${normalized}. Use: ls ${normalized}`);
@@ -256,6 +301,10 @@ async function cmdMkdir(ctx: CommandContext, args: string[], stdin: Uint8Array) 
     if (limitMessage) {
       return err(limitMessage);
     }
+    const escapeResult = escapePathResult('mkdir', caught, ctx.vfs.normalize(args[0]!));
+    if (escapeResult !== null) {
+      return escapeResult;
+    }
     if (code === 'EEXIST') {
       return err(`mkdir: path already exists: ${ctx.vfs.normalize(args[0]!)}`);
     }
@@ -297,6 +346,10 @@ async function cmdCp(ctx: CommandContext, args: string[], stdin: Uint8Array) {
     const limitMessage = resourceLimitMessage('cp', caught);
     if (limitMessage) {
       return err(limitMessage);
+    }
+    const escapeResult = escapePathResult('cp', caught, ctx.vfs.normalize(args[1]!));
+    if (escapeResult !== null) {
+      return escapeResult;
     }
     if (code === 'ENOENT') {
       return err(`cp: source not found: ${ctx.vfs.normalize(args[0]!)}`);
@@ -351,6 +404,10 @@ async function cmdMv(ctx: CommandContext, args: string[], stdin: Uint8Array) {
     if (limitMessage) {
       return err(limitMessage);
     }
+    const escapeResult = escapePathResult('mv', caught, ctx.vfs.normalize(args[1]!));
+    if (escapeResult !== null) {
+      return escapeResult;
+    }
     if (code === 'ENOENT') {
       return err(`mv: source not found: ${ctx.vfs.normalize(args[0]!)}`);
     }
@@ -402,6 +459,10 @@ async function cmdRm(ctx: CommandContext, args: string[], stdin: Uint8Array) {
     const code = errorCode(caught);
     if (code === 'ENOENT') {
       return err(`rm: path not found: ${ctx.vfs.normalize(args[0]!)}`);
+    }
+    const escapeResult = escapePathResult('rm', caught, ctx.vfs.normalize(args[0]!));
+    if (escapeResult !== null) {
+      return escapeResult;
     }
     if (code === 'EROOT') {
       return err('rm: cannot delete root: /');
@@ -493,24 +554,33 @@ async function cmdFind(ctx: CommandContext, args: string[], stdin: Uint8Array) {
   }
 
   const startPath = targetPath ?? '/';
-  const startInfo = await ctx.vfs.stat(startPath);
   const normalizedStart = ctx.vfs.normalize(startPath);
 
-  if (!startInfo.exists) {
-    return err(`find: path not found: ${normalizedStart}`);
+  try {
+    const startInfo = await ctx.vfs.stat(startPath);
+
+    if (!startInfo.exists) {
+      return err(`find: path not found: ${normalizedStart}`);
+    }
+
+    const matches: string[] = [];
+    await collectFindMatches(
+      ctx,
+      normalizedStart,
+      startInfo.isDir,
+      0,
+      { maxDepth, typeFilter, namePattern },
+      matches,
+    );
+
+    return ok(matches.join('\n'));
+  } catch (caught) {
+    const escapeResult = escapePathResult('find', caught, normalizedStart);
+    if (escapeResult !== null) {
+      return escapeResult;
+    }
+    return err(`find: ${errorMessage(caught)}`);
   }
-
-  const matches: string[] = [];
-  await collectFindMatches(
-    ctx,
-    normalizedStart,
-    startInfo.isDir,
-    0,
-    { maxDepth, typeFilter, namePattern },
-    matches,
-  );
-
-  return ok(matches.join('\n'));
 }
 
 export const find: CommandSpec = {

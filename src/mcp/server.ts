@@ -25,7 +25,7 @@ export interface ConnectedMcpServer {
 }
 
 const DEFAULT_SERVER_NAME = 'one-tool';
-const DEFAULT_SERVER_VERSION = '0.1.0';
+const DEFAULT_SERVER_VERSION = process.env.npm_package_version ?? '0.1.0';
 
 export function createMcpServer(runtime: AgentCLI, options: McpServerOptions = {}): Server {
   const toolName = options.toolName ?? 'run';

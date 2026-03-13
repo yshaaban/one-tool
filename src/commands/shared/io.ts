@@ -2,6 +2,7 @@ import type { CommandResult } from '../../types.js';
 import { err, textDecoder, textEncoder } from '../../types.js';
 import { formatSize, looksBinary, parentPath } from '../../utils.js';
 import type { CommandContext, CommandSpec } from '../core.js';
+import { checkMaterializedByteLimit, formatMaterializedLimitMessage } from '../../execution-policy.js';
 
 export function renderHelp(spec: CommandSpec): string {
   return `${spec.name}: ${spec.summary}\nUsage: ${spec.usage}\n\n${spec.details}`;
@@ -26,6 +27,10 @@ export async function readTextFromFileOrStdin(
         error: err(`${commandName}: path is a directory: ${normalized}. Use: ls ${normalized}`),
       };
     }
+    const limitError = materializedLimitError(ctx, commandName, normalized, info.size);
+    if (limitError !== undefined) {
+      return { error: limitError };
+    }
     const raw = await ctx.vfs.readBytes(filePath);
     if (looksBinary(raw)) {
       return {
@@ -38,6 +43,10 @@ export async function readTextFromFileOrStdin(
   }
 
   if (stdin.length > 0) {
+    const limitError = materializedLimitError(ctx, commandName, 'stdin', stdin.length);
+    if (limitError !== undefined) {
+      return { error: limitError };
+    }
     if (looksBinary(stdin)) {
       return {
         error: err(
@@ -91,4 +100,20 @@ export function parseNFlag(
     };
   }
   return { value: parsed, remaining: args.slice(2) };
+}
+
+export function materializedLimitError(
+  ctx: CommandContext,
+  commandName: string,
+  subject: string,
+  actualBytes: number,
+): CommandResult | undefined {
+  const exceeded = checkMaterializedByteLimit(ctx.executionPolicy, actualBytes);
+  if (!exceeded) {
+    return undefined;
+  }
+
+  return err(formatMaterializedLimitMessage(commandName, subject, exceeded.actual, exceeded.limit), {
+    exitCode: 1,
+  });
 }

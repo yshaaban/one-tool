@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, type Stats } from 'node:fs';
+import { lstatSync, mkdirSync, realpathSync, type Stats } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
@@ -29,9 +29,10 @@ export class NodeVFS implements VFS {
   public readonly resourcePolicy: ResolvedVfsResourcePolicy;
 
   constructor(rootDir: string, options: NodeVFSOptions = {}) {
-    this.rootDir = path.resolve(rootDir);
+    const resolvedRoot = path.resolve(rootDir);
+    mkdirSync(resolvedRoot, { recursive: true });
+    this.rootDir = realpathSync(resolvedRoot);
     this.resourcePolicy = resolveVfsResourcePolicy(options.resourcePolicy);
-    mkdirSync(this.rootDir, { recursive: true });
   }
 
   normalize(inputPath: string): string {
@@ -55,7 +56,7 @@ export class NodeVFS implements VFS {
   }
 
   async exists(inputPath: string): Promise<boolean> {
-    return existsSync(this.resolve(inputPath));
+    return (await this.statPath(this.normalize(inputPath))) !== null;
   }
 
   async isDir(inputPath: string): Promise<boolean> {
@@ -98,7 +99,12 @@ export class NodeVFS implements VFS {
       throw vfsError('ENOTDIR', normalized);
     }
 
-    const entries = await fs.readdir(this.resolve(normalized), { withFileTypes: true });
+    const entries = (await fs.readdir(this.resolve(normalized), { withFileTypes: true })).filter(
+      function (entry) {
+        return !entry.isSymbolicLink();
+      },
+    );
+
     entries.sort(function (a, b) {
       const aDir = a.isDirectory();
       const bDir = b.isDirectory();
@@ -284,11 +290,44 @@ export class NodeVFS implements VFS {
   }
 
   private async statPath(normalizedPath: string): Promise<Stats | null> {
+    this.assertNoSymlinkTraversal(normalizedPath);
     const target = this.resolve(normalizedPath);
-    if (!existsSync(target)) {
-      return null;
+    try {
+      return await fs.stat(target);
+    } catch (caught) {
+      if (this.isNotFoundError(caught)) {
+        return null;
+      }
+      throw caught;
     }
-    return fs.stat(target);
+  }
+
+  private assertNoSymlinkTraversal(normalizedPath: string): void {
+    if (normalizedPath === '/') {
+      return;
+    }
+
+    let currentHostPath = this.rootDir;
+    let currentVirtualPath = '';
+
+    for (const segment of normalizedPath.split('/').filter(Boolean)) {
+      currentVirtualPath += `/${segment}`;
+      currentHostPath = path.join(currentHostPath, segment);
+
+      let stats: Stats;
+      try {
+        stats = lstatSync(currentHostPath);
+      } catch (caught) {
+        if (this.isNotFoundError(caught)) {
+          return;
+        }
+        throw caught;
+      }
+
+      if (stats.isSymbolicLink()) {
+        throw vfsError('EESCAPE', currentVirtualPath);
+      }
+    }
   }
 
   private async ensureDirectoryExists(normalizedPath: string): Promise<void> {
@@ -364,6 +403,10 @@ export class NodeVFS implements VFS {
         continue;
       }
 
+      if (entry.isSymbolicLink()) {
+        continue;
+      }
+
       if (entry.isFile()) {
         const stats = await fs.stat(childResolved);
         snapshot.files.set(childNormalized, Number(stats.size));
@@ -387,6 +430,15 @@ export class NodeVFS implements VFS {
       typeof caught === 'object' &&
       'code' in caught &&
       (caught as { code?: unknown }).code === 'EXDEV'
+    );
+  }
+
+  private isNotFoundError(caught: unknown): boolean {
+    return (
+      !!caught &&
+      typeof caught === 'object' &&
+      'code' in caught &&
+      (caught as { code?: unknown }).code === 'ENOENT'
     );
   }
 }

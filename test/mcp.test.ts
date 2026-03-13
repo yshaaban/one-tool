@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { McpError, type CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
 import { buildDemoRuntime } from '../examples/demo-runtime.js';
 import { MemoryVFS } from '../src/index.js';
@@ -99,6 +99,70 @@ test('createMcpServer marks failed command executions as tool errors', async fun
     assert.equal(result.isError, true);
     assert.equal(structuredContent.exitCode, 127);
     assert.match(getTextContent(result), /unknown command: missingcmd/);
+  } finally {
+    await Promise.all([client.close(), server.close()]);
+  }
+});
+
+test('createMcpServer rejects invalid tool arguments', async function (): Promise<void> {
+  const runtime = await buildDemoRuntime({ vfs: new MemoryVFS() });
+  const server = createMcpServer(runtime);
+  const client = new Client({
+    name: 'one-tool-mcp-test',
+    version: '1.0.0',
+  });
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+
+  await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+
+  try {
+    await assert.rejects(
+      async function (): Promise<unknown> {
+        return client.callTool({
+          name: 'run',
+          arguments: {
+            command: '',
+          },
+        });
+      },
+      function (caught: unknown): boolean {
+        assert.ok(caught instanceof McpError);
+        assert.match(caught.message, /requires a string command argument/);
+        return true;
+      },
+    );
+  } finally {
+    await Promise.all([client.close(), server.close()]);
+  }
+});
+
+test('createMcpServer rejects unknown tool names', async function (): Promise<void> {
+  const runtime = await buildDemoRuntime({ vfs: new MemoryVFS() });
+  const server = createMcpServer(runtime);
+  const client = new Client({
+    name: 'one-tool-mcp-test',
+    version: '1.0.0',
+  });
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+
+  await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+
+  try {
+    await assert.rejects(
+      async function (): Promise<unknown> {
+        return client.callTool({
+          name: 'missing',
+          arguments: {
+            command: 'help',
+          },
+        });
+      },
+      function (caught: unknown): boolean {
+        assert.ok(caught instanceof McpError);
+        assert.match(caught.message, /unknown tool: missing/);
+        return true;
+      },
+    );
   } finally {
     await Promise.all([client.close(), server.close()]);
   }

@@ -25,15 +25,20 @@ interface AgentCLIOptions {
   builtinCommands?: BuiltinCommandSelection | false;
   commands?: Iterable<CommandSpec>;
   outputLimits?: AgentCLIOutputLimits;
+  executionPolicy?: AgentCLIExecutionPolicy;
 }
 
 interface AgentCLIOutputLimits {
   maxLines?: number;
   maxBytes?: number;
 }
+
+interface AgentCLIExecutionPolicy {
+  maxMaterializedBytes?: number;
+}
 ```
 
-`maxLines` and `maxBytes` must be non-negative integers.
+`maxLines`, `maxBytes`, and `maxMaterializedBytes` must be non-negative integers.
 
 Default behavior:
 
@@ -42,6 +47,7 @@ Default behavior:
 - if you pass `commands`, they are registered after built-ins and replace built-ins with the same name
 - if you pass `registry`, it is used as-is and cannot be combined with `builtinCommands` or `commands`
 - if you pass `outputLimits`, they override the default 200-line / 50KB truncation policy
+- if you pass `executionPolicy.maxMaterializedBytes`, file-backed and adapter-backed commands fail before processing oversized inputs
 
 Examples:
 
@@ -82,6 +88,17 @@ const runtime = await createAgentCLI({
     excludeCommands: ['memory'],
   },
   commands: [myCommand],
+});
+```
+
+To cap materialized input size:
+
+```ts
+const limitedRuntime = await createAgentCLI({
+  vfs: new MemoryVFS(),
+  executionPolicy: {
+    maxMaterializedBytes: 64 * 1024,
+  },
 });
 ```
 
@@ -271,6 +288,23 @@ Use `createMcpServer(...)` when you want to attach a custom transport yourself.
 
 Use `serveStdioMcpServer(...)` when you want a ready-to-run stdio server for Claude Code, Claude Desktop, or other MCP clients.
 
+Example Claude Code `.mcp.json` entry:
+
+```json
+{
+  "mcpServers": {
+    "one-tool": {
+      "command": "node",
+      "args": ["./mcp-server.js"]
+    }
+  }
+}
+```
+
+Create `mcp-server.js` from the wrapper pattern shown below.
+
+`examples/reference/mcp-stdio.ts` is the maintained repo example for that wrapper.
+
 Example:
 
 ```ts
@@ -292,6 +326,19 @@ The exported MCP tool:
 - uses the same description variants as `buildToolDefinition(...)`
 - returns human-readable text in the MCP content blocks
 - also returns structured execution metadata derived from `runDetailed(...)`
+
+`structuredContent` includes:
+
+- `commandLine`
+- `exitCode`
+- `durationMs`
+- `contentType`
+- `stderr`
+- `stdoutMode`
+- optional `savedPath`, `totalBytes`, and `totalLines`
+- pipeline and command traces from `runDetailed(...)`
+
+It intentionally does not include raw intermediate stdout bodies for every command stage.
 
 See `examples/reference/mcp-stdio.ts` for a maintained reference example.
 

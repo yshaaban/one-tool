@@ -45,6 +45,22 @@ test('adapters: search renders an explicit empty result state', async () => {
   assert.equal(stdoutText(result), '(no results)');
 });
 
+test('adapters: search maps adapter errors instead of throwing', async () => {
+  const ctx = makeCtx({
+    adapters: {
+      search: {
+        async search() {
+          throw new Error('search backend unavailable');
+        },
+      },
+    },
+  });
+
+  const { result } = await runCommand('search', ['refund'], { ctx });
+  assert.equal(result.exitCode, 1);
+  assert.match(result.stderr, /search: adapter error: search backend unavailable/);
+});
+
 test('adapters: fetch reports missing adapters and renders JSON payloads', async () => {
   const missing = await runCommand('fetch', ['order:123']);
   assert.equal(missing.result.exitCode, 1);
@@ -133,4 +149,19 @@ test('adapters: fetch maps not-found and generic adapter errors', async () => {
   const generic = await runCommand('fetch', ['order:500'], { ctx: genericCtx });
   assert.equal(generic.result.exitCode, 1);
   assert.match(generic.result.stderr, /fetch: adapter error: gateway timeout/);
+
+  const codedNotFoundCtx = makeCtx({
+    adapters: {
+      fetch: {
+        async fetch() {
+          const error = new Error('missing order') as Error & { code?: string };
+          error.code = 'NOT_FOUND';
+          throw error;
+        },
+      },
+    },
+  });
+  const codedNotFound = await runCommand('fetch', ['order:404'], { ctx: codedNotFoundCtx });
+  assert.equal(codedNotFound.result.exitCode, 1);
+  assert.match(codedNotFound.result.stderr, /fetch: resource not found: order:404/);
 });

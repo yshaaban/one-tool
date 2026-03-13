@@ -132,7 +132,7 @@ test('loadConfig falls back to anthropic when it is the only configured provider
       const config = loadConfig();
       assert.equal(config.provider, 'anthropic');
       assert.equal(config.apiKey, 'anthropic-key');
-      assert.equal(config.model, 'claude-sonnet-4-6');
+      assert.equal(config.model, 'claude-haiku-4-5');
       assert.equal(config.baseUrl, 'https://api.anthropic.com/v1');
     },
   ));

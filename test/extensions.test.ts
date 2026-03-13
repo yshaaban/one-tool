@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
+import { mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import test from 'node:test';
 
+import { resolveExecutionPolicy } from '../src/execution-policy.js';
 import { createTestCommandContext } from '../src/testing/index.js';
 import {
   collectCommands,
@@ -15,7 +19,7 @@ import {
   usageError,
   type CommandGroup,
 } from '../src/extensions/index.js';
-import type { CommandSpec } from '../src/index.js';
+import { NodeVFS, type CommandSpec } from '../src/index.js';
 import { ok, textEncoder } from '../src/types.js';
 
 const echo: CommandSpec = {
@@ -61,6 +65,30 @@ test('extension error helpers return agent-friendly messages', async function ()
   } catch (caught) {
     const result = await formatVfsError(ctx, 'write', '/reports/output.txt', caught);
     assert.equal(result.stderr, 'write: parent is not a directory: /reports');
+  }
+});
+
+test('formatVfsError reports workspace-escape paths cleanly', async function (): Promise<void> {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'one-tool-extension-node-vfs-'));
+  const outsideRoot = await mkdtemp(path.join(os.tmpdir(), 'one-tool-extension-outside-'));
+
+  try {
+    const vfs = new NodeVFS(root);
+    await writeFile(path.join(outsideRoot, 'secret.txt'), 'secret');
+    await symlink(path.join(outsideRoot, 'secret.txt'), path.join(vfs.rootDir, 'secret-link.txt'));
+
+    const ctx = createTestCommandContext({ vfs });
+
+    try {
+      await ctx.vfs.readBytes('/secret-link.txt');
+      assert.fail('expected EESCAPE');
+    } catch (caught) {
+      const result = await formatVfsError(ctx, 'show', '/secret-link.txt', caught);
+      assert.equal(result.stderr, 'show: path escapes workspace root: /secret-link.txt');
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+    await rm(outsideRoot, { recursive: true, force: true });
   }
 });
 
@@ -112,6 +140,27 @@ test('readBytesInput reads binary input and validates missing input', async func
     assert.fail('expected readBytesInput to fail');
   }
   assert.equal(missing.error.stderr, "bytes: no input provided. Usage: see 'help bytes'");
+});
+
+test('input helpers enforce max materialized size', async function (): Promise<void> {
+  const ctx = createTestCommandContext({
+    executionPolicy: resolveExecutionPolicy({ maxMaterializedBytes: 3 }),
+  });
+  await ctx.vfs.writeBytes('/notes/todo.txt', textEncoder.encode('hello'));
+
+  const textResult = await readTextInput(ctx, 'show', '/notes/todo.txt', new Uint8Array());
+  assert.equal(textResult.ok, false);
+  if (textResult.ok) {
+    assert.fail('expected text helper to fail');
+  }
+  assert.match(textResult.error.stderr, /show: input exceeds max materialized size/);
+
+  const bytesResult = await readBytesInput(ctx, 'bytes', undefined, textEncoder.encode('hello'));
+  assert.equal(bytesResult.ok, false);
+  if (bytesResult.ok) {
+    assert.fail('expected bytes helper to fail');
+  }
+  assert.match(bytesResult.error.stderr, /bytes: input exceeds max materialized size/);
 });
 
 test('readJsonInput parses JSON and reports invalid documents', async function (): Promise<void> {

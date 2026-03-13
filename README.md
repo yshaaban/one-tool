@@ -394,11 +394,11 @@ Full API reference: [`docs/api.md`](docs/api.md)
 
 All backends implement the same `VFS` interface.
 
-| Backend      | Best for                       | Persistence                         | Notes                                |
-| ------------ | ------------------------------ | ----------------------------------- | ------------------------------------ |
-| `NodeVFS`    | server/runtime agents          | host filesystem under a chosen root | safest default for Node integrations |
-| `MemoryVFS`  | tests, demos, ephemeral agents | none                                | fast and deterministic               |
-| `BrowserVFS` | browser agents                 | IndexedDB                           | persistent client-side filesystem    |
+| Backend      | Best for                       | Persistence                         | Notes                                                                    |
+| ------------ | ------------------------------ | ----------------------------------- | ------------------------------------------------------------------------ |
+| `NodeVFS`    | server/runtime agents          | host filesystem under a chosen root | rooted host storage; hides symlink entries and rejects symlink traversal |
+| `MemoryVFS`  | tests, demos, ephemeral agents | none                                | fast and deterministic                                                   |
+| `BrowserVFS` | browser agents                 | IndexedDB                           | persistent client-side filesystem                                        |
 
 Full interface, backend behavior, and workspace model: [`docs/vfs.md`](docs/vfs.md)
 
@@ -433,6 +433,7 @@ What it does:
 
 - roots all file paths under `/`
 - blocks path escape through normalization
+- rejects symlink traversal inside `NodeVFS`
 - rejects shell features such as redirection, subshells, backticks, and environment expansion
 - never spawns host processes
 - routes network access through explicit developer-supplied adapters
@@ -440,6 +441,7 @@ What it does:
 What still matters:
 
 - `NodeVFS` touches a real host directory under the root you choose
+- storage policies and output truncation do not by themselves cap how much command input may be materialized; use `executionPolicy.maxMaterializedBytes` when you need that bound
 - `fetch` and `search` can reach real systems if your adapters do
 - custom commands can do anything your code does
 

@@ -63,7 +63,7 @@ OPENAI_MODEL=gpt-5.2
 # Anthropic (OpenAI-compatible endpoint)
 AGENT_PROVIDER=anthropic
 ANTHROPIC_API_KEY=sk-ant-...
-ANTHROPIC_MODEL=claude-sonnet-4-6
+ANTHROPIC_MODEL=claude-haiku-4-5
 ```
 
 Optional endpoint overrides:
@@ -71,6 +71,8 @@ Optional endpoint overrides:
 - `GROQ_BASE_URL` overrides the Groq endpoint
 - `OPENAI_BASE_URL` overrides the OpenAI endpoint
 - `ANTHROPIC_BASE_URL` overrides the Anthropic OpenAI-compatible endpoint
+
+The maintained Anthropic example path defaults to `claude-haiku-4-5`.
 
 ---
 

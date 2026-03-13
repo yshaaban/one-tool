@@ -5,6 +5,7 @@ import {
   type CommandSpec,
   type CreateCommandRegistryOptions,
 } from '../commands/index.js';
+import { resolveExecutionPolicy } from '../execution-policy.js';
 import { SimpleMemory } from '../memory.js';
 import { textDecoder, textEncoder, type CommandResult } from '../types.js';
 import { MemoryVFS } from '../vfs/memory-vfs.js';
@@ -36,6 +37,7 @@ export function createTestCommandContext(overrides: CreateTestCommandContextOpti
     adapters: overrides.adapters ?? {},
     memory: overrides.memory ?? new SimpleMemory(),
     registry,
+    executionPolicy: overrides.executionPolicy ?? resolveExecutionPolicy(),
     outputDir: overrides.outputDir ?? '/output',
     outputCounter: overrides.outputCounter ?? 0,
   };

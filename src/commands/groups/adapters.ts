@@ -1,7 +1,8 @@
-import { err, ok } from '../../types.js';
+import { err, ok, textEncoder } from '../../types.js';
 import { errorMessage } from '../../utils.js';
 import type { CommandContext, CommandSpec } from '../core.js';
 import { renderFetchPayload } from '../shared/json.js';
+import { materializedLimitError } from '../shared/io.js';
 
 async function cmdSearch(ctx: CommandContext, args: string[], stdin: Uint8Array) {
   if (stdin.length > 0) {
@@ -16,23 +17,38 @@ async function cmdSearch(ctx: CommandContext, args: string[], stdin: Uint8Array)
     );
   }
 
-  const hits = await ctx.adapters.search.search(args.join(' '), 10);
-  if (hits.length === 0) {
-    return ok('(no results)');
+  try {
+    const hits = await ctx.adapters.search.search(args.join(' '), 10);
+    if (hits.length === 0) {
+      return ok('(no results)');
+    }
+
+    const blocks = hits.map((hit, index) => {
+      const lines = [`${index + 1}. ${hit.title}`];
+      if (hit.source) {
+        lines.push(`   source: ${hit.source}`);
+      }
+      if (hit.snippet) {
+        lines.push(`   ${hit.snippet}`);
+      }
+      return lines.join('\n');
+    });
+
+    const rendered = blocks.join('\n\n');
+    const limitError = materializedLimitError(
+      ctx,
+      'search',
+      'search results',
+      textEncoder.encode(rendered).length,
+    );
+    if (limitError !== undefined) {
+      return limitError;
+    }
+
+    return ok(rendered);
+  } catch (caught) {
+    return err(`search: adapter error: ${errorMessage(caught)}`);
   }
-
-  const blocks = hits.map((hit, index) => {
-    const lines = [`${index + 1}. ${hit.title}`];
-    if (hit.source) {
-      lines.push(`   source: ${hit.source}`);
-    }
-    if (hit.snippet) {
-      lines.push(`   ${hit.snippet}`);
-    }
-    return lines.join('\n');
-  });
-
-  return ok(blocks.join('\n\n'));
 }
 
 export const search: CommandSpec = {
@@ -60,10 +76,23 @@ async function cmdFetch(ctx: CommandContext, args: string[], stdin: Uint8Array) 
 
   try {
     const response = await ctx.adapters.fetch.fetch(args[0]!);
-    return renderFetchPayload(response.payload, response.contentType);
+    return renderFetchPayload(response.payload, response.contentType, {
+      commandName: 'fetch',
+      subject: args[0]!,
+      ...(ctx.executionPolicy.maxMaterializedBytes === undefined
+        ? {}
+        : { maxMaterializedBytes: ctx.executionPolicy.maxMaterializedBytes }),
+    });
   } catch (caught) {
+    const adapterCode =
+      caught &&
+      typeof caught === 'object' &&
+      'code' in caught &&
+      typeof (caught as { code?: unknown }).code === 'string'
+        ? (caught as { code: string }).code
+        : null;
     const message = errorMessage(caught);
-    if (message.includes('not found')) {
+    if (adapterCode === 'ENOENT' || adapterCode === 'NOT_FOUND' || message.includes('not found')) {
       return err(`fetch: resource not found: ${args[0]!}`);
     }
     return err(`fetch: adapter error: ${message}`);

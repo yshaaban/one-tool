@@ -1,5 +1,6 @@
 import type { CommandResult } from '../../types.js';
-import { err, ok, okBytes } from '../../types.js';
+import { err, ok, okBytes, textEncoder } from '../../types.js';
+import { formatMaterializedLimitMessage } from '../../execution-policy.js';
 import { errorMessage } from '../../utils.js';
 import type { CommandContext } from '../core.js';
 import { readTextFromFileOrStdin } from './io.js';
@@ -73,12 +74,67 @@ export function extractJsonPath(value: unknown, pathExpression: string): unknown
   return current;
 }
 
-export function renderFetchPayload(payload: unknown, contentType: string): CommandResult {
+interface RenderFetchPayloadOptions {
+  commandName?: string;
+  subject?: string;
+  maxMaterializedBytes?: number;
+}
+
+export function renderFetchPayload(
+  payload: unknown,
+  contentType: string,
+  options: RenderFetchPayloadOptions = {},
+): CommandResult {
+  const commandName = options.commandName ?? 'fetch';
+  const subject = options.subject ?? 'resource';
+
   if (payload instanceof Uint8Array) {
+    const limitError = materializedPayloadLimitError(
+      commandName,
+      subject,
+      payload.length,
+      options.maxMaterializedBytes,
+    );
+    if (limitError !== undefined) {
+      return limitError;
+    }
     return okBytes(payload, contentType);
   }
   if (typeof payload === 'object' && payload !== null) {
-    return ok(JSON.stringify(payload, null, 2), { contentType: 'application/json' });
+    const rendered = JSON.stringify(payload, null, 2);
+    const limitError = materializedPayloadLimitError(
+      commandName,
+      subject,
+      textEncoder.encode(rendered).length,
+      options.maxMaterializedBytes,
+    );
+    if (limitError !== undefined) {
+      return limitError;
+    }
+    return ok(rendered, { contentType: 'application/json' });
   }
-  return ok(String(payload ?? 'null'), { contentType });
+  const rendered = String(payload ?? 'null');
+  const limitError = materializedPayloadLimitError(
+    commandName,
+    subject,
+    textEncoder.encode(rendered).length,
+    options.maxMaterializedBytes,
+  );
+  if (limitError !== undefined) {
+    return limitError;
+  }
+  return ok(rendered, { contentType });
+}
+
+function materializedPayloadLimitError(
+  commandName: string,
+  subject: string,
+  actualBytes: number,
+  maxMaterializedBytes: number | undefined,
+): CommandResult | undefined {
+  if (maxMaterializedBytes === undefined || actualBytes <= maxMaterializedBytes) {
+    return undefined;
+  }
+
+  return err(formatMaterializedLimitMessage(commandName, subject, actualBytes, maxMaterializedBytes));
 }

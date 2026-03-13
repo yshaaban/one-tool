@@ -1,5 +1,6 @@
 import type { MaybePromise, CommandResult, ToolAdapters } from '../types.js';
 import type { VFS } from '../vfs/interface.js';
+import type { ResolvedAgentCLIExecutionPolicy } from '../execution-policy.js';
 import { SimpleMemory } from '../memory.js';
 
 export interface CommandSpec {
@@ -68,6 +69,7 @@ export interface CommandContext {
   adapters: ToolAdapters;
   memory: SimpleMemory;
   registry: CommandRegistry;
+  executionPolicy: ResolvedAgentCLIExecutionPolicy;
   outputDir: string;
   outputCounter: number;
 }

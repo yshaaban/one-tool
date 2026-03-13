@@ -224,6 +224,50 @@ test('AgentCLI rejects invalid output limit values', function (): void {
   }, /outputLimits\.maxBytes must be a non-negative integer/);
 });
 
+test('AgentCLI rejects invalid execution limit values', function (): void {
+  assert.throws(function (): AgentCLI {
+    return new AgentCLI({
+      vfs: new MemoryVFS(),
+      executionPolicy: { maxMaterializedBytes: -1 },
+    });
+  }, /executionPolicy\.maxMaterializedBytes must be a non-negative integer/);
+});
+
+test('AgentCLI execution limits reject oversized file reads', async function (): Promise<void> {
+  const runtime = new AgentCLI({
+    vfs: new MemoryVFS(),
+    executionPolicy: { maxMaterializedBytes: 3 },
+  });
+  await runtime.initialize();
+  await runtime.ctx.vfs.writeBytes('/notes/todo.txt', new TextEncoder().encode('hello'));
+
+  const output = await runtime.run('cat /notes/todo.txt');
+  assert.match(output, /cat: input exceeds max materialized size/);
+  assert.match(output, /\[exit:1 \|/);
+});
+
+test('AgentCLI execution limits reject oversized fetch payloads', async function (): Promise<void> {
+  const runtime = new AgentCLI({
+    vfs: new MemoryVFS(),
+    executionPolicy: { maxMaterializedBytes: 5 },
+    adapters: {
+      fetch: {
+        async fetch() {
+          return {
+            contentType: 'application/json',
+            payload: { message: 'too big' },
+          };
+        },
+      },
+    },
+  });
+  await runtime.initialize();
+
+  const output = await runtime.run('fetch order:123');
+  assert.match(output, /fetch: input exceeds max materialized size/);
+  assert.match(output, /\[exit:1 \|/);
+});
+
 test('AgentCLI can use a caller-owned registry', async function (): Promise<void> {
   const registry = createCommandRegistry({
     includeGroups: ['system'],

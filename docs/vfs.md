@@ -75,6 +75,8 @@ Behavior:
 
 - all virtual paths are rooted under `rootDir`
 - path escape is blocked
+- symlink entries inside the workspace are omitted from directory listings
+- symlink traversal inside the workspace is rejected
 - directories are created on demand for writes by default
 - deleting `/` is rejected
 
@@ -157,6 +159,19 @@ Meaning:
 - `maxOutputArtifactBytes` limits runtime spill files under `/.system/cmd-output/`
 
 Policies are enforced consistently across `NodeVFS`, `MemoryVFS`, and `BrowserVFS`.
+
+These are storage policies. They constrain persisted workspace state and runtime spill artifacts.
+
+If you also need to cap how much file or adapter data commands may materialize while executing, use the runtime-level execution policy:
+
+```ts
+const runtime = await createAgentCLI({
+  vfs,
+  executionPolicy: {
+    maxMaterializedBytes: 64 * 1024,
+  },
+});
+```
 
 ---
 

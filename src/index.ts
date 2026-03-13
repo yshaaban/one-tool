@@ -11,6 +11,7 @@ export type {
   RunPresentation,
   ToolDescriptionVariant,
 } from './runtime.js';
+export type { AgentCLIExecutionPolicy } from './execution-policy.js';
 
 // VFS interface + backends
 export type { VFS, VFileInfo } from './vfs/interface.js';

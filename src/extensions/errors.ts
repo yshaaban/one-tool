@@ -32,7 +32,7 @@ export async function formatVfsError(
   options: FormatVfsErrorOptions = {},
 ): Promise<CommandResult> {
   const normalizedPath = ctx.vfs.normalize(inputPath);
-  const code = getVfsErrorCode(caught);
+  const code = errorCode(caught);
 
   if (code === 'ENOENT') {
     const hint = options.notFoundHint ?? `ls ${parentPath(normalizedPath)}`;
@@ -51,6 +51,11 @@ export async function formatVfsError(
   if (code === 'ENOTDIR') {
     const blockedParent = await blockingParentPath(ctx, normalizedPath);
     return err(`${commandName}: parent is not a directory: ${blockedParent}`);
+  }
+
+  if (code === 'EESCAPE') {
+    const escapedPath = toVfsError(caught)?.path ?? normalizedPath;
+    return err(`${commandName}: path escapes workspace root: ${escapedPath}`);
   }
 
   if (code === 'EEXIST') {
@@ -79,16 +84,4 @@ function formatHint(hint: string | undefined): string {
     return '';
   }
   return `. Use: ${hint}`;
-}
-
-function getVfsErrorCode(caught: unknown): string | null {
-  const vfsError = toVfsError(caught);
-  if (vfsError) {
-    return vfsError.code;
-  }
-  const code = errorCode(caught);
-  if (code !== null) {
-    return code;
-  }
-  return null;
 }

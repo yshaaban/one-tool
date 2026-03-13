@@ -3,7 +3,9 @@ import { loadJson } from '../commands/shared/json.js';
 import { readTextFromFileOrStdin } from '../commands/shared/io.js';
 import { err } from '../types.js';
 import { errorMessage } from '../utils.js';
+import { vfsError } from '../vfs/errors.js';
 import { formatVfsError } from './errors.js';
+import { materializedLimitError } from '../commands/shared/io.js';
 import { helperFailure, helperSuccess, type HelperResult } from './types.js';
 
 export async function readTextInput(
@@ -29,11 +31,32 @@ export async function readBytesInput(
 ): Promise<HelperResult<Uint8Array>> {
   if (filePath !== undefined) {
     return loadInput(ctx, commandName, filePath, async function (): Promise<HelperResult<Uint8Array>> {
+      const info = await ctx.vfs.stat(filePath);
+      if (!info.exists) {
+        return helperFailure(
+          await formatVfsError(ctx, commandName, filePath, vfsError('ENOENT', ctx.vfs.normalize(filePath)), {
+            notFoundLabel: 'file not found',
+          }),
+        );
+      }
+      if (info.isDir) {
+        return helperFailure(
+          await formatVfsError(ctx, commandName, filePath, vfsError('EISDIR', ctx.vfs.normalize(filePath))),
+        );
+      }
+      const limitError = materializedLimitError(ctx, commandName, ctx.vfs.normalize(filePath), info.size);
+      if (limitError !== undefined) {
+        return helperFailure(limitError);
+      }
       return helperSuccess(await ctx.vfs.readBytes(filePath));
     });
   }
 
   if (stdin.length > 0) {
+    const limitError = materializedLimitError(ctx, commandName, 'stdin', stdin.length);
+    if (limitError !== undefined) {
+      return helperFailure(limitError);
+    }
     return helperSuccess(new Uint8Array(stdin));
   }
 

@@ -22,14 +22,7 @@ export function errorPath(caught: unknown): string {
   if (vfsError) {
     return vfsError.path;
   }
-
-  const message = getCaughtMessage(caught);
-  if (message.length === 0) {
-    return message;
-  }
-
-  const idx = message.indexOf(':');
-  return idx === -1 ? '' : message.slice(idx + 1);
+  return '';
 }
 
 export function errorTargetPath(caught: unknown): string | null {
@@ -56,14 +49,4 @@ export async function firstFileInPath(ctx: CommandContext, inputPath: string): P
 
 export async function blockingParentPath(ctx: CommandContext, inputPath: string): Promise<string> {
   return (await firstFileInPath(ctx, parentPath(inputPath))) ?? parentPath(inputPath);
-}
-
-function getCaughtMessage(caught: unknown): string {
-  if (typeof caught === 'string') {
-    return caught;
-  }
-  if (caught instanceof Error) {
-    return caught.message;
-  }
-  return '';
 }
