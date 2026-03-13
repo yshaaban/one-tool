@@ -61,7 +61,7 @@ export interface AgentTurnResult {
 }
 
 // ---------------------------------------------------------------------------
-// Defaults (OpenAI only — other providers don't support browser CORS)
+// Defaults (the browser site intentionally uses an OpenAI-compatible API path)
 // ---------------------------------------------------------------------------
 
 const DEFAULT_MODEL = 'gpt-5.2-chat-latest';

@@ -195,11 +195,8 @@ export const TerminalComponent = forwardRef<TerminalHandle, TerminalProps>(funct
       return;
     }
 
-    term.write('\r\x1b[2K');
-    term.write(PROMPT);
-    if (input.length > 0) {
-      term.write(`${INPUT_COLOR}${input}${RESET}`);
-    }
+    const line = input.length > 0 ? `\r\x1b[2K${PROMPT}${INPUT_COLOR}${input}${RESET}` : `\r\x1b[2K${PROMPT}`;
+    term.write(line);
   }, []);
 
   const recordCommand = useCallback((command: string) => {

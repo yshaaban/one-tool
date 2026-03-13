@@ -34,7 +34,7 @@ jobs:
 
       - name: Build site
         working-directory: site
-        run: npx vite build
+        run: npm run build
 
       - uses: actions/upload-pages-artifact@v3
         with:

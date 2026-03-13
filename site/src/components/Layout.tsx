@@ -15,26 +15,33 @@ export function Layout({ children }: { children: ReactNode }) {
       <nav style={navStyle}>
         <div style={navInnerStyle}>
           <Link to="/" style={logoStyle}>
-            one-tool
+            <span style={{ color: 'var(--accent)', fontWeight: 700 }}>$</span>
+            <span style={{ marginLeft: '0.35rem' }}>one-tool</span>
           </Link>
-          <div style={{ display: 'flex', gap: '1.5rem' }}>
-            {navItems.map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                style={{
-                  ...linkStyle,
-                  color: location.pathname === item.to ? 'var(--accent)' : 'var(--text-muted)',
-                }}
-              >
-                {item.label}
-              </Link>
-            ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            {navItems.map((item) => {
+              const active = location.pathname === item.to;
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  style={{
+                    ...navLinkStyle,
+                    color: active ? 'var(--text-bright)' : 'var(--text-muted)',
+                    background: active ? 'var(--accent-dim)' : 'transparent',
+                    borderColor: active ? 'var(--border)' : 'transparent',
+                  }}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+            <span style={navDivider} />
             <a
               href="https://github.com/yshaaban/one-tool"
               target="_blank"
               rel="noopener noreferrer"
-              style={linkStyle}
+              style={navLinkStyle}
             >
               GitHub
             </a>
@@ -43,8 +50,8 @@ export function Layout({ children }: { children: ReactNode }) {
       </nav>
       <main style={{ flex: 1 }}>{children}</main>
       <footer style={footerStyle}>
-        <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-          one-tool &mdash; Stateful CLI environment for LLM agents
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+          one-tool &middot; stateful CLI for LLM agents
         </span>
       </footer>
     </div>
@@ -52,9 +59,13 @@ export function Layout({ children }: { children: ReactNode }) {
 }
 
 const navStyle: React.CSSProperties = {
-  borderBottom: '1px solid var(--border)',
-  padding: '0.75rem 1.5rem',
-  background: 'var(--bg-surface)',
+  borderBottom: '1px solid var(--border-subtle)',
+  padding: '0 1.5rem',
+  background: 'rgba(10, 14, 20, 0.85)',
+  backdropFilter: 'blur(12px)',
+  position: 'sticky',
+  top: 0,
+  zIndex: 100,
 };
 
 const navInnerStyle: React.CSSProperties = {
@@ -63,24 +74,38 @@ const navInnerStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
+  height: '3.25rem',
 };
 
 const logoStyle: React.CSSProperties = {
   fontFamily: 'var(--font-mono)',
-  fontWeight: 700,
-  fontSize: '1.1rem',
-  color: 'var(--text)',
+  fontWeight: 600,
+  fontSize: '1rem',
+  color: 'var(--text-bright)',
   textDecoration: 'none',
+  letterSpacing: '-0.01em',
 };
 
-const linkStyle: React.CSSProperties = {
+const navLinkStyle: React.CSSProperties = {
   color: 'var(--text-muted)',
   textDecoration: 'none',
-  fontSize: '0.9rem',
+  fontSize: '0.82rem',
+  fontWeight: 500,
+  padding: '0.3rem 0.7rem',
+  borderRadius: 'var(--radius-sm)',
+  border: '1px solid transparent',
+  transition: 'all var(--transition)',
+};
+
+const navDivider: React.CSSProperties = {
+  width: '1px',
+  height: '1rem',
+  background: 'var(--border)',
+  margin: '0 0.35rem',
 };
 
 const footerStyle: React.CSSProperties = {
-  borderTop: '1px solid var(--border)',
-  padding: '1rem 1.5rem',
+  borderTop: '1px solid var(--border-subtle)',
+  padding: '1.25rem 1.5rem',
   textAlign: 'center',
 };

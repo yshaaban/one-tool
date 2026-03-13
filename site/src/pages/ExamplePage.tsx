@@ -158,32 +158,38 @@ function ExamplePage() {
     );
   }
 
+  const totalSteps = example.steps?.length ?? 0;
+  const allDone = stepIndex >= totalSteps;
+
   return (
     <div style={containerStyle}>
-      <div style={{ marginBottom: '1.5rem' }}>
-        <Link to="/examples" style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-          &larr; All examples
+      {/* Header */}
+      <div style={headerStyle}>
+        <Link to="/examples" style={backLinkStyle}>
+          <span style={{ marginRight: '0.3rem' }}>&larr;</span> Examples
         </Link>
-        <h1 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-mono)', marginTop: '0.5rem' }}>
-          {example.title}
-        </h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{example.description}</p>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem', marginTop: '0.5rem' }}>
+          <span style={exampleNumberStyle}>{example.id.slice(0, 2)}</span>
+          <h1 style={titleStyle}>{example.title}</h1>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.35rem' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>{example.description}</p>
+          <a href={sourceUrl} target="_blank" rel="noopener noreferrer" style={sourceLinkStyle}>
+            Source
+          </a>
+        </div>
       </div>
 
       {!example.browserRunnable ? (
         <div style={nonInteractiveStyle}>
-          <p style={{ marginBottom: '1rem' }}>This example requires Node.js and cannot run in the browser.</p>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-            View the source:{' '}
+          <div style={{ fontSize: '1.5rem', marginBottom: '0.75rem', opacity: 0.4 }}>{'{ }'}</div>
+          <p style={{ marginBottom: '0.75rem', fontWeight: 500 }}>Requires Node.js</p>
+          <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)' }}>
+            This example cannot run in the browser.{' '}
             <a href={sourceUrl} target="_blank" rel="noopener noreferrer">
-              {example.sourceFile}
+              View the source code
             </a>
           </p>
-          {example.requiresApiKey && (
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-              Requires an API key to run.
-            </p>
-          )}
         </div>
       ) : (
         <>
@@ -193,73 +199,113 @@ function ExamplePage() {
               <div style={{ marginTop: '0.35rem' }}>{runtimeError}</div>
             </div>
           )}
-          {example.steps && example.steps.length > 0 && (
-            <div style={{ marginBottom: '1rem' }}>
-              <h3 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
-                Steps
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {example.steps.map((step, i) => {
-                  return (
-                    <div key={i} style={getStepCardStyle(i, stepIndex, runningStepIndex)}>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', minWidth: '1.5rem' }}>
-                        {getStepStatusLabel(i, stepIndex, runningStepIndex)}
-                      </span>
-                      <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                        {step.explanation}
-                      </span>
-                      <code style={{ fontSize: '0.8rem', marginLeft: 'auto' }}>{step.command}</code>
-                    </div>
-                  );
-                })}
-              </div>
-              <div style={actionsStyle}>
-                {stepIndex < example.steps.length && (
-                  <button
-                    onClick={handleRunStep}
-                    style={buttonStyle}
-                    disabled={!runtime || Boolean(runtimeError) || isAutoplaying || runningStepIndex !== null}
-                  >
-                    {getRunStepButtonLabel(isAutoplaying, runningStepIndex)}
-                  </button>
+
+          {/* Steps + Terminal in a two-column layout on wide screens */}
+          <div style={mainLayoutStyle}>
+            {/* Steps panel */}
+            {example.steps && totalSteps > 0 && (
+              <div style={stepsPanelStyle}>
+                <div style={stepsPanelHeaderStyle}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
+                    Steps
+                  </span>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    {stepIndex}/{totalSteps}
+                  </span>
+                </div>
+
+                {/* Progress bar */}
+                <div style={progressTrackStyle}>
+                  <div
+                    style={{
+                      ...progressFillStyle,
+                      width: `${(stepIndex / totalSteps) * 100}%`,
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  {example.steps.map((step, i) => {
+                    const completed = i < stepIndex;
+                    const active = i === runningStepIndex;
+                    const current = i === stepIndex && !active;
+
+                    return (
+                      <div
+                        key={i}
+                        style={{
+                          ...stepItemStyle,
+                          background: active ? 'var(--accent-dim)' : completed ? 'rgba(255,255,255,0.02)' : 'transparent',
+                          borderColor: active ? 'rgba(110, 180, 255, 0.3)' : 'transparent',
+                          opacity: completed ? 0.55 : 1,
+                          animation: `slideInLeft 0.3s ${i * 0.05}s both`,
+                        }}
+                      >
+                        <span style={stepIndicatorStyle(completed, active, current)}>
+                          {completed ? '\u2713' : active ? '\u2026' : `${i + 1}`}
+                        </span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>
+                            {step.explanation}
+                          </div>
+                          <code style={stepCommandStyle}>{step.command}</code>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Actions */}
+                <div style={actionsStyle}>
+                  {!allDone && (
+                    <button
+                      onClick={handleRunStep}
+                      style={buttonStyle}
+                      disabled={!runtime || Boolean(runtimeError) || isAutoplaying || runningStepIndex !== null}
+                    >
+                      {getRunStepButtonLabel(isAutoplaying, runningStepIndex)}
+                    </button>
+                  )}
+                  {(stepIndex > 0 || isAutoplaying) && (
+                    <button
+                      onClick={handleReplay}
+                      style={secondaryButtonStyle}
+                      disabled={isAutoplaying || runningStepIndex !== null}
+                    >
+                      Replay
+                    </button>
+                  )}
+                </div>
+
+                {allDone && (
+                  <div style={completeBannerStyle}>
+                    All steps complete. Try your own commands in the terminal.
+                  </div>
                 )}
-                {(stepIndex > 0 || isAutoplaying) && (
-                  <button
-                    onClick={handleReplay}
-                    style={secondaryButtonStyle}
-                    disabled={isAutoplaying || runningStepIndex !== null}
-                  >
-                    Replay example
-                  </button>
-                )}
               </div>
-              {stepIndex >= example.steps.length && (
-                <p style={{ fontSize: '0.85rem', color: 'var(--green)', marginTop: '0.75rem' }}>
-                  All steps complete. Try your own commands below.
-                </p>
+            )}
+
+            {/* Terminal */}
+            <div style={terminalContainerStyle}>
+              {runtime ? (
+                <TerminalComponent
+                  ref={terminalRef}
+                  runtime={runtime}
+                  readOnly={isAutoplaying}
+                  onReady={handleTerminalReady}
+                />
+              ) : runtimeError ? (
+                <div style={nonInteractiveStyle}>
+                  <p>Runtime could not be initialized.</p>
+                  <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+                    Reload the page or check the browser console.
+                  </p>
+                </div>
+              ) : (
+                <div className="loading">Initializing</div>
               )}
             </div>
-          )}
-
-          {runtime ? (
-            <div style={{ height: '400px' }}>
-              <TerminalComponent
-                ref={terminalRef}
-                runtime={runtime}
-                readOnly={isAutoplaying}
-                onReady={handleTerminalReady}
-              />
-            </div>
-          ) : runtimeError ? (
-            <div style={nonInteractiveStyle}>
-              <p>The example runtime could not be initialized.</p>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                Reload the page to retry, or inspect the browser console for details.
-              </p>
-            </div>
-          ) : (
-            <div className="loading">Initializing runtime...</div>
-          )}
+          </div>
         </>
       )}
     </div>
@@ -267,6 +313,10 @@ function ExamplePage() {
 }
 
 export default ExamplePage;
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
@@ -296,54 +346,50 @@ function formatDetailedExecution(execution: RunExecution): string {
   return lines.join('\n');
 }
 
-function getStepCardStyle(
-  index: number,
-  stepIndex: number,
-  runningStepIndex: number | null,
-): React.CSSProperties {
-  const active = index === runningStepIndex;
-  const completed = index < stepIndex;
+function getRunStepButtonLabel(isAutoplaying: boolean, runningStepIndex: number | null): string {
+  if (isAutoplaying) return 'Auto-playing...';
+  if (runningStepIndex !== null) return 'Running...';
+  return 'Run next step';
+}
 
-  let background = 'transparent';
-  if (active) {
-    background = 'rgba(88, 166, 255, 0.12)';
-  } else if (completed) {
-    background = 'var(--bg-hover)';
+function stepIndicatorStyle(completed: boolean, active: boolean, current: boolean): React.CSSProperties {
+  let bg = 'transparent';
+  let color = 'var(--text-muted)';
+  let border = '1px solid var(--border)';
+
+  if (completed) {
+    bg = 'var(--green-dim)';
+    color = 'var(--green)';
+    border = '1px solid rgba(74, 230, 138, 0.25)';
+  } else if (active) {
+    bg = 'var(--accent-dim)';
+    color = 'var(--accent)';
+    border = '1px solid rgba(110, 180, 255, 0.3)';
+  } else if (current) {
+    color = 'var(--text-bright)';
+    border = '1px solid var(--border)';
   }
 
   return {
+    width: '1.5rem',
+    height: '1.5rem',
+    borderRadius: '999px',
     display: 'flex',
     alignItems: 'center',
-    gap: '0.75rem',
-    padding: '0.5rem 0.75rem',
-    background,
-    border: active ? '1px solid rgba(88, 166, 255, 0.35)' : '1px solid transparent',
-    borderRadius: '6px',
-    opacity: completed ? 0.6 : 1,
+    justifyContent: 'center',
+    fontSize: '0.68rem',
+    fontFamily: 'var(--font-mono)',
+    fontWeight: 600,
+    flexShrink: 0,
+    background: bg,
+    color,
+    border,
   };
 }
 
-function getStepStatusLabel(index: number, stepIndex: number, runningStepIndex: number | null): string {
-  if (index < stepIndex) {
-    return '\u2713';
-  }
-  if (index === runningStepIndex) {
-    return '\u2026';
-  }
-  return `${index + 1}.`;
-}
-
-function getRunStepButtonLabel(isAutoplaying: boolean, runningStepIndex: number | null): string {
-  if (isAutoplaying) {
-    return 'Auto-playing...';
-  }
-
-  if (runningStepIndex !== null) {
-    return 'Running step...';
-  }
-
-  return 'Run next step';
-}
+// ---------------------------------------------------------------------------
+// Styles
+// ---------------------------------------------------------------------------
 
 const containerStyle: React.CSSProperties = {
   maxWidth: 'var(--max-width)',
@@ -351,23 +397,128 @@ const containerStyle: React.CSSProperties = {
   padding: '1.5rem',
 };
 
-const nonInteractiveStyle: React.CSSProperties = {
-  padding: '2rem',
-  background: 'var(--bg-surface)',
+const headerStyle: React.CSSProperties = {
+  marginBottom: '1.5rem',
+};
+
+const backLinkStyle: React.CSSProperties = {
+  fontSize: '0.8rem',
+  color: 'var(--text-muted)',
+  textDecoration: 'none',
+  fontWeight: 500,
+  transition: 'color var(--transition)',
+};
+
+const exampleNumberStyle: React.CSSProperties = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.8rem',
+  fontWeight: 600,
+  color: 'var(--accent)',
+  background: 'var(--accent-dim)',
+  padding: '0.2rem 0.5rem',
+  borderRadius: '4px',
+};
+
+const titleStyle: React.CSSProperties = {
+  fontSize: '1.4rem',
+  fontFamily: 'var(--font-mono)',
+  fontWeight: 700,
+  color: 'var(--text-bright)',
+  letterSpacing: '-0.02em',
+};
+
+const sourceLinkStyle: React.CSSProperties = {
+  fontSize: '0.78rem',
+  fontFamily: 'var(--font-mono)',
+  color: 'var(--text-muted)',
+  textDecoration: 'none',
   border: '1px solid var(--border)',
-  borderRadius: '8px',
-  textAlign: 'center',
+  padding: '0.2rem 0.5rem',
+  borderRadius: '4px',
+  flexShrink: 0,
+  transition: 'border-color var(--transition)',
+};
+
+const mainLayoutStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '280px 1fr',
+  gap: '1rem',
+  alignItems: 'start',
+};
+
+const stepsPanelStyle: React.CSSProperties = {
+  background: 'var(--bg-surface)',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius)',
+  padding: '1rem',
+  position: 'sticky',
+  top: '4.5rem',
+};
+
+const stepsPanelHeaderStyle: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: '0.6rem',
+};
+
+const progressTrackStyle: React.CSSProperties = {
+  height: '2px',
+  background: 'var(--border)',
+  borderRadius: '1px',
+  marginBottom: '0.85rem',
+  overflow: 'hidden',
+};
+
+const progressFillStyle: React.CSSProperties = {
+  height: '100%',
+  background: 'var(--green)',
+  borderRadius: '1px',
+  transition: 'width 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+};
+
+const stepItemStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'flex-start',
+  gap: '0.6rem',
+  padding: '0.5rem 0.55rem',
+  borderRadius: 'var(--radius-sm)',
+  border: '1px solid transparent',
+  transition: 'all var(--transition)',
+};
+
+const stepCommandStyle: React.CSSProperties = {
+  fontSize: '0.74rem',
+  fontFamily: 'var(--font-mono)',
+  color: 'var(--accent)',
+  background: 'var(--bg-elevated)',
+  padding: '0.1rem 0.35rem',
+  borderRadius: '3px',
+  border: '1px solid var(--border-subtle)',
+  display: 'inline-block',
+  maxWidth: '100%',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+};
+
+const actionsStyle: React.CSSProperties = {
+  display: 'flex',
+  gap: '0.5rem',
+  marginTop: '0.85rem',
 };
 
 const buttonStyle: React.CSSProperties = {
-  padding: '0.5rem 1rem',
+  padding: '0.4rem 0.85rem',
   background: 'var(--accent)',
-  color: '#fff',
+  color: '#0a0e14',
   border: 'none',
-  borderRadius: '6px',
+  borderRadius: 'var(--radius-sm)',
   fontWeight: 600,
-  fontSize: '0.85rem',
+  fontSize: '0.78rem',
+  fontFamily: 'var(--font-sans)',
   cursor: 'pointer',
+  transition: 'all var(--transition)',
 };
 
 const secondaryButtonStyle: React.CSSProperties = {
@@ -377,18 +528,36 @@ const secondaryButtonStyle: React.CSSProperties = {
   border: '1px solid var(--border)',
 };
 
-const actionsStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '0.65rem',
+const completeBannerStyle: React.CSSProperties = {
   marginTop: '0.75rem',
+  fontSize: '0.78rem',
+  fontFamily: 'var(--font-mono)',
+  color: 'var(--green)',
+  background: 'var(--green-dim)',
+  padding: '0.5rem 0.65rem',
+  borderRadius: 'var(--radius-sm)',
+  border: '1px solid rgba(74, 230, 138, 0.2)',
+};
+
+const terminalContainerStyle: React.CSSProperties = {
+  height: 'calc(100vh - 180px)',
+  minHeight: '450px',
+};
+
+const nonInteractiveStyle: React.CSSProperties = {
+  padding: '3rem 2rem',
+  background: 'var(--bg-surface)',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius)',
+  textAlign: 'center',
 };
 
 const errorStyle: React.CSSProperties = {
   marginBottom: '1rem',
   padding: '0.75rem 1rem',
-  background: 'rgba(248, 81, 73, 0.12)',
-  border: '1px solid rgba(248, 81, 73, 0.3)',
-  borderRadius: '8px',
+  background: 'var(--red-dim)',
+  border: '1px solid rgba(247, 108, 108, 0.3)',
+  borderRadius: 'var(--radius)',
   color: 'var(--text)',
   fontSize: '0.85rem',
 };
