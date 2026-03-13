@@ -1,33 +1,31 @@
-import { createServer, type Server } from 'node:http';
+import http from 'node:http';
 import process from 'node:process';
 
-import { buildToolDefinition, type AgentCLI, MemoryVFS } from 'one-tool';
+import { MemoryVFS, buildToolDefinition, createAgentCLI } from 'one-tool';
 
-import { buildDemoRuntime } from '../demo-runtime.js';
 import {
   createExampleIO,
   getExampleArgs,
-  printHeading,
-  runIfEntrypoint,
-  type ExampleRunOptions,
-} from '../shared/example-utils.js';
+  runIfEntrypointWithErrorHandling,
+  type ExampleOptions,
+} from '../_example-utils.js';
 
-export interface ToolEndpointServer {
-  server: Server;
+interface ToolEndpoint {
+  server: http.Server;
   close(): Promise<void>;
   url(): string;
 }
 
-export interface StartToolEndpointOptions {
-  runtime?: AgentCLI;
-  port?: number;
+async function buildRuntime() {
+  const encoder = new TextEncoder();
+  const vfs = new MemoryVFS();
+  await vfs.writeBytes('/notes/todo.txt', encoder.encode('review logs\nwrite summary\n'));
+  return createAgentCLI({ vfs });
 }
 
-export async function startToolEndpoint(options: StartToolEndpointOptions = {}): Promise<ToolEndpointServer> {
-  const runtime = options.runtime ?? (await buildDemoRuntime());
-  const requestedPort = options.port ?? 8787;
-
-  const server = createServer(async function (req, res): Promise<void> {
+async function startToolEndpoint(requestedPort: number): Promise<ToolEndpoint> {
+  const runtime = await buildRuntime();
+  const server = http.createServer(async function (req, res): Promise<void> {
     if (req.method === 'GET' && req.url === '/tool-definition') {
       res.writeHead(200, { 'content-type': 'application/json' });
       res.end(JSON.stringify(buildToolDefinition(runtime), null, 2));
@@ -40,10 +38,9 @@ export async function startToolEndpoint(options: StartToolEndpointOptions = {}):
         chunks.push(Buffer.from(chunk));
       }
 
-      const bodyText = Buffer.concat(chunks).toString('utf8');
       let payload: { command?: string };
       try {
-        payload = JSON.parse(bodyText) as { command?: string };
+        payload = JSON.parse(Buffer.concat(chunks).toString('utf8')) as { command?: string };
       } catch {
         res.writeHead(400, { 'content-type': 'application/json' });
         res.end(JSON.stringify({ error: 'invalid JSON body' }));
@@ -107,38 +104,28 @@ export async function startToolEndpoint(options: StartToolEndpointOptions = {}):
   };
 }
 
-export async function main(options: ExampleRunOptions = {}): Promise<void> {
+export async function main(options: ExampleOptions = {}): Promise<void> {
   const io = createExampleIO(options);
   const args = getExampleArgs(options);
   const selfTest = args.includes('--self-test');
   const portArg = args.find(function (arg) {
     return arg !== '--self-test';
   });
-  const port = portArg ? Number.parseInt(portArg, 10) : 8787;
-  const runtime = selfTest
-    ? await buildDemoRuntime({
-        vfs: new MemoryVFS(),
-      })
-    : undefined;
-  const toolEndpoint = await startToolEndpoint({
-    port: selfTest ? 0 : Number.isFinite(port) ? port : 8787,
-    ...(runtime === undefined ? {} : { runtime }),
-  });
-
-  printHeading(
-    io,
-    'Reference: HTTP tool endpoint',
-    'This sample exposes GET /tool-definition and POST /run so a separate agent process can treat one-tool like a remote tool service.',
+  const requestedPort = portArg ? Number.parseInt(portArg, 10) : 8787;
+  const endpoint = await startToolEndpoint(
+    selfTest ? 0 : Number.isFinite(requestedPort) ? requestedPort : 8787,
   );
-  io.write(`Server listening on ${toolEndpoint.url()}`);
-  io.write(`GET  ${toolEndpoint.url()}/tool-definition`);
-  io.write(`POST ${toolEndpoint.url()}/run  {"command":"help"}`);
+
+  io.write('Advanced · HTTP tool endpoint');
+  io.write('Expose one-tool over a small HTTP service for remote agents or orchestrators.');
+  io.write(`GET  ${endpoint.url()}/tool-definition`);
+  io.write(`POST ${endpoint.url()}/run  {"command":"help"}`);
 
   if (selfTest) {
     try {
-      const toolDefinitionResponse = await fetch(`${toolEndpoint.url()}/tool-definition`);
+      const toolDefinitionResponse = await fetch(`${endpoint.url()}/tool-definition`);
       const toolDefinition = (await toolDefinitionResponse.json()) as { function?: { name?: string } };
-      const runResponse = await fetch(`${toolEndpoint.url()}/run`, {
+      const runResponse = await fetch(`${endpoint.url()}/run`, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
@@ -149,13 +136,13 @@ export async function main(options: ExampleRunOptions = {}): Promise<void> {
       io.write(`Tool definition name: ${toolDefinition.function?.name ?? '(missing)'}`);
       io.write(`Run response preview: ${(runBody.output ?? '').split('\n')[0] ?? '(empty)'}`);
     } finally {
-      await toolEndpoint.close();
+      await endpoint.close();
     }
     return;
   }
 
   const stop = function (): void {
-    void toolEndpoint.close().finally(function (): void {
+    void endpoint.close().finally(function (): void {
       process.exit(0);
     });
   };
@@ -164,4 +151,4 @@ export async function main(options: ExampleRunOptions = {}): Promise<void> {
   process.on('SIGTERM', stop);
 }
 
-await runIfEntrypoint(import.meta.url, main);
+await runIfEntrypointWithErrorHandling(import.meta.url, main);

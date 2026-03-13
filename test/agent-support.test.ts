@@ -1,8 +1,17 @@
 import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
 
-import { createAgentSession, loadConfig, runAgentTurn, type ChatMessage } from '../examples/agent-support.js';
-import { buildDemoRuntime } from '../examples/demo-runtime.js';
+import {
+  createAgentSession,
+  loadConfig,
+  loadEnvFile,
+  runAgentTurn,
+  type ChatMessage,
+} from '../examples/agent-support.js';
+import { buildDemoRuntime } from 'one-tool/testing';
 import { buildToolDefinition, createAgentCLI, type CommandSpec, MemoryVFS } from '../src/index.js';
 import { ok } from '../src/types.js';
 
@@ -164,6 +173,30 @@ test('loadConfig rejects unsupported providers', () =>
       assert.throws(() => loadConfig(), /unsupported AGENT_PROVIDER: azure/);
     },
   ));
+
+test('loadEnvFile reads .env from process.cwd() before module-relative fallbacks', () => {
+  const tempDir = mkdtempSync(path.join(os.tmpdir(), 'one-tool-env-'));
+  const previousCwd = process.cwd();
+  const previousValue = process.env.GROQ_API_KEY;
+
+  try {
+    writeFileSync(path.join(tempDir, '.env'), 'GROQ_API_KEY=temp-groq-key\n', 'utf8');
+    delete process.env.GROQ_API_KEY;
+    process.chdir(tempDir);
+
+    loadEnvFile();
+
+    assert.equal(process.env.GROQ_API_KEY, 'temp-groq-key');
+  } finally {
+    process.chdir(previousCwd);
+    if (previousValue === undefined) {
+      delete process.env.GROQ_API_KEY;
+    } else {
+      process.env.GROQ_API_KEY = previousValue;
+    }
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+});
 
 test('createAgentSession seeds the system prompt and one run tool', async () => {
   const runtime = await buildDemoRuntime({ vfs: new MemoryVFS() });

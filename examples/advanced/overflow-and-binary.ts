@@ -1,12 +1,11 @@
-import { createAgentCLI, MemoryVFS } from 'one-tool';
+import { MemoryVFS, createAgentCLI } from 'one-tool';
 
 import {
   createExampleIO,
   formatExecutionSummary,
-  printHeading,
-  runIfEntrypoint,
-  type ExampleRunOptions,
-} from '../shared/example-utils.js';
+  runIfEntrypointWithErrorHandling,
+  type ExampleOptions,
+} from '../_example-utils.js';
 
 function createLargeLog(): string {
   return Array.from({ length: 80 }, function (_, index) {
@@ -14,13 +13,11 @@ function createLargeLog(): string {
   }).join('\n');
 }
 
-export async function main(options: ExampleRunOptions = {}): Promise<void> {
+export async function main(options: ExampleOptions = {}): Promise<void> {
   const io = createExampleIO(options);
   const encoder = new TextEncoder();
   const vfs = new MemoryVFS();
 
-  await vfs.mkdir('/logs', true);
-  await vfs.mkdir('/images', true);
   await vfs.writeBytes('/logs/large.log', encoder.encode(createLargeLog()));
   await vfs.writeBytes('/images/logo.png', new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]));
 
@@ -35,11 +32,9 @@ export async function main(options: ExampleRunOptions = {}): Promise<void> {
   const overflow = await runtime.runDetailed('cat /logs/large.log');
   const binary = await runtime.runDetailed('cat /images/logo.png');
 
-  printHeading(
-    io,
-    'Recipe: overflow and binary handling',
-    'Use runDetailed() to detect truncation, inspect spill-file paths, and handle binary-file guards without parsing presentation text.',
-  );
+  io.write('Advanced · Overflow and binary handling');
+  io.write('Use structured execution metadata to react to truncation and binary guards.');
+
   io.write('\nOverflow');
   io.write(overflow.presentation.text);
   io.write(formatExecutionSummary(overflow));
@@ -51,4 +46,4 @@ export async function main(options: ExampleRunOptions = {}): Promise<void> {
   io.write(`savedPath: ${binary.presentation.savedPath ?? '(none)'}`);
 }
 
-await runIfEntrypoint(import.meta.url, main);
+await runIfEntrypointWithErrorHandling(import.meta.url, main);

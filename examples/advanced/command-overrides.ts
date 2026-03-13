@@ -9,13 +9,7 @@ import {
   registerCommands,
 } from 'one-tool';
 
-import {
-  createExampleIO,
-  printHeading,
-  runIfEntrypoint,
-  runCommandSequence,
-  type ExampleRunOptions,
-} from '../shared/example-utils.js';
+import { createExampleIO, runIfEntrypointWithErrorHandling, type ExampleOptions } from '../_example-utils.js';
 
 async function customHelpHandler(
   ctx: CommandContext,
@@ -33,7 +27,7 @@ const customHelp: CommandSpec = {
   name: 'help',
   summary: 'Render a custom help surface owned by the application.',
   usage: 'help [command]',
-  details: 'Example:\n  help\n  help grep',
+  details: 'Examples:\n  help\n  help grep',
   handler: customHelpHandler,
   acceptsStdin: false,
   minArgs: 0,
@@ -41,7 +35,7 @@ const customHelp: CommandSpec = {
   conformanceArgs: [],
 };
 
-export async function main(options: ExampleRunOptions = {}): Promise<void> {
+export async function main(options: ExampleOptions = {}): Promise<void> {
   const io = createExampleIO(options);
   const registry = createCommandRegistry({ preset: 'textOnly' });
   registerCommands(registry, [customHelp], { onConflict: 'replace' });
@@ -52,13 +46,13 @@ export async function main(options: ExampleRunOptions = {}): Promise<void> {
     registry,
   });
 
-  printHeading(
-    io,
-    'Recipe: command overrides',
-    'Use a caller-owned registry when you need exact command ownership. This example replaces help and removes tail.',
-  );
+  io.write('Advanced · Command overrides');
+  io.write('Own the registry directly when you need to replace or remove built-ins.');
 
-  await runCommandSequence(io, runtime, ['help', 'tail -n 2']);
+  for (const command of ['help', 'tail -n 2']) {
+    io.write(`\n$ ${command}`);
+    io.write(await runtime.run(command));
+  }
 }
 
-await runIfEntrypoint(import.meta.url, main);
+await runIfEntrypointWithErrorHandling(import.meta.url, main);

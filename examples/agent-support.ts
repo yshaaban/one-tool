@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import * as path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -65,10 +65,29 @@ function errorMessage(caught: unknown): string {
   return caught instanceof Error ? caught.message : String(caught);
 }
 
+function resolveEnvPath(thisDir: string): string | null {
+  const envCandidates = [
+    path.resolve(process.cwd(), '.env'),
+    path.resolve(thisDir, '..', '.env'),
+    path.resolve(thisDir, '..', '..', '.env'),
+  ];
+
+  for (const candidate of envCandidates) {
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
 export function loadEnvFile(): void {
   try {
     const thisDir = path.dirname(fileURLToPath(import.meta.url));
-    const envPath = path.resolve(thisDir, '..', '..', '.env');
+    const envPath = resolveEnvPath(thisDir);
+    if (!envPath) {
+      return;
+    }
     const envText = readFileSync(envPath, 'utf-8');
     for (const line of envText.split('\n')) {
       const trimmed = line.trim();

@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
 function runDemoScript(input: string): { status: number | null; output: string } {
-  const demoPath = fileURLToPath(new URL('../examples/demo-app.js', import.meta.url));
+  const demoPath = fileURLToPath(new URL('../examples/01-hello-world.js', import.meta.url));
   const result = spawnSync(process.execPath, ['--enable-source-maps', demoPath], {
     encoding: 'utf8',
     input,
@@ -16,17 +16,11 @@ function runDemoScript(input: string): { status: number | null; output: string }
   };
 }
 
-test('demo app handles piped multi-command input cleanly', () => {
-  const result = runDemoScript('help find\nhelp sort\nquit\n');
+test('demo example runs cleanly as a standalone script', () => {
+  const result = runDemoScript('');
   assert.equal(result.status, 0);
-  assert.match(result.output, /find: Recursively list files and directories with optional filters\./);
-  assert.match(result.output, /sort: Sort lines from stdin or a file\./);
-  assert.doesNotMatch(result.output, /Detected unsettled top-level await/);
-});
-
-test('demo app supports piped command examples for new commands', () => {
-  const result = runDemoScript('find /config --type file --name "*.json" | wc -l\nquit\n');
-  assert.equal(result.status, 0);
-  assert.match(result.output, /\n2\n/);
+  assert.match(result.output, /01 · Hello world/);
+  assert.match(result.output, /\$ write \/hello\.txt "Hello from one-tool"/);
+  assert.match(result.output, /\nHello from one-tool\n/);
   assert.doesNotMatch(result.output, /Detected unsettled top-level await/);
 });

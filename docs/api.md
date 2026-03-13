@@ -303,7 +303,7 @@ Example Claude Code `.mcp.json` entry:
 
 Create `mcp-server.js` from the wrapper pattern shown below.
 
-`examples/reference/mcp-stdio.ts` is the maintained repo example for that wrapper.
+`examples/07-mcp-server.ts` is the maintained repo example for that wrapper. It uses the seeded demo runtime from `one-tool/testing`, and its default stdio path persists state under `./agent_state`.
 
 Example:
 
@@ -340,7 +340,7 @@ The exported MCP tool:
 
 It intentionally does not include raw intermediate stdout bodies for every command stage.
 
-See `examples/reference/mcp-stdio.ts` for a maintained reference example.
+See `examples/07-mcp-server.ts` for a maintained reference example.
 
 ---
 

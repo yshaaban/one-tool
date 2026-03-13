@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
 function runCustomCommandExample(): { status: number | null; output: string } {
-  const examplePath = fileURLToPath(new URL('../examples/custom-command.js', import.meta.url));
+  const examplePath = fileURLToPath(new URL('../examples/02-custom-command.js', import.meta.url));
   const result = spawnSync(process.execPath, ['--enable-source-maps', examplePath], {
     encoding: 'utf8',
   });
@@ -19,8 +19,8 @@ test('custom command example runs with selective built-ins and pipelines', () =>
   const result = runCustomCommandExample();
 
   assert.equal(result.status, 0);
-  assert.match(result.output, /Available commands:/);
-  assert.match(result.output, /ticket\s+— Inspect a mock support queue/);
+  assert.match(result.output, /02 · Custom command/);
+  assert.match(result.output, /\$ help ticket/);
   assert.match(result.output, /\$ ticket lookup TICKET-123 \| json get status/);
   assert.match(result.output, /\nopen\n/);
   assert.match(result.output, /\$ ticket list --open \| head -n 2/);

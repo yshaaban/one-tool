@@ -59,6 +59,7 @@ test('package exports resolve the documented entrypoints', async function (): Pr
   assert.equal(typeof testing.runRegisteredCommand, 'function');
   assert.equal(typeof testing.DemoSearch, 'function');
   assert.equal(typeof testing.DemoFetch, 'function');
+  assert.equal(typeof testing.buildDemoRuntime, 'function');
   assert.equal(typeof testing.buildWorld, 'function');
   assert.equal(typeof testing.runOracle, 'function');
   assert.equal(typeof testing.assertScenario, 'function');

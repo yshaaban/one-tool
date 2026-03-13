@@ -5,7 +5,7 @@ import * as path from 'node:path';
 import test from 'node:test';
 import 'fake-indexeddb/auto';
 
-import { buildDemoRuntime } from '../examples/demo-runtime.js';
+import { buildDemoRuntime } from 'one-tool/testing';
 import { BrowserVFS, MemoryVFS } from '../src/index.js';
 
 async function withNodeRuntime(

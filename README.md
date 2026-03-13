@@ -38,7 +38,7 @@ It is built for the common agent problem:
   - full command reference in [`docs/command-reference.md`](docs/command-reference.md)
 - API and integration reference:
   - [`docs/api.md`](docs/api.md)
-  - [`docs/examples.md`](docs/examples.md)
+  - [`examples/README.md`](examples/README.md)
   - [`docs/vfs.md`](docs/vfs.md)
   - [`docs/providers.md`](docs/providers.md)
 - Command authoring:
@@ -89,24 +89,19 @@ The result is a model-facing interface that is simpler, but still expressive.
 npm install
 npm run build
 npm run demo
-npm run examples:list
 ```
 
-The demo runtime seeds:
+`npm run demo` runs the smallest self-contained example: `examples/01-hello-world.ts`.
 
-- a rooted workspace under `./agent_state`
-- example files such as `/logs/app.log`, `/config/prod.json`, and `/accounts/acme.md`
-- demo `search` and `fetch` adapters
-- seeded in-memory working memory entries
+For the rest of the walkthrough, open [`examples/README.md`](examples/README.md).
 
-Then try:
+Start with:
 
-```text
-help
-ls /
-cat /logs/app.log | grep -c ERROR
-fetch order:123 | json get customer.email
-search "refund timeout incident" | write /reports/refund.txt
+```bash
+npm run build
+npm run demo
+npm run example:custom-command
+npm run example:readonly-agent
 ```
 
 For the provider-backed agent example or live integration tests:
@@ -117,7 +112,7 @@ cp .env.example .env
 
 Then fill in the Groq, OpenAI, or Anthropic section described in [`docs/providers.md`](docs/providers.md).
 
-For the full tiered sample catalog, see [`docs/examples.md`](docs/examples.md).
+For the example walkthrough, see [`examples/README.md`](examples/README.md).
 
 ---
 
@@ -265,11 +260,9 @@ Reference: [`docs/api.md#structured-execution`](docs/api.md#structured-execution
 
 ### Where should I start with the examples?
 
-- start with [`docs/examples.md`](docs/examples.md)
-- use a **quickstart** for the first integration
-- use a **recipe** for a specific API pattern
-- use an **application** sample for a realistic workflow
-- use a **reference** example when you want the maintained end-to-end path
+- start with [`examples/README.md`](examples/README.md)
+- read the numbered examples in order
+- use `examples/advanced/` when you need a narrower pattern after the basics
 
 ### Does this work with my model provider?
 
@@ -408,7 +401,7 @@ Full interface, backend behavior, and workspace model: [`docs/vfs.md`](docs/vfs.
 
 ## Provider-backed agent example
 
-This repo includes a maintained provider-backed example agent in `examples/agent.ts`.
+This repo includes a maintained provider-backed example agent in `examples/08-llm-agent.ts`.
 
 ```bash
 npm run agent

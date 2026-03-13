@@ -5,7 +5,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { McpError, type CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
-import { buildDemoRuntime } from '../examples/demo-runtime.js';
+import { buildDemoRuntime } from 'one-tool/testing';
 import { MemoryVFS } from '../src/index.js';
 import { createMcpServer } from '../src/mcp/index.js';
 

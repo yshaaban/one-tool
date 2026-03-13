@@ -9,6 +9,7 @@ export {
 } from './command-harness.js';
 export { DemoFetch, DemoSearch, type DemoSearchDocument } from './adapters.js';
 export { createCommandConformanceCases } from './command-conformance.js';
+export { buildDemoRuntime, seedMemory, seedVfs } from './demo-runtime.js';
 export { assertScenario, type AssertionResult } from './assert-scenario.js';
 export { runOracle, type OracleStepTrace, type OracleTrace } from './oracle-runner.js';
 export { buildWorld } from './world-builder.js';
@@ -18,6 +19,7 @@ export type {
   RunRegisteredCommandResult,
 } from './command-harness.js';
 export type { CommandConformanceCase, CommandConformanceOptions } from './command-conformance.js';
+export type { DemoRuntimeOptions } from './demo-runtime.js';
 export type {
   AssertionSpec,
   FileAssertionSpec,

@@ -1,58 +1,82 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 
-import { exampleManifest, getExampleBySlug } from '../examples/manifest.js';
-import { main as listExamples } from '../examples/list.js';
-import { main as runExample } from '../examples/run.js';
+const TOP_LEVEL_EXAMPLES = [
+  '01-hello-world.ts',
+  '02-custom-command.ts',
+  '03-readonly-agent.ts',
+  '04-detailed-execution.ts',
+  '05-adapters.ts',
+  '06-browser-persistence.ts',
+  '07-mcp-server.ts',
+  '08-llm-agent.ts',
+  'README.md',
+  'agent-support.ts',
+] as const;
 
-test('example manifest is complete and internally consistent', async function (): Promise<void> {
-  assert.equal(exampleManifest.length, 20);
-  const examplesGuide = readFileSync(path.join(process.cwd(), 'docs/examples.md'), 'utf8');
+const ADVANCED_EXAMPLES = [
+  'command-selection.ts',
+  'command-overrides.ts',
+  'extension-helpers.ts',
+  'overflow-and-binary.ts',
+  'prompt-variants.ts',
+  'scenario-testing.ts',
+  'testing-custom-commands.ts',
+  'http-tool-endpoint.ts',
+] as const;
 
-  const tierCounts = new Map<string, number>();
-  const seenSlugs = new Set<string>();
+const REPO_ROOT = process.cwd();
+const EXAMPLES_DIR = path.join(REPO_ROOT, 'examples');
+const ADVANCED_EXAMPLES_DIR = path.join(EXAMPLES_DIR, 'advanced');
 
-  for (const entry of exampleManifest) {
-    assert.ok(!seenSlugs.has(entry.slug), `duplicate example slug: ${entry.slug}`);
-    seenSlugs.add(entry.slug);
-    tierCounts.set(entry.tier, (tierCounts.get(entry.tier) ?? 0) + 1);
+function examplePath(...segments: string[]): string {
+  return path.join(REPO_ROOT, ...segments);
+}
 
-    assert.ok(entry.runCommand.length > 0, `${entry.slug} should have a run command`);
-    assert.ok(entry.sourcePath.endsWith('.ts'), `${entry.slug} should point to a TypeScript source file`);
-    assert.ok(getExampleBySlug(entry.slug), `${entry.slug} should be discoverable by slug`);
-    assert.match(
-      examplesGuide,
-      new RegExp(`\\\`${entry.slug}\\\``),
-      `docs/examples.md should list ${entry.slug}`,
-    );
+test('example layout is curated and documented', function (): void {
+  const examplesReadme = readFileSync(path.join(EXAMPLES_DIR, 'README.md'), 'utf8');
 
-    const source = readFileSync(path.join(process.cwd(), entry.sourcePath), 'utf8');
-    if (entry.tier !== 'reference') {
-      assert.doesNotMatch(source, /from ['"]\.\.\/src\//, `${entry.slug} should use public package imports`);
-      assert.doesNotMatch(
-        source,
-        /from ['"]\.\.\/\.\.\/src\//,
-        `${entry.slug} should use public package imports`,
-      );
-    }
+  for (const fileName of TOP_LEVEL_EXAMPLES) {
+    assert.ok(existsSync(path.join(EXAMPLES_DIR, fileName)), `missing examples/${fileName}`);
   }
 
-  assert.deepEqual(
-    Object.fromEntries(
-      [...tierCounts.entries()].sort(function (a, b) {
-        return a[0].localeCompare(b[0]);
-      }),
-    ),
-    {
-      app: 4,
-      quickstart: 4,
-      recipe: 8,
-      reference: 4,
-    },
-  );
+  for (const fileName of ADVANCED_EXAMPLES) {
+    assert.ok(
+      existsSync(path.join(ADVANCED_EXAMPLES_DIR, fileName)),
+      `missing examples/advanced/${fileName}`,
+    );
+  }
 
-  await listExamples({ quiet: true });
-  await runExample({ quiet: true, args: ['quickstart-node-basic'] });
+  for (const removedPath of [
+    'examples/manifest.ts',
+    'examples/run.ts',
+    'examples/list.ts',
+    'examples/agent.ts',
+    'examples/custom-command.ts',
+    'examples/demo-app.ts',
+    'examples/demo-runtime.ts',
+    'examples/demo-adapters.ts',
+    'examples/shared',
+    'examples/apps',
+    'examples/recipes',
+    'examples/reference',
+  ]) {
+    assert.equal(existsSync(examplePath(removedPath)), false, `${removedPath} should be removed`);
+  }
+
+  for (const fileName of TOP_LEVEL_EXAMPLES.filter(function (entry) {
+    return entry.endsWith('.ts');
+  })) {
+    assert.match(examplesReadme, new RegExp(`\\\`${fileName}\\\``), `${fileName} should be documented`);
+  }
+
+  for (const fileName of ADVANCED_EXAMPLES) {
+    assert.match(
+      examplesReadme,
+      new RegExp(`advanced/${fileName.replace('.', '\\.')}`),
+      `${fileName} should be listed as advanced`,
+    );
+  }
 });

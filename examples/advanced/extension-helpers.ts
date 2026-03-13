@@ -10,13 +10,7 @@ import {
   usageError,
 } from 'one-tool/extensions';
 
-import {
-  createExampleIO,
-  printHeading,
-  runIfEntrypoint,
-  runCommandSequence,
-  type ExampleRunOptions,
-} from '../shared/example-utils.js';
+import { createExampleIO, runIfEntrypointWithErrorHandling, type ExampleOptions } from '../_example-utils.js';
 
 async function cmdProfile(ctx: CommandContext, args: string[], stdin: Uint8Array): Promise<CommandResult> {
   const action = args[0];
@@ -97,14 +91,11 @@ const helperCommands = defineCommandGroup('helper-recipes', [
   },
 ]);
 
-export async function main(options: ExampleRunOptions = {}): Promise<void> {
+export async function main(options: ExampleOptions = {}): Promise<void> {
   const io = createExampleIO(options);
   const encoder = new TextEncoder();
-  const decoder = new TextDecoder();
   const vfs = new MemoryVFS();
 
-  await vfs.mkdir('/records', true);
-  await vfs.mkdir('/notes', true);
   await vfs.writeBytes(
     '/records/order.json',
     encoder.encode(JSON.stringify({ customer: { email: 'ops@acme.example' } }, null, 2)),
@@ -117,20 +108,18 @@ export async function main(options: ExampleRunOptions = {}): Promise<void> {
     commands: collectCommands([help, helperCommands]),
   });
 
-  printHeading(
-    io,
-    'Recipe: extension helpers',
-    'This command pack uses usageError, stdinNotAcceptedError, formatVfsError, readJsonInput, readTextInput, parseCountFlag, and defineCommandGroup.',
-  );
-  await runCommandSequence(io, runtime, [
+  io.write('Advanced · Extension helpers');
+  io.write('Build custom command packs with the stable one-tool/extensions surface.');
+
+  for (const command of [
     'help profile',
     'profile email /records/order.json',
     'show /missing.txt',
     'top -n 2 /notes/todo.txt',
-  ]);
-  io.write(
-    `\nRaw bytes from todo.txt: ${decoder.decode((await vfs.readBytes('/notes/todo.txt')).slice(0, 10))}...`,
-  );
+  ]) {
+    io.write(`\n$ ${command}`);
+    io.write(await runtime.run(command));
+  }
 }
 
-await runIfEntrypoint(import.meta.url, main);
+await runIfEntrypointWithErrorHandling(import.meta.url, main);

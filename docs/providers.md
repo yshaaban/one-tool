@@ -2,7 +2,7 @@
 
 Guide for the maintained provider-backed agent example.
 
-For the runtime overview, start with [`../README.md`](../README.md). The provider-backed example itself lives in `examples/agent.ts`.
+For the runtime overview, start with [`../README.md`](../README.md). The provider-backed example itself lives in `examples/08-llm-agent.ts`.
 
 ---
 
