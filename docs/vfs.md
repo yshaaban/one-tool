@@ -59,6 +59,16 @@ interface VFileInfo {
 import { NodeVFS } from 'one-tool';
 
 const vfs = new NodeVFS('./agent_state');
+
+const constrained = new NodeVFS('./agent_state', {
+  resourcePolicy: {
+    maxFileBytes: 256 * 1024,
+    maxTotalBytes: 10 * 1024 * 1024,
+    maxDirectoryDepth: 8,
+    maxEntriesPerDirectory: 500,
+    maxOutputArtifactBytes: 128 * 1024,
+  },
+});
 ```
 
 Behavior:
@@ -110,6 +120,68 @@ Cleanup:
 vfs.close();
 await BrowserVFS.destroy('my-agent-db');
 ```
+
+---
+
+## Resource policies
+
+All three backends support the same optional resource policy surface:
+
+```ts
+interface VfsResourcePolicy {
+  maxFileBytes?: number;
+  maxTotalBytes?: number;
+  maxDirectoryDepth?: number;
+  maxEntriesPerDirectory?: number;
+  maxOutputArtifactBytes?: number;
+}
+```
+
+Pass the policy through the backend constructor or `BrowserVFS.open(...)` options:
+
+```ts
+const vfs = new MemoryVFS({
+  resourcePolicy: {
+    maxFileBytes: 1024,
+    maxTotalBytes: 4096,
+  },
+});
+```
+
+Meaning:
+
+- `maxFileBytes` limits the size of any single file
+- `maxTotalBytes` limits the total stored file bytes across the workspace
+- `maxDirectoryDepth` limits how deep nested directories may become
+- `maxEntriesPerDirectory` limits fanout under any directory
+- `maxOutputArtifactBytes` limits runtime spill files under `/.system/cmd-output/`
+
+Policies are enforced consistently across `NodeVFS`, `MemoryVFS`, and `BrowserVFS`.
+
+---
+
+## Typed VFS errors
+
+Backends now throw typed `VfsError` instances for SDK-defined filesystem failures:
+
+```ts
+import { VfsError, isVfsError, toVfsError } from 'one-tool';
+```
+
+The stable error codes are:
+
+- `ENOENT`
+- `EISDIR`
+- `ENOTDIR`
+- `EEXIST`
+- `EINVAL`
+- `EROOT`
+- `EESCAPE`
+- `ERESOURCE_LIMIT`
+
+`ERESOURCE_LIMIT` includes structured `details` such as the limit kind, configured limit, and actual value.
+
+This matters if you are writing custom commands or higher-level integrations: switch on `error.code` or use `toVfsError(...)` instead of parsing error strings.
 
 ---
 

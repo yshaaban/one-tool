@@ -11,6 +11,7 @@ import { SimpleMemory } from './memory.js';
 import type { CommandResult, ToolAdapters } from './types.js';
 import { err, ok, textDecoder } from './types.js';
 import { errorMessage, formatDuration, formatSize, looksBinary, splitLines } from './utils.js';
+import { toVfsError } from './vfs/errors.js';
 import type { VFS } from './vfs/interface.js';
 
 export interface AgentCLIOptions {
@@ -86,6 +87,11 @@ interface RenderedStdout {
   savedPath?: string;
   totalBytes?: number;
   totalLines?: number;
+}
+
+interface OverflowArtifactResult {
+  savedPath?: string;
+  failureMessage?: string;
 }
 
 export class AgentCLI {
@@ -293,15 +299,22 @@ export class AgentCLI {
 
     if (result.stdout.length > 0) {
       if (looksBinary(result.stdout)) {
-        const saved = await this.storeOverflowBytes(result.stdout, '.bin');
         presentation.stdoutMode = 'binary-guard';
-        presentation.savedPath = saved;
         presentation.totalBytes = result.stdout.length;
-        parts.push(
-          '[error] command produced binary output that should not be sent to the model.\n' +
-            `Saved to: ${saved}\n` +
-            `Use: stat ${saved}`,
-        );
+        const saved = await this.storeOverflowBytes(result.stdout, '.bin');
+        if (saved.savedPath !== undefined) {
+          presentation.savedPath = saved.savedPath;
+          parts.push(
+            '[error] command produced binary output that should not be sent to the model.\n' +
+              `Saved to: ${saved.savedPath}\n` +
+              `Use: stat ${saved.savedPath}`,
+          );
+        } else {
+          parts.push(
+            '[error] command produced binary output that should not be sent to the model.\n' +
+              `${saved.failureMessage ?? 'Binary output could not be saved.'}`,
+          );
+        }
       } else {
         const renderedStdout = await this.applyOverflow(textDecoder.decode(result.stdout));
         presentation.stdoutMode = renderedStdout.stdoutMode;
@@ -352,33 +365,61 @@ export class AgentCLI {
       preview = preview.slice(0, -1);
     }
 
-    const meta =
-      `--- output truncated (${lines.length} lines, ${formatSize(encoded.length)}) ---\n` +
-      `Full output: ${saved}\n` +
-      `Explore: cat ${saved} | grep <pattern>\n` +
-      `         cat ${saved} | tail -n 100`;
+    const metaLines = [`--- output truncated (${lines.length} lines, ${formatSize(encoded.length)}) ---`];
+    if (saved.savedPath !== undefined) {
+      metaLines.push(`Full output: ${saved.savedPath}`);
+      metaLines.push(`Explore: cat ${saved.savedPath} | grep <pattern>`);
+      metaLines.push(`         cat ${saved.savedPath} | tail -n 100`);
+    } else {
+      metaLines.push(saved.failureMessage ?? 'Full output could not be saved.');
+    }
+    const meta = metaLines.join('\n');
 
     return {
       text: preview.length === 0 ? meta : `${preview}\n\n${meta}`,
       stdoutMode: 'truncated',
-      savedPath: saved,
+      ...(saved.savedPath === undefined ? {} : { savedPath: saved.savedPath }),
       totalBytes: encoded.length,
       totalLines: lines.length,
     };
   }
 
-  private async storeOverflowText(text: string): Promise<string> {
+  private async storeOverflowText(text: string): Promise<OverflowArtifactResult> {
     this.ctx.outputCounter += 1;
     const target = `${this.ctx.outputDir}/cmd-${String(this.ctx.outputCounter).padStart(4, '0')}.txt`;
-    await this.ctx.vfs.writeBytes(target, new TextEncoder().encode(text));
-    return target;
+    return this.storeOverflowArtifact(target, new TextEncoder().encode(text));
   }
 
-  private async storeOverflowBytes(data: Uint8Array, suffix = '.bin'): Promise<string> {
+  private async storeOverflowBytes(data: Uint8Array, suffix = '.bin'): Promise<OverflowArtifactResult> {
     this.ctx.outputCounter += 1;
     const target = `${this.ctx.outputDir}/cmd-${String(this.ctx.outputCounter).padStart(4, '0')}${suffix}`;
-    await this.ctx.vfs.writeBytes(target, data);
-    return target;
+    return this.storeOverflowArtifact(target, data);
+  }
+
+  private async storeOverflowArtifact(path: string, data: Uint8Array): Promise<OverflowArtifactResult> {
+    try {
+      await this.ctx.vfs.writeBytes(path, data);
+      return { savedPath: path };
+    } catch (caught) {
+      return {
+        failureMessage: this.describeOverflowArtifactFailure(caught),
+      };
+    }
+  }
+
+  private describeOverflowArtifactFailure(caught: unknown): string {
+    const vfsError = toVfsError(caught);
+    if (vfsError?.code === 'ERESOURCE_LIMIT') {
+      const limitKind =
+        typeof vfsError.details?.limitKind === 'string' ? vfsError.details.limitKind : 'resource limit';
+      const limit = typeof vfsError.details?.limit === 'number' ? vfsError.details.limit : undefined;
+      const actual = typeof vfsError.details?.actual === 'number' ? vfsError.details.actual : undefined;
+      if (limit !== undefined && actual !== undefined) {
+        return `Full output could not be saved because ${limitKind} was exceeded (${actual} > ${limit}).`;
+      }
+      return `Full output could not be saved because ${limitKind} was exceeded.`;
+    }
+    return `Full output could not be saved: ${errorMessage(caught)}`;
   }
 }
 

@@ -14,9 +14,15 @@ export type {
 
 // VFS interface + backends
 export type { VFS, VFileInfo } from './vfs/interface.js';
+export type { VfsErrorCode, VfsErrorOptions } from './vfs/errors.js';
+export { BrowserVFS } from './vfs/browser-vfs.js';
+export { VfsError, isVfsError, toVfsError } from './vfs/errors.js';
 export { MemoryVFS } from './vfs/memory-vfs.js';
 export { NodeVFS, RootedVFS } from './vfs/node-vfs.js';
-export { BrowserVFS } from './vfs/browser-vfs.js';
+export type { BrowserVFSOpenOptions } from './vfs/browser-vfs.js';
+export type { MemoryVFSOptions } from './vfs/memory-vfs.js';
+export type { NodeVFSOptions } from './vfs/node-vfs.js';
+export type { ResolvedVfsResourcePolicy, VfsPolicyOptions, VfsResourcePolicy } from './vfs/policy.js';
 
 // Commands
 export {
@@ -87,6 +93,10 @@ export { SimpleMemory } from './memory.js';
 // Tool schema helpers
 export { buildToolDefinition } from './tool-schema.js';
 export type { BuildToolDefinitionOptions, ToolDefinition } from './tool-schema.js';
+
+// MCP helpers
+export { createMcpServer, serveStdioMcpServer } from './mcp/index.js';
+export type { ConnectedMcpServer, McpServerOptions } from './mcp/index.js';
 
 // Testing helpers
 export {

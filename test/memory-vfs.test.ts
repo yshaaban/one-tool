@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { MemoryVFS } from '../src/index.js';
+import { MemoryVFS, toVfsError } from '../src/index.js';
 
 test('normalize resolves paths correctly', () => {
   const vfs = new MemoryVFS();
@@ -133,7 +133,16 @@ test('delete removes directory recursively', async () => {
 
 test('delete root throws', async () => {
   const vfs = new MemoryVFS();
-  await assert.rejects(() => vfs.delete('/'), /cannot delete root/);
+  await assert.rejects(
+    async () => vfs.delete('/'),
+    function (caught: unknown): boolean {
+      const vfsError = toVfsError(caught);
+      assert.ok(vfsError);
+      assert.equal(vfsError.code, 'EROOT');
+      assert.equal(vfsError.path, '/');
+      return true;
+    },
+  );
 });
 
 test('copy duplicates file', async () => {
@@ -189,6 +198,15 @@ test('move directory into its own child throws EINVAL', async () => {
   const vfs = new MemoryVFS();
   await vfs.writeBytes('/src/main.ts', new TextEncoder().encode('code'));
   await assert.rejects(() => vfs.move('/src', '/src/sub'), /EINVAL/);
+});
+
+test('move reports ENOENT before descendant checks for missing sources', async () => {
+  const vfs = new MemoryVFS({
+    resourcePolicy: {
+      maxDirectoryDepth: 0,
+    },
+  });
+  await assert.rejects(() => vfs.move('/missing', '/missing/sub'), /ENOENT/);
 });
 
 test('writeBytes creates parent dirs automatically', async () => {

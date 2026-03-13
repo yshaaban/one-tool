@@ -1,5 +1,11 @@
 export type { VFS, VFileInfo } from './interface.js';
 export { guessMediaType } from './interface.js';
-export { MemoryVFS } from './memory-vfs.js';
-export { NodeVFS, RootedVFS } from './node-vfs.js';
+export type { VfsErrorCode, VfsErrorOptions } from './errors.js';
+export { VfsError, isVfsError, toVfsError } from './errors.js';
+export type { BrowserVFSOpenOptions } from './browser-vfs.js';
 export { BrowserVFS } from './browser-vfs.js';
+export type { MemoryVFSOptions } from './memory-vfs.js';
+export { MemoryVFS } from './memory-vfs.js';
+export type { NodeVFSOptions } from './node-vfs.js';
+export { NodeVFS, RootedVFS } from './node-vfs.js';
+export type { ResolvedVfsResourcePolicy, VfsPolicyOptions, VfsResourcePolicy } from './policy.js';

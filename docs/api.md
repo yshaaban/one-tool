@@ -244,6 +244,59 @@ The exported `ToolDefinition` type matches this object shape.
 
 ---
 
+## MCP server surface
+
+Import from `one-tool/mcp` when you want to expose the runtime as a native MCP tool server:
+
+```ts
+import { createMcpServer, serveStdioMcpServer } from 'one-tool/mcp';
+```
+
+The MCP surface is intentionally small:
+
+```ts
+interface McpServerOptions {
+  serverName?: string;
+  serverVersion?: string;
+  instructions?: string;
+  toolName?: string;
+  descriptionVariant?: ToolDescriptionVariant;
+}
+
+function createMcpServer(runtime: AgentCLI, options?: McpServerOptions): Server;
+function serveStdioMcpServer(runtime: AgentCLI, options?: McpServerOptions): Promise<ConnectedMcpServer>;
+```
+
+Use `createMcpServer(...)` when you want to attach a custom transport yourself.
+
+Use `serveStdioMcpServer(...)` when you want a ready-to-run stdio server for Claude Code, Claude Desktop, or other MCP clients.
+
+Example:
+
+```ts
+import { createAgentCLI, NodeVFS } from 'one-tool';
+import { serveStdioMcpServer } from 'one-tool/mcp';
+
+const runtime = await createAgentCLI({
+  vfs: new NodeVFS('./agent_state'),
+});
+
+await serveStdioMcpServer(runtime, {
+  instructions: 'Use the run tool to inspect files, memory, and adapters.',
+});
+```
+
+The exported MCP tool:
+
+- is named `run` by default
+- uses the same description variants as `buildToolDefinition(...)`
+- returns human-readable text in the MCP content blocks
+- also returns structured execution metadata derived from `runDetailed(...)`
+
+See `examples/reference/mcp-stdio.ts` for a maintained reference example.
+
+---
+
 ## Adapters
 
 ```ts
@@ -594,6 +647,7 @@ You can also import `BrowserVFS` from the root entrypoint when your environment 
 | `one-tool`             | Core runtime, types, command APIs, testing helpers, tool schema, and all VFS backends        |
 | `one-tool/commands`    | Command registry helpers, built-in command groups, and command specs                         |
 | `one-tool/extensions`  | Stable command-authoring helpers for input handling, VFS errors, flags, and command groups   |
+| `one-tool/mcp`         | MCP server helpers for exposing the runtime as a `run` tool                                  |
 | `one-tool/testing`     | Stable command-testing helpers, deterministic scenario-test helpers, and conformance helpers |
 | `one-tool/vfs/node`    | `NodeVFS` and deprecated `RootedVFS`                                                         |
 | `one-tool/vfs/memory`  | `MemoryVFS`                                                                                  |
@@ -652,6 +706,8 @@ Explore: cat /.system/cmd-output/cmd-0003.txt | grep <pattern>
 ```
 
 This is a major part of the design: large results become explorable, not destructive to the context window.
+
+If a VFS resource policy prevents the spill file from being saved, the runtime still returns the preview or binary guard message. In that case `savedPath` is omitted from the structured result and the presentation text explains why persistence failed.
 
 You can tune those thresholds:
 

@@ -139,10 +139,18 @@ test('run returns the same presentation text exposed by runDetailed', async func
   });
   await runtime.initialize();
 
-  const text = await runtime.run('echo hello world');
   const execution = await runtime.runDetailed('echo hello world');
+  const originalRunDetailed = runtime.runDetailed.bind(runtime);
+  runtime.runDetailed = async function (): Promise<typeof execution> {
+    return execution;
+  };
 
-  assert.equal(text, execution.presentation.text);
+  try {
+    const text = await runtime.run('echo hello world');
+    assert.equal(text, execution.presentation.text);
+  } finally {
+    runtime.runDetailed = originalRunDetailed;
+  }
 });
 
 test('runDetailed exposes binary-guard metadata', async function (): Promise<void> {
@@ -161,4 +169,53 @@ test('runDetailed exposes binary-guard metadata', async function (): Promise<voi
   assert.equal(await runtime.ctx.vfs.exists(execution.presentation.savedPath ?? ''), true);
   assert.match(execution.presentation.body, /command produced binary output/);
   assert.deepEqual(Array.from(execution.stdout), [0, 1, 2, 3]);
+});
+
+test('runDetailed degrades gracefully when truncated output cannot be saved', async function (): Promise<void> {
+  const runtime = new AgentCLI({
+    vfs: new MemoryVFS({
+      resourcePolicy: {
+        maxOutputArtifactBytes: 8,
+      },
+    }),
+    builtinCommands: false,
+    commands: [burst],
+    outputLimits: { maxLines: 1, maxBytes: 1024 },
+  });
+  await runtime.initialize();
+
+  const execution = await runtime.runDetailed('burst');
+
+  assert.equal(execution.exitCode, 0);
+  assert.equal(execution.presentation.stdoutMode, 'truncated');
+  assert.equal(execution.presentation.savedPath, undefined);
+  assert.match(execution.presentation.body, /output truncated \(3 lines,/);
+  assert.match(
+    execution.presentation.body,
+    /Full output could not be saved because maxOutputArtifactBytes was exceeded/,
+  );
+});
+
+test('runDetailed degrades gracefully when binary output cannot be saved', async function (): Promise<void> {
+  const runtime = new AgentCLI({
+    vfs: new MemoryVFS({
+      resourcePolicy: {
+        maxOutputArtifactBytes: 3,
+      },
+    }),
+    builtinCommands: false,
+    commands: [binary],
+  });
+  await runtime.initialize();
+
+  const execution = await runtime.runDetailed('binary');
+
+  assert.equal(execution.exitCode, 0);
+  assert.equal(execution.presentation.stdoutMode, 'binary-guard');
+  assert.equal(execution.presentation.savedPath, undefined);
+  assert.match(execution.presentation.body, /command produced binary output/);
+  assert.match(
+    execution.presentation.body,
+    /Full output could not be saved because maxOutputArtifactBytes was exceeded/,
+  );
 });

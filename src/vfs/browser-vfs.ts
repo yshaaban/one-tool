@@ -1,6 +1,22 @@
 import type { VFS, VFileInfo } from './interface.js';
 import { guessMediaType } from './interface.js';
 import { posixNormalize, parentOf, baseName, isStrictDescendantPath } from './path-utils.js';
+import { vfsError } from './errors.js';
+import {
+  applyAppendToSnapshot,
+  applyCopyToSnapshot,
+  applyMkdirToSnapshot,
+  applyMoveToSnapshot,
+  applyWriteToSnapshot,
+  cloneSnapshot,
+  createSnapshotFromEntries,
+  enforceResourcePolicy,
+  hasResourcePolicy,
+  type ResolvedVfsResourcePolicy,
+  resolveVfsResourcePolicy,
+  type VfsPolicyOptions,
+  type VfsSnapshot,
+} from './policy.js';
 
 const STORE_FILES = 'files';
 const STORE_DIRS = 'dirs';
@@ -22,6 +38,8 @@ interface DirRecord {
   path: string;
   mtimeMs: number;
 }
+
+export type BrowserVFSOpenOptions = VfsPolicyOptions;
 
 function promisifyRequest<T>(request: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -77,16 +95,18 @@ function openDatabase(dbName: string): Promise<IDBDatabase> {
 export class BrowserVFS implements VFS {
   private db: IDBDatabase;
   readonly dbName: string;
+  readonly resourcePolicy: ResolvedVfsResourcePolicy;
 
-  private constructor(db: IDBDatabase, dbName: string) {
+  private constructor(db: IDBDatabase, dbName: string, options: BrowserVFSOpenOptions) {
     this.db = db;
     this.dbName = dbName;
+    this.resourcePolicy = resolveVfsResourcePolicy(options.resourcePolicy);
   }
 
   /** Open (or create) a named IndexedDB database and return a ready VFS. */
-  static async open(dbName = 'one-tool-vfs'): Promise<BrowserVFS> {
+  static async open(dbName = 'one-tool-vfs', options: BrowserVFSOpenOptions = {}): Promise<BrowserVFS> {
     const db = await openDatabase(dbName);
-    const vfs = new BrowserVFS(db, dbName);
+    const vfs = new BrowserVFS(db, dbName, options);
 
     // Ensure root dir exists
     const tx = db.transaction(STORE_DIRS, 'readwrite');
@@ -155,7 +175,7 @@ export class BrowserVFS implements VFS {
       if (fileStore) {
         const fileCollision = await promisifyRequest(fileStore.get(current));
         if (fileCollision) {
-          throw new Error(`ENOTDIR:${current}`);
+          throw vfsError('ENOTDIR', current);
         }
       }
       const existing = await promisifyRequest(dirStore.get(current));
@@ -163,6 +183,45 @@ export class BrowserVFS implements VFS {
         dirStore.put({ path: current, mtimeMs: Date.now() } satisfies DirRecord);
       }
     }
+  }
+
+  private async validateParents(normalizedPath: string, fileStore: IDBObjectStore): Promise<void> {
+    const segments = normalizedPath.split('/').filter(Boolean);
+    let current = '';
+    for (const segment of segments) {
+      current += `/${segment}`;
+      if (await promisifyRequest(fileStore.get(current))) {
+        throw vfsError('ENOTDIR', current);
+      }
+    }
+  }
+
+  private async createSnapshot(dirStore: IDBObjectStore, fileStore: IDBObjectStore): Promise<VfsSnapshot> {
+    const allDirs = (await promisifyRequest(dirStore.getAll())) as DirRecord[];
+    const allFiles = (await promisifyRequest(fileStore.getAll())) as FileRecord[];
+    return createSnapshotFromEntries(
+      allFiles.map(function (file) {
+        return [file.path, file.data.length] as const;
+      }),
+      allDirs.map(function (dir) {
+        return dir.path;
+      }),
+    );
+  }
+
+  private async enforcePolicy(
+    contextPath: string,
+    dirStore: IDBObjectStore,
+    fileStore: IDBObjectStore,
+    mutate: (snapshot: VfsSnapshot) => void,
+  ): Promise<void> {
+    if (!hasResourcePolicy(this.resourcePolicy)) {
+      return;
+    }
+
+    const snapshot = cloneSnapshot(await this.createSnapshot(dirStore, fileStore));
+    mutate(snapshot);
+    enforceResourcePolicy(snapshot, this.resourcePolicy, contextPath);
   }
 
   // ── VFS interface ────────────────────────────────────────────────
@@ -192,20 +251,28 @@ export class BrowserVFS implements VFS {
     // Collision: a file already exists at this exact path
     const fileCollision = await promisifyRequest(fileStore.get(p));
     if (fileCollision) {
-      throw new Error(`EEXIST:${p}`);
+      throw vfsError('EEXIST', p);
     }
+    if (parents) {
+      await this.validateParents(p, fileStore);
+    } else {
+      const parent = parentOf(p);
+      if (await promisifyRequest(fileStore.get(parent))) {
+        throw vfsError('ENOTDIR', parent);
+      }
+      const parentExists = await promisifyRequest(dirStore.get(parent));
+      if (!parentExists) {
+        throw vfsError('ENOENT', parent);
+      }
+    }
+
+    await this.enforcePolicy(p, dirStore, fileStore, function (snapshot): void {
+      applyMkdirToSnapshot(snapshot, p, parents);
+    });
 
     if (parents) {
       await this.ensureParents(p, dirStore, fileStore);
     } else {
-      const parent = parentOf(p);
-      if (await promisifyRequest(fileStore.get(parent))) {
-        throw new Error(`ENOTDIR:${parent}`);
-      }
-      const parentExists = await promisifyRequest(dirStore.get(parent));
-      if (!parentExists) {
-        throw new Error(`ENOENT:${parent}`);
-      }
       dirStore.put({ path: p, mtimeMs: Date.now() } satisfies DirRecord);
     }
 
@@ -223,9 +290,9 @@ export class BrowserVFS implements VFS {
     if (!dirExists) {
       const fileExists = await promisifyRequest(fileStore.get(p));
       if (fileExists) {
-        throw new Error(`ENOTDIR:${p}`);
+        throw vfsError('ENOTDIR', p);
       }
-      throw new Error(`ENOENT:${p}`);
+      throw vfsError('ENOENT', p);
     }
 
     const prefix = p === '/' ? '/' : p + '/';
@@ -270,12 +337,12 @@ export class BrowserVFS implements VFS {
 
     const dirExists = await promisifyRequest(tx.objectStore(STORE_DIRS).get(p));
     if (dirExists) {
-      throw new Error(`EISDIR:${p}`);
+      throw vfsError('EISDIR', p);
     }
 
     const record = (await promisifyRequest(tx.objectStore(STORE_FILES).get(p))) as FileRecord | undefined;
     if (!record) {
-      throw new Error(`ENOENT:${p}`);
+      throw vfsError('ENOENT', p);
     }
 
     return new Uint8Array(record.data);
@@ -295,19 +362,26 @@ export class BrowserVFS implements VFS {
     // Collision: cannot overwrite a directory with a file
     const dirCollision = await promisifyRequest(dirStore.get(p));
     if (dirCollision) {
-      throw new Error(`EISDIR:${p}`);
+      throw vfsError('EISDIR', p);
     }
-
     if (makeParents) {
-      await this.ensureParents(parentOf(p), dirStore, fileStore);
+      await this.validateParents(parentOf(p), fileStore);
     } else {
       const parent = parentOf(p);
       if (await promisifyRequest(fileStore.get(parent))) {
-        throw new Error(`ENOTDIR:${parent}`);
+        throw vfsError('ENOTDIR', parent);
       }
       if (!(await promisifyRequest(dirStore.get(parent)))) {
-        throw new Error(`ENOENT:${parent}`);
+        throw vfsError('ENOENT', parent);
       }
+    }
+
+    await this.enforcePolicy(p, dirStore, fileStore, function (snapshot): void {
+      applyWriteToSnapshot(snapshot, p, data.length, makeParents);
+    });
+
+    if (makeParents) {
+      await this.ensureParents(parentOf(p), dirStore, fileStore);
     }
 
     fileStore.put({
@@ -328,23 +402,29 @@ export class BrowserVFS implements VFS {
     // Collision: cannot append to a directory
     const dirCollision = await promisifyRequest(dirStore.get(p));
     if (dirCollision) {
-      throw new Error(`EISDIR:${p}`);
-    }
-
-    if (makeParents) {
-      await this.ensureParents(parentOf(p), dirStore, tx.objectStore(STORE_FILES));
-    } else {
-      const parent = parentOf(p);
-      const fileStore = tx.objectStore(STORE_FILES);
-      if (await promisifyRequest(fileStore.get(parent))) {
-        throw new Error(`ENOTDIR:${parent}`);
-      }
-      if (!(await promisifyRequest(dirStore.get(parent)))) {
-        throw new Error(`ENOENT:${parent}`);
-      }
+      throw vfsError('EISDIR', p);
     }
 
     const fileStore = tx.objectStore(STORE_FILES);
+    if (makeParents) {
+      await this.validateParents(parentOf(p), fileStore);
+    } else {
+      const parent = parentOf(p);
+      if (await promisifyRequest(fileStore.get(parent))) {
+        throw vfsError('ENOTDIR', parent);
+      }
+      if (!(await promisifyRequest(dirStore.get(parent)))) {
+        throw vfsError('ENOENT', parent);
+      }
+    }
+    await this.enforcePolicy(p, dirStore, fileStore, function (snapshot): void {
+      applyAppendToSnapshot(snapshot, p, data.length, makeParents);
+    });
+
+    if (makeParents) {
+      await this.ensureParents(parentOf(p), dirStore, fileStore);
+    }
+
     const existing = (await promisifyRequest(fileStore.get(p))) as FileRecord | undefined;
 
     if (existing) {
@@ -377,10 +457,10 @@ export class BrowserVFS implements VFS {
     // Check if it's a directory
     const dirRecord = await promisifyRequest(dirStore.get(p));
     if (!dirRecord) {
-      throw new Error(`ENOENT:${p}`);
+      throw vfsError('ENOENT', p);
     }
     if (p === '/') {
-      throw new Error('cannot delete root');
+      throw vfsError('EROOT', p);
     }
 
     // Delete the dir and all children
@@ -416,8 +496,12 @@ export class BrowserVFS implements VFS {
     if (fileRecord) {
       const dstDirCollision = await promisifyRequest(dirStore.get(dstP));
       if (dstDirCollision) {
-        throw new Error(`EISDIR:${dstP}`);
+        throw vfsError('EISDIR', dstP);
       }
+      await this.validateParents(parentOf(dstP), fileStore);
+      await this.enforcePolicy(dstP, dirStore, fileStore, function (snapshot): void {
+        applyCopyToSnapshot(snapshot, srcP, dstP);
+      });
       await this.ensureParents(parentOf(dstP), dirStore, fileStore);
       fileStore.put({
         path: dstP,
@@ -431,18 +515,22 @@ export class BrowserVFS implements VFS {
     // Directory copy
     const dirRecord = await promisifyRequest(dirStore.get(srcP));
     if (!dirRecord) {
-      throw new Error(`ENOENT:${srcP}`);
+      throw vfsError('ENOENT', srcP);
     }
 
     // Check destination doesn't exist
     const dstDirExists = await promisifyRequest(dirStore.get(dstP));
     const dstFileExists = await promisifyRequest(fileStore.get(dstP));
     if (dstDirExists || dstFileExists) {
-      throw new Error(`EEXIST:${dstP}`);
+      throw vfsError('EEXIST', dstP);
     }
     if (isStrictDescendantPath(srcP, dstP)) {
-      throw new Error(`EINVAL:${dstP}`);
+      throw vfsError('EINVAL', dstP, { targetPath: srcP });
     }
+    await this.validateParents(parentOf(dstP), fileStore);
+    await this.enforcePolicy(dstP, dirStore, fileStore, function (snapshot): void {
+      applyCopyToSnapshot(snapshot, srcP, dstP);
+    });
 
     // Copy directory tree
     await this.ensureParents(parentOf(dstP), dirStore, fileStore);
@@ -477,14 +565,78 @@ export class BrowserVFS implements VFS {
   async move(src: string, dst: string): Promise<{ src: string; dst: string }> {
     const srcP = this.normalize(src);
     const dstP = this.normalize(dst);
+    const dstParent = parentOf(dstP);
     if (srcP === dstP) {
       return { src: srcP, dst: dstP };
     }
-    if ((await this.isDir(srcP)) && isStrictDescendantPath(srcP, dstP)) {
-      throw new Error(`EINVAL:${dstP}`);
+    const tx = this.tx([STORE_DIRS, STORE_FILES], 'readwrite');
+    const dirStore = tx.objectStore(STORE_DIRS);
+    const fileStore = tx.objectStore(STORE_FILES);
+
+    const fileRecord = (await promisifyRequest(fileStore.get(srcP))) as FileRecord | undefined;
+    if (fileRecord) {
+      if (await promisifyRequest(dirStore.get(dstP))) {
+        throw vfsError('EISDIR', dstP);
+      }
+      await this.validateParents(dstParent, fileStore);
+      await this.enforcePolicy(dstP, dirStore, fileStore, function (snapshot): void {
+        applyMoveToSnapshot(snapshot, srcP, dstP);
+      });
+      await this.ensureParents(dstParent, dirStore, fileStore);
+      fileStore.put({
+        path: dstP,
+        data: new Uint8Array(fileRecord.data),
+        mtimeMs: Date.now(),
+      } satisfies FileRecord);
+      fileStore.delete(srcP);
+      await promisifyTransaction(tx);
+      return { src: srcP, dst: dstP };
     }
-    await this.copy(src, dst);
-    await this.delete(src);
+
+    const dirRecord = await promisifyRequest(dirStore.get(srcP));
+    if (!dirRecord) {
+      throw vfsError('ENOENT', srcP);
+    }
+    if (isStrictDescendantPath(srcP, dstP)) {
+      throw vfsError('EINVAL', dstP, { targetPath: srcP });
+    }
+    const dstDirExists = await promisifyRequest(dirStore.get(dstP));
+    const dstFileExists = await promisifyRequest(fileStore.get(dstP));
+    if (dstDirExists || dstFileExists) {
+      throw vfsError('EEXIST', dstP);
+    }
+
+    await this.validateParents(dstParent, fileStore);
+    await this.enforcePolicy(dstP, dirStore, fileStore, function (snapshot): void {
+      applyMoveToSnapshot(snapshot, srcP, dstP);
+    });
+    await this.ensureParents(dstParent, dirStore, fileStore);
+    dirStore.put({ path: dstP, mtimeMs: Date.now() } satisfies DirRecord);
+    const prefix = srcP === '/' ? '/' : srcP + '/';
+
+    const allDirs = (await promisifyRequest(dirStore.getAll())) as DirRecord[];
+    for (const dir of allDirs) {
+      if (dir.path.startsWith(prefix)) {
+        dirStore.put({
+          path: dstP + dir.path.slice(srcP.length),
+          mtimeMs: Date.now(),
+        } satisfies DirRecord);
+      }
+    }
+
+    const allFiles = (await promisifyRequest(fileStore.getAll())) as FileRecord[];
+    for (const file of allFiles) {
+      if (file.path.startsWith(prefix)) {
+        fileStore.put({
+          path: dstP + file.path.slice(srcP.length),
+          data: new Uint8Array(file.data),
+          mtimeMs: Date.now(),
+        } satisfies FileRecord);
+      }
+    }
+
+    await promisifyTransaction(tx);
+    await this.delete(srcP);
     return { src: srcP, dst: dstP };
   }
 

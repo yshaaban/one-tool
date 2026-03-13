@@ -115,7 +115,7 @@ For the provider-backed agent example or live integration tests:
 cp .env.example .env
 ```
 
-Then fill in either the Groq or OpenAI section described in [`docs/providers.md`](docs/providers.md).
+Then fill in the Groq, OpenAI, or Anthropic section described in [`docs/providers.md`](docs/providers.md).
 
 For the full tiered sample catalog, see [`docs/examples.md`](docs/examples.md).
 
@@ -277,6 +277,7 @@ The runtime itself is provider-agnostic.
 
 - OpenAI: covered by maintained example and live-test entrypoint
 - Groq: covered by maintained example and live-test entrypoint
+- Anthropic: covered by maintained example and live-test entrypoint through Anthropic's OpenAI-compatible endpoint
 - other OpenAI-compatible providers: often usable if they support tool calling, but not covered by maintained examples or tests in this repo
 
 Provider details: [`docs/providers.md`](docs/providers.md)
@@ -372,6 +373,7 @@ Primary entrypoints:
 | `createAgentCLI(...)`                            | create a runtime                                     | [`docs/api.md#core-runtime`](docs/api.md#core-runtime)                         |
 | `runtime.runDetailed(...)`                       | inspect structured execution results and traces      | [`docs/api.md#structured-execution`](docs/api.md#structured-execution)         |
 | `buildToolDefinition(...)`                       | expose an OpenAI-compatible tool definition          | [`docs/api.md#tool-definition`](docs/api.md#tool-definition)                   |
+| `one-tool/mcp`                                   | expose the runtime as an MCP stdio tool server       | [`docs/api.md#mcp-server-surface`](docs/api.md#mcp-server-surface)             |
 | `CommandRegistry` / `createCommandRegistry(...)` | select, override, and compose commands               | [`docs/api.md#command-registry`](docs/api.md#command-registry)                 |
 | `one-tool/extensions`                            | author custom commands with stable helper utilities  | [`docs/api.md#public-extension-helpers`](docs/api.md#public-extension-helpers) |
 | `one-tool/testing`                               | test custom commands and deterministic scenario runs | [`docs/api.md#command-testing-helpers`](docs/api.md#command-testing-helpers)   |
@@ -416,6 +418,7 @@ Live integration tests are opt-in:
 npm run test:live
 npm run test:live:groq
 npm run test:live:openai
+npm run test:live:anthropic
 ```
 
 Environment setup, provider selection, and compatibility notes: [`docs/providers.md`](docs/providers.md)

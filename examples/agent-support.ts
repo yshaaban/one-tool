@@ -34,7 +34,7 @@ export interface ChatMessage {
   tool_call_id?: string;
 }
 
-export type AgentProvider = 'groq' | 'openai';
+export type AgentProvider = 'groq' | 'openai' | 'anthropic';
 
 export interface AgentConfig {
   provider: AgentProvider;
@@ -92,7 +92,7 @@ export function loadEnvFile(): void {
 
 function resolveProvider(preferredProvider?: string): AgentProvider {
   const raw = preferredProvider?.trim().toLowerCase();
-  if (raw === 'groq' || raw === 'openai') {
+  if (raw === 'groq' || raw === 'openai' || raw === 'anthropic') {
     return raw;
   }
   if (raw) {
@@ -103,6 +103,9 @@ function resolveProvider(preferredProvider?: string): AgentProvider {
   }
   if (process.env.OPENAI_API_KEY) {
     return 'openai';
+  }
+  if (process.env.ANTHROPIC_API_KEY) {
+    return 'anthropic';
   }
   return 'groq';
 }
@@ -119,19 +122,32 @@ export function loadConfig(preferredProvider = process.env.AGENT_PROVIDER): Agen
       provider,
       apiKey,
       model: process.env.GROQ_MODEL ?? 'openai/gpt-oss-120b',
-      baseUrl: process.env.GROQ_BASE_URL ?? 'https://api.groq.com/openai/v1',
+      baseUrl: normalizeBaseUrl(process.env.GROQ_BASE_URL ?? 'https://api.groq.com/openai/v1'),
     };
   }
 
-  const apiKey = process.env.OPENAI_API_KEY;
+  if (provider === 'openai') {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error('OPENAI_API_KEY is required for provider=openai.');
+    }
+    return {
+      provider,
+      apiKey,
+      model: process.env.OPENAI_MODEL ?? 'gpt-5.2',
+      baseUrl: normalizeBaseUrl(process.env.OPENAI_BASE_URL ?? 'https://api.openai.com/v1'),
+    };
+  }
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    throw new Error('OPENAI_API_KEY is required for provider=openai.');
+    throw new Error('ANTHROPIC_API_KEY is required for provider=anthropic.');
   }
   return {
     provider,
     apiKey,
-    model: process.env.OPENAI_MODEL ?? 'gpt-5.2',
-    baseUrl: process.env.OPENAI_BASE_URL ?? 'https://api.openai.com/v1',
+    model: process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6',
+    baseUrl: normalizeBaseUrl(process.env.ANTHROPIC_BASE_URL ?? 'https://api.anthropic.com/v1'),
   };
 }
 
@@ -262,6 +278,10 @@ async function chatCompletion(
   }
 
   throw new Error(`failed to call ${config.provider} after retries`);
+}
+
+function normalizeBaseUrl(baseUrl: string): string {
+  return baseUrl.replace(/\/+$/, '');
 }
 
 const MAX_TOOL_ROUNDS = 20;

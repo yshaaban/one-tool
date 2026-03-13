@@ -22,6 +22,10 @@
       "types": "./dist/src/extensions/index.d.ts",
       "default": "./dist/src/extensions/index.js"
     },
+    "./mcp": {
+      "types": "./dist/src/mcp/index.d.ts",
+      "default": "./dist/src/mcp/index.js"
+    },
     "./testing": {
       "types": "./dist/src/testing/index.d.ts",
       "default": "./dist/src/testing/index.js"
@@ -48,6 +52,7 @@
     "example:run-detailed": "npm run build && node --enable-source-maps dist/examples/quickstarts/run-detailed.js",
     "example:browser-vfs": "npm run build && node --enable-source-maps dist/examples/recipes/browser-vfs.js",
     "example:incident-investigator": "npm run build && node --enable-source-maps dist/examples/apps/incident-investigator.js",
+    "example:mcp-stdio": "npm run build && node --enable-source-maps dist/examples/reference/mcp-stdio.js",
     "agent": "npm run build && node --enable-source-maps dist/examples/agent.js",
     "lint": "eslint src/ test/ examples/",
     "format": "prettier --ignore-unknown --write .env.example .prettierrc README.md COMMANDS.md CHANGELOG.md eslint.config.js docs/ src/ test/ examples/",
@@ -56,6 +61,7 @@
     "test:live": "npm run build && LIVE_AGENT_TESTS=1 node --test dist/test/agent-live.integration.js",
     "test:live:groq": "npm run build && LIVE_AGENT_TESTS=1 AGENT_PROVIDER=groq node --test dist/test/agent-live.integration.js",
     "test:live:openai": "npm run build && LIVE_AGENT_TESTS=1 AGENT_PROVIDER=openai node --test dist/test/agent-live.integration.js",
+    "test:live:anthropic": "npm run build && LIVE_AGENT_TESTS=1 AGENT_PROVIDER=anthropic node --test dist/test/agent-live.integration.js",
     "clean": "rm -rf dist agent_state"
   },
   "devDependencies": {
@@ -68,5 +74,8 @@
     "prettier": "^3.8.1",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.57.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1"
   }
 }

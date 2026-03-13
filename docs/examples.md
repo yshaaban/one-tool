@@ -17,6 +17,7 @@ High-value aliases remain available for:
 - `npm run example:run-detailed`
 - `npm run example:browser-vfs`
 - `npm run example:incident-investigator`
+- `npm run example:mcp-stdio`
 
 ---
 
@@ -67,11 +68,12 @@ These are deterministic domain-shaped examples. They are meant to answer “what
 
 These are maintained end-to-end paths that show the repo’s opinionated reference integrations.
 
-| Slug                           | What it shows                                            | Run command                                       |
-| ------------------------------ | -------------------------------------------------------- | ------------------------------------------------- |
-| `reference-demo-cli`           | seeded interactive CLI runtime                           | `npm run demo`                                    |
-| `reference-provider-agent`     | provider-backed agent loop over an OpenAI-compatible API | `npm run agent`                                   |
-| `reference-http-tool-endpoint` | a simple HTTP wrapper around the runtime                 | `npm run example -- reference-http-tool-endpoint` |
+| Slug                           | What it shows                                              | Run command                                       |
+| ------------------------------ | ---------------------------------------------------------- | ------------------------------------------------- |
+| `reference-demo-cli`           | seeded interactive CLI runtime                             | `npm run demo`                                    |
+| `reference-provider-agent`     | provider-backed agent loop over Groq, OpenAI, or Anthropic | `npm run agent`                                   |
+| `reference-mcp-stdio`          | a native MCP stdio wrapper for Claude Code and MCP clients | `npm run example:mcp-stdio`                       |
+| `reference-http-tool-endpoint` | a simple HTTP wrapper around the runtime                   | `npm run example -- reference-http-tool-endpoint` |
 
 ---
 
@@ -96,3 +98,4 @@ The catalog covers the current public surfaces:
 - `BrowserVFS` → `recipe-browser-vfs`, `app-browser-notebook`
 - prompt variants → `recipe-prompt-variants`
 - provider-backed agent loop → `reference-provider-agent`
+- MCP stdio server → `reference-mcp-stdio`

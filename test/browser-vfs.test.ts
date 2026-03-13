@@ -3,6 +3,7 @@ import test, { beforeEach, afterEach } from 'node:test';
 import 'fake-indexeddb/auto';
 
 import { BrowserVFS } from '../src/vfs/browser-vfs.js';
+import { toVfsError } from '../src/vfs/errors.js';
 
 let vfs: BrowserVFS;
 let dbCounter = 0;
@@ -205,7 +206,16 @@ test('delete throws ENOENT for missing path', async () => {
 });
 
 test('delete root throws', async () => {
-  await assert.rejects(() => vfs.delete('/'), /cannot delete root/);
+  await assert.rejects(
+    async () => vfs.delete('/'),
+    function (caught: unknown): boolean {
+      const vfsError = toVfsError(caught);
+      assert.ok(vfsError);
+      assert.equal(vfsError.code, 'EROOT');
+      assert.equal(vfsError.path, '/');
+      return true;
+    },
+  );
 });
 
 // ── Stat ────────────────────────────────────────────────────────
@@ -309,6 +319,22 @@ test('move transfers directory tree', async () => {
 test('move directory into its own child throws EINVAL', async () => {
   await vfs.writeBytes('/src/main.ts', new TextEncoder().encode('code'));
   await assert.rejects(() => vfs.move('/src', '/src/sub'), /EINVAL/);
+});
+
+test('move reports ENOENT before descendant checks for missing sources', async () => {
+  const dbName = uniqueDb();
+  const constrained = await BrowserVFS.open(dbName, {
+    resourcePolicy: {
+      maxDirectoryDepth: 0,
+    },
+  });
+
+  try {
+    await assert.rejects(() => constrained.move('/missing', '/missing/sub'), /ENOENT/);
+  } finally {
+    constrained.close();
+    await BrowserVFS.destroy(dbName);
+  }
 });
 
 // ── exists / isDir ──────────────────────────────────────────────

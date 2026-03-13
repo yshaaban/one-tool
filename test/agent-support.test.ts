@@ -14,6 +14,9 @@ const ENV_KEYS = [
   'OPENAI_API_KEY',
   'OPENAI_MODEL',
   'OPENAI_BASE_URL',
+  'ANTHROPIC_API_KEY',
+  'ANTHROPIC_MODEL',
+  'ANTHROPIC_BASE_URL',
 ] as const;
 
 function withEnv(
@@ -116,15 +119,49 @@ test('loadConfig honors explicit openai provider', () =>
     },
   ));
 
-test('loadConfig rejects unsupported providers', () =>
+test('loadConfig falls back to anthropic when it is the only configured provider', () =>
+  withEnv(
+    {
+      AGENT_PROVIDER: undefined,
+      GROQ_API_KEY: undefined,
+      OPENAI_API_KEY: undefined,
+      ANTHROPIC_API_KEY: 'anthropic-key',
+      ANTHROPIC_MODEL: undefined,
+    },
+    () => {
+      const config = loadConfig();
+      assert.equal(config.provider, 'anthropic');
+      assert.equal(config.apiKey, 'anthropic-key');
+      assert.equal(config.model, 'claude-sonnet-4-6');
+      assert.equal(config.baseUrl, 'https://api.anthropic.com/v1');
+    },
+  ));
+
+test('loadConfig honors explicit anthropic provider and normalizes a trailing slash', () =>
   withEnv(
     {
       AGENT_PROVIDER: 'anthropic',
-      GROQ_API_KEY: 'groq-key',
-      OPENAI_API_KEY: 'openai-key',
+      ANTHROPIC_API_KEY: 'anthropic-key',
+      ANTHROPIC_BASE_URL: 'https://api.anthropic.com/v1/',
     },
     () => {
-      assert.throws(() => loadConfig(), /unsupported AGENT_PROVIDER: anthropic/);
+      const config = loadConfig();
+      assert.equal(config.provider, 'anthropic');
+      assert.equal(config.apiKey, 'anthropic-key');
+      assert.equal(config.baseUrl, 'https://api.anthropic.com/v1');
+    },
+  ));
+
+test('loadConfig rejects unsupported providers', () =>
+  withEnv(
+    {
+      AGENT_PROVIDER: 'azure',
+      GROQ_API_KEY: 'groq-key',
+      OPENAI_API_KEY: 'openai-key',
+      ANTHROPIC_API_KEY: 'anthropic-key',
+    },
+    () => {
+      assert.throws(() => loadConfig(), /unsupported AGENT_PROVIDER: azure/);
     },
   ));
 

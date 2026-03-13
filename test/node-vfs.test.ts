@@ -4,7 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import test from 'node:test';
 
-import { NodeVFS } from '../src/index.js';
+import { NodeVFS, toVfsError } from '../src/index.js';
 
 async function withNodeVfs(runTest: (vfs: NodeVFS) => Promise<void>): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), 'node-vfs-test-'));
@@ -25,7 +25,16 @@ test('resolve clamps paths inside the root', async () => {
 
 test('delete root throws', async () => {
   await withNodeVfs(async (vfs) => {
-    await assert.rejects(() => vfs.delete('/'), /cannot delete root/);
+    await assert.rejects(
+      async () => vfs.delete('/'),
+      function (caught: unknown): boolean {
+        const vfsError = toVfsError(caught);
+        assert.ok(vfsError);
+        assert.equal(vfsError.code, 'EROOT');
+        assert.equal(vfsError.path, '/');
+        return true;
+      },
+    );
   });
 });
 

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import { MemoryVFS } from '../../src/index.js';
 import { textEncoder } from '../../src/types.js';
 import { makeCtx, NO_STDIN, runCommand, stdoutText } from './harness.js';
 
@@ -81,6 +82,23 @@ test('fs: write reports missing content and parent-not-directory errors', async 
   assert.match(blockedParent.result.stderr, /write: parent is not a directory: \/blocked/);
 });
 
+test('fs: write reports resource limit failures cleanly', async () => {
+  const ctx = makeCtx({
+    vfs: new MemoryVFS({
+      resourcePolicy: {
+        maxFileBytes: 3,
+      },
+    }),
+  });
+
+  const { result } = await runCommand('write', ['/notes/large.txt', 'hello'], { ctx });
+  assert.equal(result.exitCode, 1);
+  assert.match(
+    result.stderr,
+    /write: resource limit exceeded \(maxFileBytes: 5 > 3\) at \/notes\/large\.txt/,
+  );
+});
+
 test('fs: append extends files and rejects missing content', async () => {
   const ctx = makeCtx();
   await ctx.vfs.writeBytes('/notes/log.txt', textEncoder.encode('start'));
@@ -135,6 +153,20 @@ test('fs: mv renames files and blocks subtree moves', async () => {
   const subtree = await runCommand('mv', ['/tree', '/tree/sub'], { ctx });
   assert.equal(subtree.result.exitCode, 1);
   assert.match(subtree.result.stderr, /mv: destination is inside the source directory: \/tree\/sub/);
+});
+
+test('fs: mv reports missing sources before destination-shape validation', async () => {
+  const ctx = makeCtx({
+    vfs: new MemoryVFS({
+      resourcePolicy: {
+        maxDirectoryDepth: 0,
+      },
+    }),
+  });
+
+  const missing = await runCommand('mv', ['/missing', '/missing/sub'], { ctx });
+  assert.equal(missing.result.exitCode, 1);
+  assert.match(missing.result.stderr, /mv: source not found: \/missing/);
 });
 
 test('fs: rm removes files and protects root', async () => {

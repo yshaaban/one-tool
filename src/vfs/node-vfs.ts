@@ -1,15 +1,36 @@
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, type Stats } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
 import type { VFS, VFileInfo } from './interface.js';
 import { guessMediaType } from './interface.js';
+import { vfsError } from './errors.js';
+import {
+  applyAppendToSnapshot,
+  applyCopyToSnapshot,
+  applyMkdirToSnapshot,
+  applyMoveToSnapshot,
+  applyWriteToSnapshot,
+  cloneSnapshot,
+  createEmptySnapshot,
+  enforceResourcePolicy,
+  hasResourcePolicy,
+  type ResolvedVfsResourcePolicy,
+  resolveVfsResourcePolicy,
+  type VfsPolicyOptions,
+  type VfsSnapshot,
+} from './policy.js';
+import { isStrictDescendantPath, parentOf } from './path-utils.js';
+
+export type NodeVFSOptions = VfsPolicyOptions;
 
 export class NodeVFS implements VFS {
   public readonly rootDir: string;
+  public readonly resourcePolicy: ResolvedVfsResourcePolicy;
 
-  constructor(rootDir: string) {
+  constructor(rootDir: string, options: NodeVFSOptions = {}) {
     this.rootDir = path.resolve(rootDir);
+    this.resourcePolicy = resolveVfsResourcePolicy(options.resourcePolicy);
     mkdirSync(this.rootDir, { recursive: true });
   }
 
@@ -28,7 +49,7 @@ export class NodeVFS implements VFS {
     const target = path.resolve(this.rootDir, relative);
     const backToRoot = path.relative(this.rootDir, target);
     if (backToRoot !== '' && (backToRoot.startsWith('..') || path.isAbsolute(backToRoot))) {
-      throw new Error(`path escapes root: ${inputPath}`);
+      throw vfsError('EESCAPE', normalized);
     }
     return target;
   }
@@ -38,32 +59,47 @@ export class NodeVFS implements VFS {
   }
 
   async isDir(inputPath: string): Promise<boolean> {
-    try {
-      const stats = await fs.stat(this.resolve(inputPath));
-      return stats.isDirectory();
-    } catch {
-      return false;
-    }
+    const stats = await this.statPath(this.normalize(inputPath));
+    return stats?.isDirectory() ?? false;
   }
 
   async mkdir(inputPath: string, parents = true): Promise<string> {
-    const target = this.resolve(inputPath);
-    await fs.mkdir(target, { recursive: parents });
-    return this.normalize(inputPath);
+    const normalized = this.normalize(inputPath);
+    if (normalized === '/') {
+      return normalized;
+    }
+
+    const existing = await this.statPath(normalized);
+    if (existing && !existing.isDirectory()) {
+      throw vfsError('EEXIST', normalized);
+    }
+
+    if (parents) {
+      await this.validateParents(normalized);
+    } else {
+      await this.ensureDirectoryExists(parentOf(normalized));
+    }
+
+    await this.enforcePolicy(normalized, function (snapshot): void {
+      applyMkdirToSnapshot(snapshot, normalized, parents);
+    });
+
+    await fs.mkdir(this.resolve(normalized), { recursive: parents });
+    return normalized;
   }
 
   async listdir(inputPath = '/'): Promise<string[]> {
-    const target = this.resolve(inputPath);
-    if (!existsSync(target)) {
-      throw new Error(`ENOENT:${this.normalize(inputPath)}`);
+    const normalized = this.normalize(inputPath);
+    const stats = await this.statPath(normalized);
+    if (!stats) {
+      throw vfsError('ENOENT', normalized);
     }
-    const stats = await fs.stat(target);
     if (!stats.isDirectory()) {
-      throw new Error(`ENOTDIR:${this.normalize(inputPath)}`);
+      throw vfsError('ENOTDIR', normalized);
     }
 
-    const entries = await fs.readdir(target, { withFileTypes: true });
-    entries.sort((a, b) => {
+    const entries = await fs.readdir(this.resolve(normalized), { withFileTypes: true });
+    entries.sort(function (a, b) {
       const aDir = a.isDirectory();
       const bDir = b.isDirectory();
       if (aDir !== bDir) {
@@ -72,19 +108,21 @@ export class NodeVFS implements VFS {
       return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
     });
 
-    return entries.map((entry) => entry.name + (entry.isDirectory() ? '/' : ''));
+    return entries.map(function (entry) {
+      return entry.name + (entry.isDirectory() ? '/' : '');
+    });
   }
 
   async readBytes(inputPath: string): Promise<Uint8Array> {
-    const target = this.resolve(inputPath);
-    if (!existsSync(target)) {
-      throw new Error(`ENOENT:${this.normalize(inputPath)}`);
+    const normalized = this.normalize(inputPath);
+    const stats = await this.statPath(normalized);
+    if (!stats) {
+      throw vfsError('ENOENT', normalized);
     }
-    const stats = await fs.stat(target);
     if (stats.isDirectory()) {
-      throw new Error(`EISDIR:${this.normalize(inputPath)}`);
+      throw vfsError('EISDIR', normalized);
     }
-    return new Uint8Array(await fs.readFile(target));
+    return new Uint8Array(await fs.readFile(this.resolve(normalized)));
   }
 
   async readText(inputPath: string): Promise<string> {
@@ -93,93 +131,140 @@ export class NodeVFS implements VFS {
   }
 
   async writeBytes(inputPath: string, data: Uint8Array, makeParents = true): Promise<string> {
-    const target = this.resolve(inputPath);
-    if (makeParents) {
-      await fs.mkdir(path.dirname(target), { recursive: true });
-    }
-    await fs.writeFile(target, data);
-    return this.normalize(inputPath);
+    const normalized = this.normalize(inputPath);
+    await this.ensureWritablePath(normalized, makeParents);
+    await this.enforcePolicy(normalized, function (snapshot): void {
+      applyWriteToSnapshot(snapshot, normalized, data.length, makeParents);
+    });
+    await this.ensureParentPath(normalized, makeParents);
+    await fs.writeFile(this.resolve(normalized), data);
+    return normalized;
   }
 
   async appendBytes(inputPath: string, data: Uint8Array, makeParents = true): Promise<string> {
-    const target = this.resolve(inputPath);
-    if (makeParents) {
-      await fs.mkdir(path.dirname(target), { recursive: true });
-    }
-    await fs.appendFile(target, data);
-    return this.normalize(inputPath);
+    const normalized = this.normalize(inputPath);
+    await this.ensureWritablePath(normalized, makeParents);
+    await this.enforcePolicy(normalized, function (snapshot): void {
+      applyAppendToSnapshot(snapshot, normalized, data.length, makeParents);
+    });
+    await this.ensureParentPath(normalized, makeParents);
+    await fs.appendFile(this.resolve(normalized), data);
+    return normalized;
   }
 
   async delete(inputPath: string): Promise<string> {
-    if (this.normalize(inputPath) === '/') {
-      throw new Error('cannot delete root');
+    const normalized = this.normalize(inputPath);
+    if (normalized === '/') {
+      throw vfsError('EROOT', normalized);
     }
-    const target = this.resolve(inputPath);
-    if (!existsSync(target)) {
-      throw new Error(`ENOENT:${this.normalize(inputPath)}`);
+    if (!(await this.exists(normalized))) {
+      throw vfsError('ENOENT', normalized);
     }
-    await fs.rm(target, { recursive: true, force: false });
-    return this.normalize(inputPath);
+    await fs.rm(this.resolve(normalized), { recursive: true, force: false });
+    return normalized;
   }
 
   async copy(src: string, dst: string): Promise<{ src: string; dst: string }> {
-    const srcPath = this.resolve(src);
-    if (!existsSync(srcPath)) {
-      throw new Error(`ENOENT:${this.normalize(src)}`);
+    const srcPath = this.normalize(src);
+    const dstPath = this.normalize(dst);
+    const srcStats = await this.statPath(srcPath);
+
+    if (!srcStats) {
+      throw vfsError('ENOENT', srcPath);
     }
-    const srcStats = await fs.stat(srcPath);
-    const dstPath = this.resolve(dst);
-    await fs.mkdir(path.dirname(dstPath), { recursive: true });
+    if (srcStats.isDirectory() && isStrictDescendantPath(srcPath, dstPath)) {
+      throw vfsError('EINVAL', dstPath, { targetPath: srcPath });
+    }
+
+    const dstStats = await this.statPath(dstPath);
+    if (srcStats.isDirectory()) {
+      if (dstStats) {
+        throw vfsError('EEXIST', dstPath);
+      }
+    } else if (dstStats?.isDirectory()) {
+      throw vfsError('EISDIR', dstPath);
+    }
+
+    await this.ensureParentPath(dstPath, true);
+    await this.enforcePolicy(dstPath, function (snapshot): void {
+      applyCopyToSnapshot(snapshot, srcPath, dstPath);
+    });
+
+    const resolvedSrc = this.resolve(srcPath);
+    const resolvedDst = this.resolve(dstPath);
+    await fs.mkdir(path.dirname(resolvedDst), { recursive: true });
 
     if (srcStats.isDirectory()) {
-      if (existsSync(dstPath)) {
-        throw new Error(`EEXIST:${this.normalize(dst)}`);
-      }
-      await fs.cp(srcPath, dstPath, {
+      await fs.cp(resolvedSrc, resolvedDst, {
         recursive: true,
         errorOnExist: true,
         force: false,
       });
     } else {
-      await fs.copyFile(srcPath, dstPath);
+      await fs.copyFile(resolvedSrc, resolvedDst);
     }
 
-    return { src: this.normalize(src), dst: this.normalize(dst) };
+    return { src: srcPath, dst: dstPath };
   }
 
   async move(src: string, dst: string): Promise<{ src: string; dst: string }> {
-    const srcPath = this.resolve(src);
-    if (!existsSync(srcPath)) {
-      throw new Error(`ENOENT:${this.normalize(src)}`);
+    const srcPath = this.normalize(src);
+    const dstPath = this.normalize(dst);
+    if (srcPath === dstPath) {
+      return { src: srcPath, dst: dstPath };
     }
-    const dstPath = this.resolve(dst);
-    await fs.mkdir(path.dirname(dstPath), { recursive: true });
+
+    const srcStats = await this.statPath(srcPath);
+    if (!srcStats) {
+      throw vfsError('ENOENT', srcPath);
+    }
+    if (srcStats.isDirectory() && isStrictDescendantPath(srcPath, dstPath)) {
+      throw vfsError('EINVAL', dstPath, { targetPath: srcPath });
+    }
+
+    const dstStats = await this.statPath(dstPath);
+    if (srcStats.isDirectory()) {
+      if (dstStats) {
+        throw vfsError('EEXIST', dstPath);
+      }
+    } else if (dstStats?.isDirectory()) {
+      throw vfsError('EISDIR', dstPath);
+    }
+
+    await this.ensureParentPath(dstPath, true);
+    await this.enforcePolicy(dstPath, function (snapshot): void {
+      applyMoveToSnapshot(snapshot, srcPath, dstPath);
+    });
+
+    const resolvedSrc = this.resolve(srcPath);
+    const resolvedDst = this.resolve(dstPath);
+    await fs.mkdir(path.dirname(resolvedDst), { recursive: true });
 
     try {
-      await fs.rename(srcPath, dstPath);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (!message.includes('EXDEV')) {
-        throw error;
+      await fs.rename(resolvedSrc, resolvedDst);
+    } catch (caught) {
+      if (!this.isCrossDeviceRenameError(caught)) {
+        throw caught;
       }
-      const srcStats = await fs.stat(srcPath);
+
       if (srcStats.isDirectory()) {
-        await fs.cp(srcPath, dstPath, { recursive: true, force: true });
-        await fs.rm(srcPath, { recursive: true, force: false });
+        await fs.cp(resolvedSrc, resolvedDst, { recursive: true, force: true });
+        await fs.rm(resolvedSrc, { recursive: true, force: false });
       } else {
-        await fs.copyFile(srcPath, dstPath);
-        await fs.unlink(srcPath);
+        await fs.copyFile(resolvedSrc, resolvedDst);
+        await fs.unlink(resolvedSrc);
       }
     }
 
-    return { src: this.normalize(src), dst: this.normalize(dst) };
+    return { src: srcPath, dst: dstPath };
   }
 
   async stat(inputPath: string): Promise<VFileInfo> {
-    const target = this.resolve(inputPath);
-    if (!existsSync(target)) {
+    const normalized = this.normalize(inputPath);
+    const stats = await this.statPath(normalized);
+    if (!stats) {
       return {
-        path: this.normalize(inputPath),
+        path: normalized,
         exists: false,
         isDir: false,
         size: 0,
@@ -188,15 +273,121 @@ export class NodeVFS implements VFS {
       };
     }
 
-    const stats = await fs.stat(target);
     return {
-      path: this.normalize(inputPath),
+      path: normalized,
       exists: true,
       isDir: stats.isDirectory(),
       size: stats.isDirectory() ? 0 : Number(stats.size),
-      mediaType: guessMediaType(path.basename(target), stats.isDirectory()),
+      mediaType: guessMediaType(path.basename(this.resolve(normalized)), stats.isDirectory()),
       modifiedEpochMs: Math.floor(stats.mtimeMs),
     };
+  }
+
+  private async statPath(normalizedPath: string): Promise<Stats | null> {
+    const target = this.resolve(normalizedPath);
+    if (!existsSync(target)) {
+      return null;
+    }
+    return fs.stat(target);
+  }
+
+  private async ensureDirectoryExists(normalizedPath: string): Promise<void> {
+    const stats = await this.statPath(normalizedPath);
+    if (!stats) {
+      throw vfsError('ENOENT', normalizedPath);
+    }
+    if (!stats.isDirectory()) {
+      throw vfsError('ENOTDIR', normalizedPath);
+    }
+  }
+
+  private async validateParents(normalizedPath: string): Promise<void> {
+    if (normalizedPath === '/') {
+      return;
+    }
+
+    let current = '';
+    for (const segment of normalizedPath.split('/').filter(Boolean)) {
+      current += `/${segment}`;
+      const stats = await this.statPath(current);
+      if (stats && !stats.isDirectory()) {
+        throw vfsError('ENOTDIR', current);
+      }
+    }
+  }
+
+  private async ensureParentPath(normalizedPath: string, makeParents: boolean): Promise<void> {
+    const parentPath = parentOf(normalizedPath);
+    if (makeParents) {
+      await this.validateParents(parentPath);
+      await fs.mkdir(this.resolve(parentPath), { recursive: true });
+      return;
+    }
+
+    await this.ensureDirectoryExists(parentPath);
+  }
+
+  private async ensureWritablePath(normalizedPath: string, makeParents: boolean): Promise<void> {
+    const targetStats = await this.statPath(normalizedPath);
+    if (targetStats?.isDirectory()) {
+      throw vfsError('EISDIR', normalizedPath);
+    }
+
+    if (makeParents) {
+      await this.validateParents(parentOf(normalizedPath));
+      return;
+    }
+
+    await this.ensureDirectoryExists(parentOf(normalizedPath));
+  }
+
+  private async createSnapshot(): Promise<VfsSnapshot> {
+    const snapshot = createEmptySnapshot();
+    await this.walkSnapshot('/', this.rootDir, snapshot);
+    return snapshot;
+  }
+
+  private async walkSnapshot(
+    normalizedDir: string,
+    resolvedDir: string,
+    snapshot: VfsSnapshot,
+  ): Promise<void> {
+    const entries = await fs.readdir(resolvedDir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const childNormalized = normalizedDir === '/' ? `/${entry.name}` : `${normalizedDir}/${entry.name}`;
+      const childResolved = path.join(resolvedDir, entry.name);
+
+      if (entry.isDirectory()) {
+        snapshot.dirs.add(childNormalized);
+        await this.walkSnapshot(childNormalized, childResolved, snapshot);
+        continue;
+      }
+
+      if (entry.isFile()) {
+        const stats = await fs.stat(childResolved);
+        snapshot.files.set(childNormalized, Number(stats.size));
+      }
+    }
+  }
+
+  private async enforcePolicy(contextPath: string, mutate: (snapshot: VfsSnapshot) => void): Promise<void> {
+    if (!hasResourcePolicy(this.resourcePolicy)) {
+      return;
+    }
+
+    const snapshot = cloneSnapshot(await this.createSnapshot());
+    mutate(snapshot);
+    enforceResourcePolicy(snapshot, this.resourcePolicy, contextPath);
+  }
+
+  private isCrossDeviceRenameError(caught: unknown): boolean {
+    return (
+      !!caught &&
+      typeof caught === 'object' &&
+      'code' in caught &&
+      (caught as { code?: unknown }).code === 'EXDEV'
+    );
   }
 }
 

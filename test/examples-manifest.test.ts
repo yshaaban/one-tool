@@ -8,7 +8,7 @@ import { main as listExamples } from '../examples/list.js';
 import { main as runExample } from '../examples/run.js';
 
 test('example manifest is complete and internally consistent', async function (): Promise<void> {
-  assert.equal(exampleManifest.length, 19);
+  assert.equal(exampleManifest.length, 20);
   const examplesGuide = readFileSync(path.join(process.cwd(), 'docs/examples.md'), 'utf8');
 
   const tierCounts = new Map<string, number>();
@@ -49,7 +49,7 @@ test('example manifest is complete and internally consistent', async function ()
       app: 4,
       quickstart: 4,
       recipe: 8,
-      reference: 3,
+      reference: 4,
     },
   );
 

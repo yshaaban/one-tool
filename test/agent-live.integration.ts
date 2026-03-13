@@ -10,8 +10,9 @@ loadEnvFile();
 const liveTestsEnabled = process.env.LIVE_AGENT_TESTS === '1';
 const hasGroqKey = Boolean(process.env.GROQ_API_KEY);
 const hasOpenAIKey = Boolean(process.env.OPENAI_API_KEY);
+const hasAnthropicKey = Boolean(process.env.ANTHROPIC_API_KEY);
 
-function resolveLiveProvider(): 'groq' | 'openai' {
+function resolveLiveProvider(): 'groq' | 'openai' | 'anthropic' {
   const raw = process.env.AGENT_PROVIDER?.trim().toLowerCase();
   if (!raw) {
     if (hasGroqKey) {
@@ -20,9 +21,12 @@ function resolveLiveProvider(): 'groq' | 'openai' {
     if (hasOpenAIKey) {
       return 'openai';
     }
+    if (hasAnthropicKey) {
+      return 'anthropic';
+    }
     return 'groq';
   }
-  if (raw === 'groq' || raw === 'openai') {
+  if (raw === 'groq' || raw === 'openai' || raw === 'anthropic') {
     return raw;
   }
   throw new Error(`unsupported AGENT_PROVIDER: ${process.env.AGENT_PROVIDER}`);
@@ -31,7 +35,7 @@ function resolveLiveProvider(): 'groq' | 'openai' {
 const liveProvider = resolveLiveProvider();
 
 function liveSkipReason(
-  provider: 'groq' | 'openai',
+  provider: 'groq' | 'openai' | 'anthropic',
   apiKeyPresent: boolean,
   envName: string,
 ): false | string {
@@ -44,9 +48,12 @@ function liveSkipReason(
   return false;
 }
 
-function liveTestSkip(provider: 'groq' | 'openai'): false | string {
+function liveTestSkip(provider: 'groq' | 'openai' | 'anthropic'): false | string {
   if (provider === 'groq') {
     return liveSkipReason('groq', hasGroqKey, 'GROQ_API_KEY');
+  }
+  if (provider === 'anthropic') {
+    return liveSkipReason('anthropic', hasAnthropicKey, 'ANTHROPIC_API_KEY');
   }
   return liveSkipReason('openai', hasOpenAIKey, 'OPENAI_API_KEY');
 }
@@ -60,7 +67,7 @@ function extractJsonObject(text: string): Record<string, unknown> {
   return JSON.parse(match[0]) as Record<string, unknown>;
 }
 
-async function runLiveAgent(provider: 'groq' | 'openai'): Promise<void> {
+async function runLiveAgent(provider: 'groq' | 'openai' | 'anthropic'): Promise<void> {
   const runtime = await buildDemoRuntime({ vfs: new MemoryVFS() });
   const session = createAgentSession(runtime);
   const config = loadConfig(provider);
