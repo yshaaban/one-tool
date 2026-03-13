@@ -386,6 +386,38 @@ Each case has:
 - `name`
 - `run()`
 
+For deterministic end-to-end scenario checks, `one-tool/testing` also exports helpers to seed a test world, run a deterministic command script, and assert the result:
+
+```ts
+import { assertScenario, buildWorld, runOracle, type ScenarioSpec } from 'one-tool/testing';
+
+const scenario: ScenarioSpec = {
+  id: 'fetch-customer-email',
+  category: 'structured',
+  description: 'Fetch an order and extract the customer email.',
+  prompt: 'Get the customer email for order 123.',
+  maxTurns: 1,
+  maxToolCalls: 1,
+  world: {
+    fetchResources: {
+      'order:123': {
+        customer: { email: 'buyer@example.com' },
+      },
+    },
+  },
+  oracle: ['fetch order:123 | json get customer.email'], // deterministic command script
+  assertions: {
+    finalAnswer: {
+      contains: ['buyer@example.com'],
+    },
+  },
+};
+
+const runtime = await buildWorld(scenario.world);
+const trace = await runOracle(runtime, scenario);
+const result = await assertScenario(scenario, trace, runtime);
+```
+
 For full command-authoring and test patterns, see [`../COMMANDS.md`](../COMMANDS.md).
 
 ---
@@ -404,14 +436,14 @@ You can also import `BrowserVFS` from the root entrypoint when your environment 
 
 ### Package exports table
 
-| Import path            | Contents                                                                              |
-| ---------------------- | ------------------------------------------------------------------------------------- |
-| `one-tool`             | Core runtime, types, command APIs, testing helpers, tool schema, and all VFS backends |
-| `one-tool/commands`    | Command registry helpers, built-in command groups, and command specs                  |
-| `one-tool/testing`     | Stable command-testing helpers and reusable command conformance helpers               |
-| `one-tool/vfs/node`    | `NodeVFS` and deprecated `RootedVFS`                                                  |
-| `one-tool/vfs/memory`  | `MemoryVFS`                                                                           |
-| `one-tool/vfs/browser` | `BrowserVFS`                                                                          |
+| Import path            | Contents                                                                                     |
+| ---------------------- | -------------------------------------------------------------------------------------------- |
+| `one-tool`             | Core runtime, types, command APIs, testing helpers, tool schema, and all VFS backends        |
+| `one-tool/commands`    | Command registry helpers, built-in command groups, and command specs                         |
+| `one-tool/testing`     | Stable command-testing helpers, deterministic scenario-test helpers, and conformance helpers |
+| `one-tool/vfs/node`    | `NodeVFS` and deprecated `RootedVFS`                                                         |
+| `one-tool/vfs/memory`  | `MemoryVFS`                                                                                  |
+| `one-tool/vfs/browser` | `BrowserVFS`                                                                                 |
 
 ---
 

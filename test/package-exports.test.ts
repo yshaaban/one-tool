@@ -36,6 +36,16 @@ test('package exports resolve the documented entrypoints', async function (): Pr
   assert.equal(typeof testing.createTestCommandContext, 'function');
   assert.equal(typeof testing.createTestCommandRegistry, 'function');
   assert.equal(typeof testing.runRegisteredCommand, 'function');
+  assert.equal(typeof testing.DemoSearch, 'function');
+  assert.equal(typeof testing.DemoFetch, 'function');
+  assert.equal(typeof testing.buildWorld, 'function');
+  assert.equal(typeof testing.runOracle, 'function');
+  assert.equal(typeof testing.assertScenario, 'function');
+  assert.equal(typeof root.DemoSearch, 'function');
+  assert.equal(typeof root.DemoFetch, 'function');
+  assert.equal(typeof root.buildWorld, 'function');
+  assert.equal(typeof root.runOracle, 'function');
+  assert.equal(typeof root.assertScenario, 'function');
 
   assert.equal(typeof memoryVfs.MemoryVFS, 'function');
   assert.equal(typeof nodeVfs.NodeVFS, 'function');

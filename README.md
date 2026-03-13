@@ -438,6 +438,8 @@ npm run example:custom-command
 npm run agent
 ```
 
+`npm test` includes both deterministic contract tests and deterministic end-to-end scenario tests.
+
 Live provider tests:
 
 ```bash
