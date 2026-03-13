@@ -56,6 +56,26 @@ const SEARCH_DOCS = [
 ] as const;
 
 const FETCH_RESOURCES: Record<string, unknown> = {
+  'kb://incidents/refund-timeout': {
+    title: 'Refund timeout incident retro',
+    summary:
+      'Payment timeouts spiked during a deploy. Root cause was a retry storm against the order service.',
+    guidance: [
+      'Reduce aggressive retries against the order service.',
+      'Watch payment timeout rate during deploys.',
+      'Escalate to checkout on-call if timeout rate exceeds 2%.',
+    ],
+  },
+  'kb://accounts/acme-renewal': {
+    title: 'Acme renewal risk notes',
+    summary: 'Acme wants a tighter weekly status update and is blocked on invoice mapping.',
+    guidance: ['Send a concise weekly update.', 'Resolve invoice mapping blockers before renewal review.'],
+  },
+  'kb://security/login-failure-playbook': {
+    title: 'Login failure playbook',
+    summary: 'Repeated failed login errors can indicate bot traffic or a stale SSO configuration.',
+    guidance: ['Check SSO configuration drift.', 'Investigate bot traffic if failures spike.'],
+  },
   'order:123': {
     id: '123',
     status: 'timed_out',

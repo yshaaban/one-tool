@@ -67,12 +67,11 @@ export interface BrowserModelOption {
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 const OPENROUTER_REFERER = 'https://yrsh.github.io/one-tool/';
 const OPENROUTER_TITLE = 'one-tool website demo';
-const DEFAULT_MODEL = 'openai/gpt-oss-20b';
+const DEFAULT_MODEL = 'openai/gpt-oss-120b';
 const MAX_TOOL_ROUNDS = 20;
 
 export const browserModelOptions: BrowserModelOption[] = [
-  { value: 'openai/gpt-oss-20b', label: 'OpenAI: gpt-oss-20b (recommended)' },
-  { value: 'openai/gpt-oss-safeguard-20b', label: 'OpenAI: gpt-oss-safeguard-20b' },
+  { value: 'openai/gpt-oss-120b', label: 'OpenAI: gpt-oss-120b (recommended)' },
   { value: 'meta-llama/llama-3.1-8b-instruct', label: 'Meta: Llama 3.1 8B Instruct' },
   { value: 'minimax/minimax-m2.5', label: 'MiniMax: MiniMax M2.5' },
   { value: 'x-ai/grok-4-fast', label: 'xAI: Grok 4 Fast' },
@@ -164,6 +163,11 @@ function buildSystemPrompt(
     'It executes CLI-style commands over a virtual file system and registered adapters.',
     "Use the tool to answer the user's questions. You can chain multiple calls.",
     'When the task asks about files, logs, search, fetch, or memory, inspect the runtime with the tool before answering.',
+    'Stay inside the documented command surface. Do not assume Unix flags or shell behavior that help output does not show.',
+    'If you are unsure about command syntax, call `help <command>` before retrying.',
+    'Search results already include useful snippets. Use those snippets directly unless you have a clear reason to fetch another resource.',
+    'Treat `source:` values in search results as citations, not file paths. Do not use `cat`, `ls`, or `find` on them.',
+    'Only use `fetch` for resource IDs that the runtime explicitly supports.',
     `Available commands: ${commandList}`,
     'Use `help` when you need to discover exact command usage.',
     '',
