@@ -126,9 +126,10 @@ export const examples: ExampleDef[] = [
     id: '08-llm-agent',
     title: 'LLM Agent',
     description: 'Wire the runtime to a real LLM provider and watch an agent solve tasks autonomously.',
-    browserRunnable: false,
+    browserRunnable: true,
     requiresApiKey: true,
     sourceFile: 'examples/08-llm-agent.ts',
+    runtimeKind: 'demo',
   },
 ];
 

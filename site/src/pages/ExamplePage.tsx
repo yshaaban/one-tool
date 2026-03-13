@@ -1,10 +1,12 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getExample } from '../examples';
 import { sourceBaseUrl } from '../config';
 import { TerminalComponent, type TerminalHandle } from '../components/Terminal';
 import { createRuntimeForExample } from '../runtime/create-runtime';
 import type { AgentCLI, RunExecution } from 'one-tool/browser';
+
+const AgentPage = lazy(() => import('./AgentPage'));
 
 function ExamplePage() {
   const { id } = useParams<{ id: string }>();
@@ -77,6 +79,14 @@ function ExamplePage() {
         <p>Example not found.</p>
         <Link to="/examples">Back to examples</Link>
       </div>
+    );
+  }
+
+  if (example.browserRunnable && example.requiresApiKey) {
+    return (
+      <Suspense fallback={<div className="loading">Loading agent page...</div>}>
+        <AgentPage example={example} />
+      </Suspense>
     );
   }
 
