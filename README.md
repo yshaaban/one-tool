@@ -1,6 +1,6 @@
 # one-tool
 
-Single-tool CLI runtime for LLM agents.
+Constrained agent workspace that avoids Python and shell sandboxes.
 
 `one-tool` gives a model exactly one tool:
 
@@ -19,6 +19,16 @@ Behind that one entrypoint, the runtime provides:
 It is built for the common agent problem:
 
 > You want the power of CLI-style composition without exposing a real shell.
+
+At a glance:
+
+- one model-facing tool: `run(command)`
+- 25 built-in commands for files, text, data, memory, and adapters
+- rooted storage through `NodeVFS`, `MemoryVFS`, or `BrowserVFS`
+- structured execution via `runDetailed(...)`
+- extension helpers for custom commands
+- testing helpers for command and scenario coverage
+- MCP server support for Claude Code and other MCP clients
 
 <p align="center">
   <img src="docs/diagrams/tool-surface.svg" alt="Diagram showing the model calling run(command), the one-tool runtime dispatching commands, and formatted results returning through rooted files, adapters, and memory." width="980" />
@@ -74,6 +84,29 @@ That often creates three problems:
 
 The result is a model-facing interface that is simpler, but still expressive.
 
+It is a practical alternative to code-interpreter style sandboxes when you need:
+
+- lower infrastructure cost
+- a smaller execution surface
+- easier multi-tenant control
+- browser or middleware deployment without arbitrary code execution
+
+### When this fits
+
+Use `one-tool` when:
+
+- you want one stable tool surface instead of many narrow tools
+- your agent needs to compose file, text, JSON, memory, and retrieval work in one step
+- you want a safer rooted workspace instead of a real shell
+- you need deterministic command behavior that is easy to test
+- you want a browser-, middleware-, or server-friendly alternative to code-interpreter or shell sandboxes
+
+Look elsewhere when:
+
+- you need arbitrary process execution
+- you need full shell compatibility, redirection, or job control
+- you need a streaming terminal or interactive TTY applications
+
 ---
 
 ## Quick start
@@ -103,6 +136,12 @@ npm run demo
 npm run example:custom-command
 npm run example:readonly-agent
 ```
+
+Then continue with:
+
+- `npm run example:detailed-execution` for traces and structured output
+- `npm run example:adapters` for `search` and `fetch`
+- `npm run example:mcp-server` for Claude Code / MCP integration
 
 For the provider-backed agent example or live integration tests:
 
@@ -196,6 +235,16 @@ For a missing file:
 ```
 
 For complete API details, see [`docs/api.md`](docs/api.md).
+
+### Why this shape works well for agents
+
+| Approach         | What you get                                 | Main tradeoff                                |
+| ---------------- | -------------------------------------------- | -------------------------------------------- |
+| Code interpreter | arbitrary code execution                     | expensive, harder to secure, harder to scale |
+| Real shell       | familiar process-level power                 | large risk surface and inconsistent outputs  |
+| `one-tool`       | constrained, composable workspace for agents | intentionally narrower than Python or shell  |
+
+The trade is deliberate: less raw power than arbitrary code execution, but much tighter control and a much simpler operating model.
 
 ---
 
@@ -291,6 +340,14 @@ Execution semantics:
 - `&&`, `||`, and `;` control whether the next pipeline runs
 - relative paths resolve under `/`
 - there is no process environment, cwd mutation, or shell state
+
+Operationally, think of the runtime as:
+
+1. one parser for CLI-style commands
+2. one registry of allowed commands
+3. one rooted workspace
+4. optional retrieval adapters and memory
+5. one formatter that turns results into model-friendly text or structured execution data
 
 The runtime intentionally makes discovery cheap:
 
@@ -417,6 +474,12 @@ npm run test:live:anthropic
 ```
 
 Environment setup, provider selection, and compatibility notes: [`docs/providers.md`](docs/providers.md)
+
+If you want the smallest maintained end-to-end path:
+
+- `npm run agent` for a provider-backed agent loop
+- `npm run example:mcp-server` for MCP / Claude Code integration
+- `npm run example:custom-command` for extending the runtime
 
 ---
 
