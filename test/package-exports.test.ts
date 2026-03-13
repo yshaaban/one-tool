@@ -16,6 +16,10 @@ test('package exports resolve the documented entrypoints', async function (): Pr
   assert.equal(typeof root.createTestCommandRegistry, 'function');
   assert.ok(Array.isArray(root.builtinCommandPresetNames));
   assert.equal(typeof root.builtinCommandPresets, 'object');
+  assert.equal(typeof root.find, 'object');
+  assert.equal(typeof root.sort, 'object');
+  assert.equal(typeof root.uniq, 'object');
+  assert.equal(typeof root.wc, 'object');
 
   assert.equal(typeof commands.createCommandRegistry, 'function');
   assert.ok(Array.isArray(commands.fsCommands));
@@ -23,6 +27,10 @@ test('package exports resolve the documented entrypoints', async function (): Pr
   assert.ok(Array.isArray(commands.systemCommands));
   assert.ok(Array.isArray(commands.builtinCommandPresetNames));
   assert.equal(typeof commands.builtinCommandPresets, 'object');
+  assert.equal(typeof commands.find, 'object');
+  assert.equal(typeof commands.sort, 'object');
+  assert.equal(typeof commands.uniq, 'object');
+  assert.equal(typeof commands.wc, 'object');
 
   assert.equal(typeof testing.createCommandConformanceCases, 'function');
   assert.equal(typeof testing.createTestCommandContext, 'function');

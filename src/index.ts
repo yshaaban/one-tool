@@ -23,6 +23,7 @@ export {
   createCommandRegistry,
   dataCommands,
   fetch,
+  find,
   fsCommands,
   grep,
   head,
@@ -37,10 +38,13 @@ export {
   registerCommands,
   rm,
   search,
+  sort,
   stat,
   systemCommands,
   tail,
   textCommands,
+  uniq,
+  wc,
   write,
 } from './commands/index.js';
 export type {

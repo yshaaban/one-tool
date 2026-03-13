@@ -11,6 +11,7 @@ test('system: registerBuiltinCommands registers the expected command names once'
     'cat',
     'cp',
     'fetch',
+    'find',
     'grep',
     'head',
     'help',
@@ -21,8 +22,11 @@ test('system: registerBuiltinCommands registers the expected command names once'
     'mv',
     'rm',
     'search',
+    'sort',
     'stat',
     'tail',
+    'uniq',
+    'wc',
     'write',
   ]);
 });

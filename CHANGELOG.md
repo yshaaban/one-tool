@@ -5,7 +5,7 @@
 ### Added
 
 - Core runtime with `AgentCLI`, `createAgentCLI`, and a single `run(command)` tool surface
-- 18 built-in commands: `ls`, `stat`, `cat`, `write`, `append`, `mkdir`, `cp`, `mv`, `rm`, `grep`, `head`, `tail`, `json`, `calc`, `search`, `fetch`, `help`, and `memory`
+- 22 built-in commands: `ls`, `stat`, `cat`, `write`, `append`, `mkdir`, `cp`, `mv`, `rm`, `find`, `grep`, `head`, `tail`, `sort`, `uniq`, `wc`, `json`, `calc`, `search`, `fetch`, `help`, and `memory`
 - Shell-like composition with pipes (`|`), `&&`, `||`, and `;`
 - Three VFS backends: `NodeVFS`, `MemoryVFS`, and `BrowserVFS`
 - Pluggable search and fetch adapters

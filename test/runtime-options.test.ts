@@ -48,7 +48,7 @@ test('AgentCLI can start with a selective built-in set', async function (): Prom
   });
   await runtime.initialize();
 
-  assert.deepEqual(runtime.registry.names(), ['grep', 'head', 'help', 'tail']);
+  assert.deepEqual(runtime.registry.names(), ['grep', 'head', 'help', 'sort', 'tail', 'uniq', 'wc']);
   assert.match(runtime.buildToolDescription(), /help/);
   assert.doesNotMatch(runtime.buildToolDescription(), /memory/);
 

@@ -74,6 +74,23 @@ for (const backend of backends) {
     });
   });
 
+  test(`${backend.name}: finds matching files and sorts the results`, async () => {
+    await backend.withRuntime(async (runtime) => {
+      const output = await runtime.run('find /config --type file --name "*.json" | sort');
+      assert.match(output, /\/config\/default\.json/);
+      assert.match(output, /\/config\/prod\.json/);
+      assert.match(output, /\[exit:0 \| /);
+    });
+  });
+
+  test(`${backend.name}: counts discovered files through wc`, async () => {
+    await backend.withRuntime(async (runtime) => {
+      const output = await runtime.run('find /config --type file --name "*.json" | wc -l');
+      assert.match(output, /^2$/m);
+      assert.match(output, /\[exit:0 \| /);
+    });
+  });
+
   test(`${backend.name}: writes and reads emulated local files without a shell`, async () => {
     await backend.withRuntime(async (runtime) => {
       const output = await runtime.run('write /tmp/hello.txt hello && cat /tmp/hello.txt');

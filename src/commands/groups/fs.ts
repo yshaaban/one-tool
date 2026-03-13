@@ -1,5 +1,6 @@
 import { err, ok, okBytes } from '../../types.js';
 import { errorMessage, formatSize, looksBinary, parentPath } from '../../utils.js';
+import { baseName } from '../../vfs/path-utils.js';
 import type { CommandContext, CommandSpec } from '../core.js';
 import { blockingParentPath, errorCode, errorPath, firstFileInPath } from '../shared/errors.js';
 import { contentFromArgsOrStdin } from '../shared/io.js';
@@ -396,4 +397,155 @@ export const rm: CommandSpec = {
   conformanceArgs: ['/missing'],
 };
 
-export const fsCommands: CommandSpec[] = [ls, stat, cat, write, append, mkdir, cp, mv, rm];
+async function cmdFind(ctx: CommandContext, args: string[], stdin: Uint8Array) {
+  if (stdin.length > 0) {
+    return err('find: does not accept stdin');
+  }
+
+  let targetPath: string | undefined;
+  let typeFilter: 'file' | 'dir' | undefined;
+  let namePattern: string | undefined;
+  let maxDepth = Number.POSITIVE_INFINITY;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index]!;
+
+    if (arg === '--type') {
+      const value = args[index + 1];
+      if (value === undefined) {
+        return err(
+          'find: missing value for --type. Usage: find [path] [--type file|dir] [--name pattern] [--max-depth N]',
+        );
+      }
+      if (value !== 'file' && value !== 'dir') {
+        return err(`find: invalid value for --type: ${value}. Expected file or dir.`);
+      }
+      typeFilter = value;
+      index += 1;
+      continue;
+    }
+
+    if (arg === '--name') {
+      const value = args[index + 1];
+      if (value === undefined) {
+        return err(
+          'find: missing value for --name. Usage: find [path] [--type file|dir] [--name pattern] [--max-depth N]',
+        );
+      }
+      namePattern = value;
+      index += 1;
+      continue;
+    }
+
+    if (arg === '--max-depth') {
+      const value = args[index + 1];
+      if (value === undefined) {
+        return err(
+          'find: missing value for --max-depth. Usage: find [path] [--type file|dir] [--name pattern] [--max-depth N]',
+        );
+      }
+      const parsed = Number.parseInt(value, 10);
+      if (!Number.isFinite(parsed) || parsed < 0) {
+        return err(`find: invalid integer for --max-depth: ${value}`);
+      }
+      maxDepth = parsed;
+      index += 1;
+      continue;
+    }
+
+    if (arg.startsWith('-')) {
+      return err(
+        `find: unknown option: ${arg}. Usage: find [path] [--type file|dir] [--name pattern] [--max-depth N]`,
+      );
+    }
+
+    if (targetPath === undefined) {
+      targetPath = arg;
+      continue;
+    }
+
+    return err('find: usage: find [path] [--type file|dir] [--name pattern] [--max-depth N]');
+  }
+
+  const startPath = targetPath ?? '/';
+  const startInfo = await ctx.vfs.stat(startPath);
+  const normalizedStart = ctx.vfs.normalize(startPath);
+
+  if (!startInfo.exists) {
+    return err(`find: path not found: ${normalizedStart}`);
+  }
+
+  const matches: string[] = [];
+  await collectFindMatches(
+    ctx,
+    normalizedStart,
+    startInfo.isDir,
+    0,
+    { maxDepth, typeFilter, namePattern },
+    matches,
+  );
+
+  return ok(matches.join('\n'));
+}
+
+export const find: CommandSpec = {
+  name: 'find',
+  summary: 'Recursively list files and directories with optional filters.',
+  usage: 'find [path] [--type file|dir] [--name pattern] [--max-depth N]',
+  details:
+    'Examples:\n  find /logs\n  find /config --type file --name "*.json"\n  find /drafts --max-depth 1',
+  handler: cmdFind,
+  acceptsStdin: false,
+  minArgs: 0,
+  conformanceArgs: ['/'],
+};
+
+interface FindFilters {
+  maxDepth: number;
+  typeFilter: 'file' | 'dir' | undefined;
+  namePattern: string | undefined;
+}
+
+async function collectFindMatches(
+  ctx: CommandContext,
+  currentPath: string,
+  isDir: boolean,
+  depth: number,
+  filters: FindFilters,
+  matches: string[],
+): Promise<void> {
+  if (matchesFindFilters(currentPath, isDir, filters)) {
+    matches.push(currentPath);
+  }
+
+  if (!isDir || depth >= filters.maxDepth) {
+    return;
+  }
+
+  for (const entry of await ctx.vfs.listdir(currentPath)) {
+    const childPath = currentPath === '/' ? `/${entry}` : `${currentPath}/${entry}`;
+    const childInfo = await ctx.vfs.stat(childPath);
+    await collectFindMatches(ctx, childInfo.path, childInfo.isDir, depth + 1, filters, matches);
+  }
+}
+
+function matchesFindFilters(path: string, isDir: boolean, filters: FindFilters): boolean {
+  if (filters.typeFilter === 'file' && isDir) {
+    return false;
+  }
+  if (filters.typeFilter === 'dir' && !isDir) {
+    return false;
+  }
+  if (filters.namePattern !== undefined && !matchesWildcard(baseName(path), filters.namePattern)) {
+    return false;
+  }
+  return true;
+}
+
+function matchesWildcard(value: string, pattern: string): boolean {
+  const escaped = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`^${escaped.replace(/\*/g, '.*').replace(/\?/g, '.')}$`);
+  return regex.test(value);
+}
+
+export const fsCommands: CommandSpec[] = [ls, stat, cat, write, append, mkdir, cp, mv, rm, find];

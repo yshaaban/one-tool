@@ -405,7 +405,7 @@ There is no mutable current working directory.
 
 ## Built-in commands
 
-The runtime ships with 18 built-in commands. They are grouped in code under `src/commands/groups/`.
+The runtime ships with 22 built-in commands. They are grouped in code under `src/commands/groups/`.
 
 ### System commands
 
@@ -425,17 +425,18 @@ memory recent 5
 
 ### Filesystem commands
 
-| Command  | Usage                     | Stdin | Purpose                                   |
-| -------- | ------------------------- | ----: | ----------------------------------------- |
-| `ls`     | `ls [path]`               |    no | List a directory                          |
-| `stat`   | `stat <path>`             |    no | Show file metadata                        |
-| `cat`    | `cat <path>`              |    no | Read a text file                          |
-| `write`  | `write <path> [content]`  |   yes | Write a file from inline content or stdin |
-| `append` | `append <path> [content]` |   yes | Append to a file                          |
-| `mkdir`  | `mkdir <path>`            |    no | Create a directory and missing parents    |
-| `cp`     | `cp <src> <dst>`          |    no | Copy a file or directory                  |
-| `mv`     | `mv <src> <dst>`          |    no | Move or rename a file or directory        |
-| `rm`     | `rm <path>`               |    no | Delete a file or directory recursively    |
+| Command  | Usage                                                                            | Stdin | Purpose                                   |
+| -------- | -------------------------------------------------------------------------------- | ----: | ----------------------------------------- |
+| `ls`     | `ls [path]`                                                                      |    no | List a directory                          |
+| `stat`   | `stat <path>`                                                                    |    no | Show file metadata                        |
+| `cat`    | `cat <path>`                                                                     |    no | Read a text file                          |
+| `write`  | `write <path> [content]`                                                         |   yes | Write a file from inline content or stdin |
+| `append` | `append <path> [content]`                                                        |   yes | Append to a file                          |
+| `mkdir`  | `mkdir <path>`                                                                   |    no | Create a directory and missing parents    |
+| `cp`     | `cp <src> <dst>`                                                                 |    no | Copy a file or directory                  |
+| `mv`     | `mv <src> <dst>`                                                                 |    no | Move or rename a file or directory        |
+| `rm`     | `rm <path>`                                                                      |    no | Delete a file or directory recursively    |
+| `find`   | <code>find [path] [--type file&#124;dir] [--name pattern] [--max-depth N]</code> |    no | Recursively list files and directories    |
 
 Examples:
 
@@ -450,15 +451,19 @@ mkdir /reports/daily/2026-03-13
 cp /drafts/qbr.md /reports/qbr-v1.md
 mv /reports/qbr-v1.md /archive/qbr.md
 rm /scratch
+find /config --type file --name "*.json"
 ```
 
 ### Text commands
 
-| Command | Usage                                       | Stdin | Purpose               |
-| ------- | ------------------------------------------- | ----: | --------------------- |
-| `grep`  | `grep [-i] [-v] [-c] [-n] <pattern> [path]` |   yes | Filter lines by regex |
-| `head`  | `head [-n N] [path]`                        |   yes | Show first N lines    |
-| `tail`  | `tail [-n N] [path]`                        |   yes | Show last N lines     |
+| Command | Usage                                       | Stdin | Purpose                           |
+| ------- | ------------------------------------------- | ----: | --------------------------------- |
+| `grep`  | `grep [-i] [-v] [-c] [-n] <pattern> [path]` |   yes | Filter lines by regex             |
+| `head`  | `head [-n N] [path]`                        |   yes | Show first N lines                |
+| `tail`  | `tail [-n N] [path]`                        |   yes | Show last N lines                 |
+| `sort`  | `sort [-r] [-n] [-u] [path]`                |   yes | Sort lines                        |
+| `uniq`  | `uniq [-c] [-i] [path]`                     |   yes | Collapse adjacent duplicate lines |
+| `wc`    | `wc [-l] [-w] [-c] [path]`                  |   yes | Count lines, words, and bytes     |
 
 Examples:
 
@@ -467,6 +472,9 @@ grep ERROR /logs/app.log
 cat /logs/app.log | grep -i timeout
 head -n 20 /logs/app.log
 tail -n 50 /logs/app.log
+find /config --type file | sort
+cat /logs/app.log | sort | uniq -c
+wc -l /logs/app.log
 ```
 
 ### Data commands
@@ -508,6 +516,12 @@ fetch crm/customer/acme | json get owner.email
 cat /logs/app.log | grep ERROR | tail -n 20
 ```
 
+#### Inventory config files
+
+```text
+find /config --type file --name "*.json" | sort
+```
+
 #### Fallback config inspection
 
 ```text
@@ -531,6 +545,12 @@ fetch order:123 | json get customer.email
 ```text
 cat /accounts/acme.md | head -n 3 | memory store
 memory search "Acme owner"
+```
+
+#### Count discovered files
+
+```text
+find /config --type file --name "*.json" | wc -l
 ```
 
 ---

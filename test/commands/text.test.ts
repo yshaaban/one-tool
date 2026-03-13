@@ -64,3 +64,62 @@ test('text: tail reads from stdin and file paths', async () => {
   assert.equal(fromFile.result.exitCode, 0);
   assert.equal(stdoutText(fromFile.result), '1\n2\n3\n4');
 });
+
+test('text: sort orders lines lexically, numerically, and uniquely', async () => {
+  const lexical = await runCommand('sort', [], {
+    stdin: stdinText('pear\napple\nbanana\napple'),
+  });
+  assert.equal(lexical.result.exitCode, 0);
+  assert.equal(stdoutText(lexical.result), 'apple\napple\nbanana\npear');
+
+  const numeric = await runCommand('sort', ['-n'], {
+    stdin: stdinText('10\n2\n30\napple'),
+  });
+  assert.equal(numeric.result.exitCode, 0);
+  assert.equal(stdoutText(numeric.result), '2\n10\n30\napple');
+
+  const unique = await runCommand('sort', ['-u'], {
+    stdin: stdinText('pear\napple\npear\napple'),
+  });
+  assert.equal(unique.result.exitCode, 0);
+  assert.equal(stdoutText(unique.result), 'apple\npear');
+});
+
+test('text: uniq collapses adjacent duplicates and supports counts', async () => {
+  const basic = await runCommand('uniq', [], {
+    stdin: stdinText('a\na\nb\na\na'),
+  });
+  assert.equal(basic.result.exitCode, 0);
+  assert.equal(stdoutText(basic.result), 'a\nb\na');
+
+  const counted = await runCommand('uniq', ['-c'], {
+    stdin: stdinText('a\na\nb\nb\nb'),
+  });
+  assert.equal(counted.result.exitCode, 0);
+  assert.equal(stdoutText(counted.result), '2\ta\n3\tb');
+
+  const insensitive = await runCommand('uniq', ['-i'], {
+    stdin: stdinText('Error\nerror\nWARN'),
+  });
+  assert.equal(insensitive.result.exitCode, 0);
+  assert.equal(stdoutText(insensitive.result), 'Error\nWARN');
+});
+
+test('text: wc reports line, word, and byte counts', async () => {
+  const ctx = makeCtx();
+  await ctx.vfs.writeBytes('/counts.txt', textEncoder.encode('alpha beta\ngamma\n'));
+
+  const summary = await runCommand('wc', ['/counts.txt'], { ctx });
+  assert.equal(summary.result.exitCode, 0);
+  assert.equal(stdoutText(summary.result), 'lines: 2\nwords: 3\nbytes: 17');
+
+  const linesOnly = await runCommand('wc', ['-l', '/counts.txt'], { ctx });
+  assert.equal(linesOnly.result.exitCode, 0);
+  assert.equal(stdoutText(linesOnly.result), '2');
+
+  const wordsAndBytes = await runCommand('wc', ['-w', '-c'], {
+    stdin: stdinText('one two'),
+  });
+  assert.equal(wordsAndBytes.result.exitCode, 0);
+  assert.equal(stdoutText(wordsAndBytes.result), 'words: 2\nbytes: 7');
+});

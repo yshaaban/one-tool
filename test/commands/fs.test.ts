@@ -149,3 +149,40 @@ test('fs: rm removes files and protects root', async () => {
   assert.equal(root.result.exitCode, 1);
   assert.match(root.result.stderr, /rm: cannot delete root: \//);
 });
+
+test('fs: find walks recursively and supports filters', async () => {
+  const ctx = makeCtx();
+  await ctx.vfs.writeBytes('/docs/a.txt', textEncoder.encode('a'));
+  await ctx.vfs.writeBytes('/docs/nested/b.md', textEncoder.encode('b'));
+  await ctx.vfs.mkdir('/docs/empty', true);
+
+  const all = await runCommand('find', ['/docs'], { ctx });
+  assert.equal(all.result.exitCode, 0);
+  assert.equal(stdoutText(all.result), '/docs\n/docs/empty\n/docs/nested\n/docs/nested/b.md\n/docs/a.txt');
+
+  const filesOnly = await runCommand('find', ['/docs', '--type', 'file'], { ctx });
+  assert.equal(filesOnly.result.exitCode, 0);
+  assert.equal(stdoutText(filesOnly.result), '/docs/nested/b.md\n/docs/a.txt');
+
+  const named = await runCommand('find', ['/docs', '--name', '*.md'], { ctx });
+  assert.equal(named.result.exitCode, 0);
+  assert.equal(stdoutText(named.result), '/docs/nested/b.md');
+});
+
+test('fs: find supports max depth and validates flags', async () => {
+  const ctx = makeCtx();
+  await ctx.vfs.writeBytes('/tree/top.txt', textEncoder.encode('top'));
+  await ctx.vfs.writeBytes('/tree/deep/down.txt', textEncoder.encode('down'));
+
+  const shallow = await runCommand('find', ['/tree', '--max-depth', '1'], { ctx });
+  assert.equal(shallow.result.exitCode, 0);
+  assert.equal(stdoutText(shallow.result), '/tree\n/tree/deep\n/tree/top.txt');
+
+  const invalidType = await runCommand('find', ['/tree', '--type', 'other'], { ctx });
+  assert.equal(invalidType.result.exitCode, 1);
+  assert.match(invalidType.result.stderr, /find: invalid value for --type: other/);
+
+  const invalidDepth = await runCommand('find', ['/tree', '--max-depth', '-1'], { ctx });
+  assert.equal(invalidDepth.result.exitCode, 1);
+  assert.match(invalidDepth.result.stderr, /find: invalid integer for --max-depth: -1/);
+});

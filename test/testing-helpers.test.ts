@@ -30,7 +30,7 @@ test('createTestCommandRegistry supports the same selection API as runtime regis
     onConflict: 'replace',
   });
 
-  assert.deepEqual(registry.names(), ['echo', 'grep', 'head', 'help', 'tail']);
+  assert.deepEqual(registry.names(), ['echo', 'grep', 'head', 'help', 'sort', 'tail', 'uniq', 'wc']);
 });
 
 test('createTestCommandContext and runRegisteredCommand provide a stable public harness', async function (): Promise<void> {

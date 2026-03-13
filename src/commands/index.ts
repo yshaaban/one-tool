@@ -22,6 +22,6 @@ export type {
 
 export { adapterCommands, fetch, search } from './groups/adapters.js';
 export { calc, dataCommands, json } from './groups/data.js';
-export { append, cat, cp, fsCommands, ls, mkdir, mv, rm, stat, write } from './groups/fs.js';
+export { append, cat, cp, find, fsCommands, ls, mkdir, mv, rm, stat, write } from './groups/fs.js';
 export { help, memory, systemCommands } from './groups/system.js';
-export { grep, head, tail, textCommands } from './groups/text.js';
+export { grep, head, sort, tail, textCommands, uniq, wc } from './groups/text.js';
