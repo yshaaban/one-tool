@@ -6,6 +6,7 @@ import type { AgentCLI } from 'one-tool/browser';
 import { sourceBaseUrl } from '../config';
 import type { ExampleDef } from '../examples/types';
 import { closeRuntime, createDemoRuntime } from '../runtime/create-runtime';
+import { tokenizeCommand, type CommandTokenKind } from '../utils/command-highlighting';
 import {
   browserModelOptions,
   createAgentSession,
@@ -38,7 +39,7 @@ export default function AgentPage({ example }: { example: ExampleDef }) {
   const [activeToolCall, setActiveToolCall] = useState<ActiveToolCall | null>(null);
 
   const sessionRef = useRef<AgentSession | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const chatViewportRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const apiKeyInputRef = useRef<HTMLInputElement | null>(null);
   const mountedRef = useRef(true);
@@ -76,7 +77,15 @@ export default function AgentPage({ example }: { example: ExampleDef }) {
   }, []);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const chatViewport = chatViewportRef.current;
+    if (!chatViewport) {
+      return;
+    }
+
+    chatViewport.scrollTo({
+      top: chatViewport.scrollHeight,
+      behavior: 'smooth',
+    });
   }, [messages, busy]);
 
   const resetConversation = useCallback((nextInput?: string) => {
@@ -218,9 +227,8 @@ export default function AgentPage({ example }: { example: ExampleDef }) {
           </div>
           <h1 style={titleStyle}>{example.title}</h1>
           <p style={headerSubtitleStyle}>
-            Give the agent a concrete task. It plans with one{' '}
-            <code style={headerInlineCodeStyle}>run(command)</code> tool and keeps every command, tool result,
-            and reply visible.
+            The agent uses one <code style={headerInlineCodeStyle}>run(command)</code> tool. This page shows
+            each command, result, and reply.
           </p>
         </div>
         <a href={sourceUrl} target="_blank" rel="noopener noreferrer" style={sourceLinkStyle}>
@@ -229,7 +237,7 @@ export default function AgentPage({ example }: { example: ExampleDef }) {
       </header>
 
       <section style={chatShellStyle}>
-        <div style={chatViewportStyle}>
+        <div ref={chatViewportRef} style={chatViewportStyle}>
           {runtimeError ? (
             <div style={runtimeErrorStyle}>
               <div style={errorLabelStyle}>Runtime error</div>
@@ -244,10 +252,9 @@ export default function AgentPage({ example }: { example: ExampleDef }) {
                   <span style={{ color: 'var(--accent)' }}>{'>'}</span>
                   <span style={{ color: 'var(--accent)', marginLeft: '0.35rem' }}>_</span>
                 </div>
-                <h2 style={emptyTitleStyle}>Start with a concrete task</h2>
+                <h2 style={emptyTitleStyle}>Suggested tasks</h2>
                 <p style={emptySubtitleStyle}>
-                  Pick a model, add your OpenRouter key, then start with one of these prompts. The page is
-                  optimized for understanding how the agent works, not hiding the loop.
+                  Add your OpenRouter key, choose a model, then run one of these prompts.
                 </p>
               </div>
 
@@ -264,7 +271,7 @@ export default function AgentPage({ example }: { example: ExampleDef }) {
                         animation: `fadeInUp 0.28s ${index * 0.05}s both`,
                       }}
                     >
-                      <span style={promptCardLabelStyle}>Try this</span>
+                      <span style={promptCardLabelStyle}>Prompt</span>
                       <span style={promptCardTextStyle}>{prompt}</span>
                     </button>
                   ))}
@@ -294,8 +301,6 @@ export default function AgentPage({ example }: { example: ExampleDef }) {
               ) : null}
             </div>
           )}
-
-          <div ref={messagesEndRef} />
         </div>
       </section>
 
@@ -409,7 +414,7 @@ function renderMessage(message: UIMessage): React.ReactNode {
           </div>
           <div style={toolCommandShellStyle}>
             <div style={toolCommandLabelStyle}>Command</div>
-            <code style={toolCommandStyle}>{message.command}</code>
+            <code style={toolCommandStyle}>{renderCommandTokens(message.command)}</code>
           </div>
           <pre style={toolOutputStyle}>
             <AnimatedToolOutput text={message.result || '(no output)'} />
@@ -440,7 +445,7 @@ function renderActiveToolCall(activeToolCall: ActiveToolCall): React.ReactNode {
       </div>
       <div style={toolCommandShellStyle}>
         <div style={toolCommandLabelStyle}>Command</div>
-        <code style={toolCommandStyle}>{activeToolCall.command}</code>
+        <code style={toolCommandStyle}>{renderCommandTokens(activeToolCall.command)}</code>
       </div>
       <div style={toolProgressBodyStyle}>
         <span style={thinkingDotStyle} />
@@ -490,12 +495,12 @@ function getDockHint({
     return 'Preparing the demo workspace…';
   }
   if (!hasApiKey) {
-    return 'Paste an OpenRouter API key to enable the agent.';
+    return 'Add an OpenRouter API key to start.';
   }
   if (busy) {
     return 'The agent is using the workspace and model you selected.';
   }
-  return 'Ready. Ask for a concrete task such as counting errors, fetching data, or writing a report.';
+  return 'Ready. Try counting errors, fetching an order email, or writing a report.';
 }
 
 function renderMarkdown(markdown: string): React.ReactNode {
@@ -524,11 +529,36 @@ function renderMarkdown(markdown: string): React.ReactNode {
   );
 }
 
+function renderCommandTokens(command: string): React.ReactNode {
+  return tokenizeCommand(command).map((token, index) => (
+    <span key={`${token.kind}-${index}`} style={getCommandTokenStyle(token.kind)}>
+      {token.text}
+    </span>
+  ));
+}
+
+function getCommandTokenStyle(kind: CommandTokenKind): React.CSSProperties {
+  switch (kind) {
+    case 'command':
+      return commandNameStyle;
+    case 'operator':
+      return commandOperatorStyle;
+    case 'flag':
+      return commandFlagStyle;
+    case 'path':
+      return commandPathStyle;
+    case 'string':
+      return commandStringStyle;
+    case 'argument':
+      return commandArgumentStyle;
+  }
+}
+
 function AnimatedToolOutput({ text }: { text: string }) {
   const [visibleLength, setVisibleLength] = useState(0);
 
   useEffect(() => {
-    const chunkSize = Math.max(6, Math.ceil(text.length / 48));
+    const chunkSize = Math.max(12, Math.ceil(text.length / 24));
     const intervalMs = 12;
     setVisibleLength(0);
 
@@ -565,10 +595,13 @@ const containerStyle: React.CSSProperties = {
   maxWidth: '1120px',
   margin: '0 auto',
   padding: '1.25rem 1.5rem 1rem',
-  minHeight: 'calc(100vh - 72px)',
+  width: '100%',
+  height: '100%',
+  minHeight: 0,
   display: 'grid',
   gridTemplateRows: 'auto 1fr auto',
   gap: '0.9rem',
+  overflow: 'hidden',
 };
 
 const headerStyle: React.CSSProperties = {
@@ -644,7 +677,7 @@ const headerInlineCodeStyle: React.CSSProperties = {
 
 const chatShellStyle: React.CSSProperties = {
   minHeight: 0,
-  overflow: 'auto',
+  overflow: 'hidden',
   padding: '1rem 1rem 1.2rem',
   borderRadius: '14px',
   border: '1px solid var(--border)',
@@ -664,6 +697,9 @@ const chatViewportStyle: React.CSSProperties = {
   width: '100%',
   maxWidth: '920px',
   margin: '0 auto',
+  height: '100%',
+  minHeight: 0,
+  overflow: 'auto',
 };
 
 const emptyStateStyle: React.CSSProperties = {
@@ -850,6 +886,7 @@ const toolCommandStyle: React.CSSProperties = {
   color: 'var(--text-bright)',
   whiteSpace: 'pre-wrap',
   wordBreak: 'break-word',
+  lineHeight: 1.65,
 };
 
 const toolOutputStyle: React.CSSProperties = {
@@ -1149,4 +1186,29 @@ const clearButtonStyle: React.CSSProperties = {
   background: 'var(--bg-surface)',
   color: 'var(--text-muted)',
   cursor: 'pointer',
+};
+
+const commandNameStyle: React.CSSProperties = {
+  color: 'var(--accent)',
+  fontWeight: 600,
+};
+
+const commandOperatorStyle: React.CSSProperties = {
+  color: 'var(--yellow)',
+};
+
+const commandFlagStyle: React.CSSProperties = {
+  color: 'var(--purple)',
+};
+
+const commandPathStyle: React.CSSProperties = {
+  color: '#8dd0ff',
+};
+
+const commandStringStyle: React.CSSProperties = {
+  color: 'var(--green)',
+};
+
+const commandArgumentStyle: React.CSSProperties = {
+  color: 'var(--text-bright)',
 };

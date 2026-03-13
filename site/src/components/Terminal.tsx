@@ -3,6 +3,7 @@ import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import type { AgentCLI } from 'one-tool/browser';
+import { tokenizeCommand, type CommandTokenKind } from '../utils/command-highlighting';
 
 interface TerminalProps {
   runtime: AgentCLI;
@@ -10,6 +11,7 @@ interface TerminalProps {
   onCommand?: (cmd: string, output: string) => void;
   onReady?: () => void;
   readOnly?: boolean;
+  autoFocus?: boolean;
 }
 
 export interface TerminalPlaybackOptions {
@@ -24,11 +26,15 @@ export interface TerminalHandle {
 }
 
 const PROMPT = '\x1b[38;5;81m$\x1b[0m ';
-const INPUT_COLOR = '\x1b[38;5;229m';
 const MUTED_COLOR = '\x1b[38;5;246m';
-const SUCCESS_COLOR = '\x1b[38;5;114m';
 const RESET = '\x1b[0m';
 const DEFAULT_TYPING_DELAY_MS = 22;
+const COMMAND_COLOR = '\x1b[38;5;81m';
+const ARGUMENT_COLOR = '\x1b[38;5;229m';
+const FLAG_COLOR = '\x1b[38;5;177m';
+const PATH_COLOR = '\x1b[38;5;117m';
+const STRING_COLOR = '\x1b[38;5;114m';
+const OPERATOR_COLOR = '\x1b[38;5;221m';
 
 interface CompletionMatch {
   replacement: string;
@@ -57,6 +63,33 @@ function isPathToken(token: string): boolean {
     token.startsWith('../') ||
     token.includes('/')
   );
+}
+
+function getInputTokenColor(kind: CommandTokenKind): string {
+  switch (kind) {
+    case 'command':
+      return COMMAND_COLOR;
+    case 'operator':
+      return OPERATOR_COLOR;
+    case 'flag':
+      return FLAG_COLOR;
+    case 'path':
+      return PATH_COLOR;
+    case 'string':
+      return STRING_COLOR;
+    case 'argument':
+      return ARGUMENT_COLOR;
+  }
+}
+
+function renderHighlightedInput(input: string): string {
+  if (input.length === 0) {
+    return '';
+  }
+
+  return tokenizeCommand(input)
+    .map((token) => `${getInputTokenColor(token.kind)}${token.text}${RESET}`)
+    .join('');
 }
 
 function getCommonPrefix(values: readonly string[]): string {
@@ -164,7 +197,7 @@ async function getAutocompleteMatches(runtime: AgentCLI, input: string): Promise
 }
 
 export const TerminalComponent = forwardRef<TerminalHandle, TerminalProps>(function TerminalComponent(
-  { runtime, welcomeMessage, onCommand, onReady, readOnly = false }: TerminalProps,
+  { runtime, welcomeMessage, onCommand, onReady, readOnly = false, autoFocus = false }: TerminalProps,
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -189,13 +222,23 @@ export const TerminalComponent = forwardRef<TerminalHandle, TerminalProps>(funct
     onReadyRef.current = onReady;
   }, [onReady]);
 
+  const focusTerminal = useCallback(() => {
+    const term = termRef.current;
+    if (!term) {
+      return;
+    }
+
+    term.focus();
+  }, []);
+
   const renderInputLine = useCallback((input: string) => {
     const term = termRef.current;
     if (!term) {
       return;
     }
 
-    const line = input.length > 0 ? `\r\x1b[2K${PROMPT}${INPUT_COLOR}${input}${RESET}` : `\r\x1b[2K${PROMPT}`;
+    const line =
+      input.length > 0 ? `\r\x1b[2K${PROMPT}${renderHighlightedInput(input)}` : `\r\x1b[2K${PROMPT}`;
     term.write(line);
   }, []);
 
@@ -436,6 +479,13 @@ export const TerminalComponent = forwardRef<TerminalHandle, TerminalProps>(funct
     renderInputLine('');
     onReadyRef.current?.();
 
+    if (autoFocus) {
+      window.requestAnimationFrame(() => {
+        focusTerminal();
+        window.setTimeout(focusTerminal, 40);
+      });
+    }
+
     term.onKey(({ key, domEvent }) => {
       if (busyRef.current || readOnlyRef.current) return;
 
@@ -507,12 +557,26 @@ export const TerminalComponent = forwardRef<TerminalHandle, TerminalProps>(funct
     const resizeObserver = new ResizeObserver(() => fitAddon.fit());
     resizeObserver.observe(container);
 
+    const handlePointerDown = () => {
+      term.focus();
+    };
+    container.addEventListener('pointerdown', handlePointerDown);
+
     return () => {
       resizeObserver.disconnect();
+      container.removeEventListener('pointerdown', handlePointerDown);
       term.dispose();
       termRef.current = null;
     };
-  }, [executeTypedCommand, handleAutocomplete, renderInputLine, resetAutocompleteState, welcomeMessage]);
+  }, [
+    autoFocus,
+    executeTypedCommand,
+    focusTerminal,
+    handleAutocomplete,
+    renderInputLine,
+    resetAutocompleteState,
+    welcomeMessage,
+  ]);
 
   return (
     <div

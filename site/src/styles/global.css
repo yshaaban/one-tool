@@ -40,6 +40,7 @@
 
 html {
   color-scheme: dark;
+  height: 100%;
 }
 
 body {
@@ -48,8 +49,14 @@ body {
   color: var(--text);
   line-height: 1.6;
   min-height: 100vh;
+  height: 100%;
+  overflow: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  height: 100%;
 }
 
 a {

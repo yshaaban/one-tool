@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 const features = [
   {
     tag: 'runtime',
-    title: 'One Tool for AI Agents',
+    title: 'Single tool interface',
     description:
       'Expose a single run(command) tool. Agents get 26 built-in commands with pipes, &&, ||, and ; composition.',
     accent: 'var(--accent)',
@@ -13,7 +13,7 @@ const features = [
     tag: 'vfs',
     title: 'Constrained Workspace',
     description:
-      'Use MemoryVFS, BrowserVFS, or NodeVFS for rooted storage without a Python or shell sandbox.',
+      'Use MemoryVFS, BrowserVFS, or NodeVFS for rooted storage without exposing a Python or shell sandbox.',
     accent: 'var(--green)',
     dim: 'var(--green-dim)',
   },
@@ -70,7 +70,7 @@ const codeLines = [
 
 export function Landing() {
   return (
-    <div>
+    <div style={pageStyle}>
       {/* Hero */}
       <section style={heroStyle}>
         <div style={heroInnerStyle}>
@@ -80,25 +80,23 @@ export function Landing() {
           </div>
 
           <h1 style={heroTitleStyle}>
-            One tool.
-            <br />
-            <span style={{ color: 'var(--accent)' }}>Real agent work.</span>
+            A single <code style={inlineCodeStyle}>run(command)</code> interface for agent workspaces
           </h1>
 
           <p style={heroSubtitleStyle}>
-            A constrained workspace for AI agents. Replace a catalog of narrow tools or a code-interpreter
-            sandbox with a single <code style={inlineCodeStyle}>run(command)</code> interface.
+            one-tool gives agents a constrained workspace with files, text processing, retrieval, and memory,
+            without exposing a shell or Python sandbox.
           </p>
 
           <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link to="/playground" style={primaryCtaStyle}>
-              Open Playground
+              Playground
             </Link>
             <Link to="/examples/08-llm-agent" style={secondaryCtaStyle}>
-              Watch Agent Example
+              Agent example
             </Link>
             <Link to="/examples" style={secondaryCtaStyle}>
-              Browse Examples
+              Examples
             </Link>
           </div>
         </div>
@@ -153,18 +151,17 @@ export function Landing() {
       <section style={{ ...sectionStyle, paddingTop: 0 }}>
         <div style={agentHeroStyle}>
           <div>
-            <h2 style={agentHeroTitleStyle}>See the agent loop, not just the runtime</h2>
+            <h2 style={agentHeroTitleStyle}>Agent example</h2>
             <p style={agentHeroTextStyle}>
-              The agent example shows the full pattern: prompt, tool call, tool output, and final answer. It
-              is the fastest way to see why one tool works well for agents.
+              The agent example shows the full loop: prompt, command, command output, and final answer.
             </p>
           </div>
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
             <Link to="/examples/08-llm-agent" style={primaryCtaStyle}>
-              Open Agent Example
+              Open example
             </Link>
             <Link to="/examples" style={secondaryCtaStyle}>
-              Compare All Samples
+              All examples
             </Link>
           </div>
         </div>
@@ -173,10 +170,9 @@ export function Landing() {
       <section style={{ ...sectionStyle, paddingTop: 0 }}>
         <div style={principlesShellStyle}>
           <div style={{ marginBottom: '1rem' }}>
-            <h2 style={principlesTitleStyle}>Built for agent feedback loops</h2>
+            <h2 style={principlesTitleStyle}>How agents use it</h2>
             <p style={principlesSubtitleStyle}>
-              one-tool works because models can discover commands, compose them, and use output and errors to
-              decide what to do next.
+              Agents can discover commands, compose them, and use output and errors to choose the next step.
             </p>
           </div>
           <div style={principlesGridStyle}>
@@ -193,9 +189,7 @@ export function Landing() {
       {/* Code example */}
       <section style={{ ...sectionStyle, paddingBottom: '4rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-          <h2 style={{ fontSize: '1.15rem', fontWeight: 600, color: 'var(--text-bright)' }}>
-            Get started in 4 lines
-          </h2>
+          <h2 style={{ fontSize: '1.15rem', fontWeight: 600, color: 'var(--text-bright)' }}>Quick start</h2>
         </div>
         <div style={codeBlockStyle}>
           <div style={codeHeaderStyle}>
@@ -237,6 +231,12 @@ export function Landing() {
     </div>
   );
 }
+
+const pageStyle: React.CSSProperties = {
+  width: '100%',
+  minHeight: 0,
+  overflow: 'auto',
+};
 
 const heroStyle: React.CSSProperties = {
   padding: '5rem 1.5rem 3.5rem',

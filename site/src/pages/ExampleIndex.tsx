@@ -152,6 +152,9 @@ function ExampleCard({ example, animationDelay }: { example: ExampleDef; animati
 }
 
 const containerStyle: React.CSSProperties = {
+  width: '100%',
+  minHeight: 0,
+  overflow: 'auto',
   maxWidth: 'var(--max-width)',
   margin: '0 auto',
   padding: '2.5rem 1.5rem 3rem',

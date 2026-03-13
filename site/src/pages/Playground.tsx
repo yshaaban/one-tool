@@ -72,7 +72,7 @@ function Playground() {
         </p>
       </div>
       <div style={terminalWrapperStyle}>
-        <TerminalComponent runtime={runtime} welcomeMessage={WELCOME} />
+        <TerminalComponent runtime={runtime} welcomeMessage={WELCOME} autoFocus />
       </div>
     </div>
   );
@@ -81,13 +81,20 @@ function Playground() {
 export default Playground;
 
 const containerStyle: React.CSSProperties = {
+  width: '100%',
+  height: '100%',
+  minHeight: 0,
+  overflow: 'hidden',
   maxWidth: 'var(--max-width)',
   margin: '0 auto',
   padding: '1.5rem',
+  display: 'grid',
+  gridTemplateRows: 'auto 1fr',
+  gap: '1rem',
 };
 
 const headerStyle: React.CSSProperties = {
-  marginBottom: '1rem',
+  minHeight: 0,
 };
 
 const titleStyle: React.CSSProperties = {
@@ -105,8 +112,8 @@ const subtitleStyle: React.CSSProperties = {
 };
 
 const terminalWrapperStyle: React.CSSProperties = {
-  height: 'calc(100vh - 180px)',
-  minHeight: '450px',
+  minHeight: 0,
+  height: '100%',
 };
 
 const errorStyle: React.CSSProperties = {

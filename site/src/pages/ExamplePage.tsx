@@ -419,13 +419,20 @@ function stepIndicatorStyle(completed: boolean, active: boolean, current: boolea
 // ---------------------------------------------------------------------------
 
 const containerStyle: React.CSSProperties = {
+  width: '100%',
+  height: '100%',
+  minHeight: 0,
+  overflow: 'hidden',
   maxWidth: 'var(--max-width)',
   margin: '0 auto',
   padding: '1.5rem',
+  display: 'grid',
+  gridTemplateRows: 'auto 1fr',
 };
 
 const headerStyle: React.CSSProperties = {
   marginBottom: '1.5rem',
+  minHeight: 0,
 };
 
 const backLinkStyle: React.CSSProperties = {
@@ -471,6 +478,7 @@ const mainLayoutStyle: React.CSSProperties = {
   gridTemplateColumns: '280px 1fr',
   gap: '1rem',
   alignItems: 'start',
+  minHeight: 0,
 };
 
 const stepsPanelStyle: React.CSSProperties = {
@@ -478,8 +486,8 @@ const stepsPanelStyle: React.CSSProperties = {
   border: '1px solid var(--border-subtle)',
   borderRadius: 'var(--radius)',
   padding: '1rem',
-  position: 'sticky',
-  top: '4.5rem',
+  minHeight: 0,
+  overflow: 'auto',
 };
 
 const stepsPanelHeaderStyle: React.CSSProperties = {
@@ -567,8 +575,8 @@ const completeBannerStyle: React.CSSProperties = {
 };
 
 const terminalContainerStyle: React.CSSProperties = {
-  height: 'calc(100vh - 180px)',
-  minHeight: '450px',
+  minHeight: 0,
+  height: '100%',
 };
 
 const nonInteractiveStyle: React.CSSProperties = {

@@ -11,7 +11,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const location = useLocation();
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+    <div style={shellStyle}>
       <nav style={navStyle}>
         <div style={navInnerStyle}>
           <Link to="/" style={logoStyle}>
@@ -48,10 +48,10 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
         </div>
       </nav>
-      <main style={{ flex: 1 }}>{children}</main>
+      <main style={mainStyle}>{children}</main>
       <footer style={footerStyle}>
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-          one-tool &middot; constrained workspace for AI agents
+          one-tool
         </span>
       </footer>
     </div>
@@ -105,7 +105,22 @@ const navDivider: React.CSSProperties = {
 };
 
 const footerStyle: React.CSSProperties = {
+  flexShrink: 0,
   borderTop: '1px solid var(--border-subtle)',
   padding: '1.25rem 1.5rem',
   textAlign: 'center',
+};
+
+const shellStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  height: '100dvh',
+  overflow: 'hidden',
+};
+
+const mainStyle: React.CSSProperties = {
+  flex: 1,
+  minHeight: 0,
+  display: 'flex',
+  overflow: 'hidden',
 };
