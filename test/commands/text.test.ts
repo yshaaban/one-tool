@@ -85,6 +85,39 @@ test('text: sort orders lines lexically, numerically, and uniquely', async () =>
   assert.equal(stdoutText(unique.result), 'apple\npear');
 });
 
+test('text: tr translates, deletes, squeezes, and preserves empty stdin', async () => {
+  const translated = await runCommand('tr', ['a-z', 'A-Z'], {
+    stdin: stdinText('banana'),
+  });
+  assert.equal(translated.result.exitCode, 0);
+  assert.equal(stdoutText(translated.result), 'BANANA');
+
+  const deleted = await runCommand('tr', ['-d', '0-9'], {
+    stdin: stdinText('a1b2c3'),
+  });
+  assert.equal(deleted.result.exitCode, 0);
+  assert.equal(stdoutText(deleted.result), 'abc');
+
+  const squeezed = await runCommand('tr', ['-s', ' '], {
+    stdin: stdinText('a   b'),
+  });
+  assert.equal(squeezed.result.exitCode, 0);
+  assert.equal(stdoutText(squeezed.result), 'a b');
+
+  const empty = await runCommand('tr', ['a-z', 'A-Z']);
+  assert.equal(empty.result.exitCode, 0);
+  assert.equal(stdoutText(empty.result), '');
+});
+
+test('text: tr reports operand and class-alignment errors', async () => {
+  const emptyString2 = await runCommand('tr', ['a', '']);
+  assert.equal(emptyString2.result.exitCode, 1);
+  assert.match(emptyString2.result.stderr, /tr: when not truncating set1, string2 must be non-empty/);
+
+  const misalignedClass = await runCommand('tr', ['0-9', '[:upper:]']);
+  assert.equal(misalignedClass.result.exitCode, 1);
+  assert.match(misalignedClass.result.stderr, /tr: misaligned \[:upper:\] and\/or \[:lower:\] construct/);
+});
 test('text: uniq collapses adjacent duplicates and supports counts', async () => {
   const basic = await runCommand('uniq', [], {
     stdin: stdinText('a\na\nb\na\na'),

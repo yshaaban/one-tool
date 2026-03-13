@@ -83,7 +83,7 @@ export function createCommandConformanceCases(options: CommandConformanceOptions
       cases.push(
         createCase(spec, `requires at least ${spec.minArgs} arg(s)`, async function (): Promise<void> {
           const result = await invokeSpec(options, spec, tooFewArgsFor(spec));
-          assertEqual(result.exitCode, 1, `${spec.name} should reject too few arguments`);
+          assertCondition(result.exitCode !== 0, `${spec.name} should reject too few arguments`);
         }),
       );
     }
@@ -92,7 +92,7 @@ export function createCommandConformanceCases(options: CommandConformanceOptions
       cases.push(
         createCase(spec, `rejects more than ${spec.maxArgs} arg(s)`, async function (): Promise<void> {
           const result = await invokeSpec(options, spec, tooManyArgsFor(spec));
-          assertEqual(result.exitCode, 1, `${spec.name} should reject too many arguments`);
+          assertCondition(result.exitCode !== 0, `${spec.name} should reject too many arguments`);
         }),
       );
     }

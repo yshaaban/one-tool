@@ -1,7 +1,8 @@
-import { err, ok } from '../../types.js';
-import { errorMessage, splitLines } from '../../utils.js';
+import { err, ok, okBytes } from '../../types.js';
+import { errorMessage, looksBinary, splitLines } from '../../utils.js';
 import type { CommandContext, CommandSpec } from '../core.js';
 import { parseNFlag, readTextFromFileOrStdin } from '../shared/io.js';
+import { compileTrProgram } from '../shared/tr-arrays.js';
 
 async function cmdGrep(ctx: CommandContext, args: string[], stdin: Uint8Array) {
   if (args.length === 0) {
@@ -206,6 +207,28 @@ export const sort: CommandSpec = {
   conformanceArgs: [],
 };
 
+async function cmdTr(_ctx: CommandContext, args: string[], stdin: Uint8Array) {
+  const compiled = compileTrProgram(args);
+  if (!compiled.ok) {
+    return err(`tr: ${compiled.error}`);
+  }
+
+  const output = compiled.value.run(stdin);
+  return okBytes(output, looksBinary(output) ? 'application/octet-stream' : 'text/plain');
+}
+
+export const tr: CommandSpec = {
+  name: 'tr',
+  summary: 'Translate, delete, and squeeze bytes from stdin.',
+  usage: 'tr [OPTION]... STRING1 [STRING2]',
+  details:
+    'Examples:\n  cat /logs/app.log | tr a-z A-Z\n  cat /notes.txt | tr -s " "\n  cat /data.txt | tr -d 0-9',
+  handler: cmdTr,
+  acceptsStdin: true,
+  minArgs: 1,
+  conformanceArgs: ['a-z', 'A-Z'],
+};
+
 async function cmdUniq(ctx: CommandContext, args: string[], stdin: Uint8Array) {
   let count = false;
   let ignoreCase = false;
@@ -392,4 +415,4 @@ function countWords(text: string): number {
   return matches?.length ?? 0;
 }
 
-export const textCommands: CommandSpec[] = [grep, head, tail, sort, uniq, wc];
+export const textCommands: CommandSpec[] = [grep, head, tail, sort, tr, uniq, wc];

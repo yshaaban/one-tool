@@ -5,6 +5,7 @@ import { formatEscapePathErrorMessage, formatResourceLimitErrorMessage } from '.
 import { baseName } from '../../vfs/path-utils.js';
 import type { CommandContext, CommandSpec } from '../core.js';
 import { blockingParentPath, errorCode, errorPath, firstFileInPath } from '../shared/errors.js';
+import { parseDiffArgs, runDiffCommand } from '../shared/diff.js';
 import { contentFromArgsOrStdin, materializedLimitError } from '../shared/io.js';
 
 function resourceLimitMessage(commandName: string, caught: unknown): string | null {
@@ -585,6 +586,27 @@ export const find: CommandSpec = {
   conformanceArgs: ['/'],
 };
 
+async function cmdDiff(ctx: CommandContext, args: string[], stdin: Uint8Array) {
+  const parsed = parseDiffArgs(args);
+  if (!parsed.ok) {
+    return err(`diff: ${parsed.error}`, { exitCode: 2 });
+  }
+
+  return runDiffCommand(ctx, parsed.value, stdin);
+}
+
+export const diff: CommandSpec = {
+  name: 'diff',
+  summary: 'Compare files or directories with normal, unified, or context output.',
+  usage: 'diff [-u|-U N|-c|-C N] [-r] [-a] [-b] [-i] <left> <right>',
+  details:
+    'Examples:\n  diff /drafts/a.txt /reports/a.txt\n  diff -u /drafts/a.txt /reports/a.txt\n  diff -r /left /right',
+  handler: cmdDiff,
+  acceptsStdin: true,
+  minArgs: 2,
+  conformanceArgs: ['/', '/'],
+};
+
 interface FindFilters {
   maxDepth: number;
   typeFilter: 'file' | 'dir' | undefined;
@@ -633,4 +655,4 @@ function matchesWildcard(value: string, pattern: string): boolean {
   return regex.test(value);
 }
 
-export const fsCommands: CommandSpec[] = [ls, stat, cat, write, append, mkdir, cp, mv, rm, find];
+export const fsCommands: CommandSpec[] = [ls, stat, cat, write, append, mkdir, cp, diff, mv, rm, find];

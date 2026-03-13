@@ -218,3 +218,88 @@ test('fs: find supports max depth and validates flags', async () => {
   assert.equal(invalidDepth.result.exitCode, 1);
   assert.match(invalidDepth.result.stderr, /find: invalid integer for --max-depth: -1/);
 });
+
+test('fs: diff uses normal diff exit semantics for identical and changed files', async () => {
+  const ctx = makeCtx();
+  await ctx.vfs.writeBytes('/same-left.txt', textEncoder.encode('alpha\n'));
+  await ctx.vfs.writeBytes('/same-right.txt', textEncoder.encode('alpha\n'));
+  await ctx.vfs.writeBytes('/left.txt', textEncoder.encode('alpha\n'));
+  await ctx.vfs.writeBytes('/right.txt', textEncoder.encode('beta\n'));
+
+  const identical = await runCommand('diff', ['/same-left.txt', '/same-right.txt'], { ctx });
+  assert.equal(identical.result.exitCode, 0);
+  assert.equal(stdoutText(identical.result), '');
+  assert.equal(identical.result.stderr, '');
+
+  const changed = await runCommand('diff', ['/left.txt', '/right.txt'], { ctx });
+  assert.equal(changed.result.exitCode, 1);
+  assert.equal(stdoutText(changed.result), '1c1\n< alpha\n---\n> beta\n');
+  assert.equal(changed.result.stderr, '');
+});
+
+test('fs: diff supports unified and context formats', async () => {
+  const ctx = makeCtx();
+  await ctx.vfs.writeBytes('/left.txt', textEncoder.encode('alpha\nbravo\n'));
+  await ctx.vfs.writeBytes('/right.txt', textEncoder.encode('alpha\ncharlie\n'));
+
+  const unified = await runCommand('diff', ['-u', '/left.txt', '/right.txt'], { ctx });
+  assert.equal(unified.result.exitCode, 1);
+  assert.match(stdoutText(unified.result), /^--- \/left\.txt\t/m);
+  assert.match(stdoutText(unified.result), /^\+\+\+ \/right\.txt\t/m);
+  assert.match(stdoutText(unified.result), /^@@ -1,2 \+1,2 @@$/m);
+  assert.match(stdoutText(unified.result), /^-bravo$/m);
+  assert.match(stdoutText(unified.result), /^\+charlie$/m);
+
+  const context = await runCommand('diff', ['-c', '/left.txt', '/right.txt'], { ctx });
+  assert.equal(context.result.exitCode, 1);
+  assert.match(stdoutText(context.result), /^\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*$/m);
+  assert.match(stdoutText(context.result), /^\*\*\* \/left\.txt\t/m);
+  assert.match(stdoutText(context.result), /^--- \/right\.txt\t/m);
+  assert.match(stdoutText(context.result), /^! bravo$/m);
+  assert.match(stdoutText(context.result), /^! charlie$/m);
+});
+
+test('fs: diff handles binary files, stdin operands, and invalid usage', async () => {
+  const ctx = makeCtx();
+  await ctx.vfs.writeBytes('/left.bin', new Uint8Array([0, 1, 2]));
+  await ctx.vfs.writeBytes('/right.bin', new Uint8Array([0, 1, 3]));
+  await ctx.vfs.writeBytes('/right.txt', textEncoder.encode('bravo\n'));
+
+  const binary = await runCommand('diff', ['/left.bin', '/right.bin'], { ctx });
+  assert.equal(binary.result.exitCode, 1);
+  assert.equal(stdoutText(binary.result), 'Binary files /left.bin and /right.bin differ\n');
+
+  const stdinCompared = await runCommand('diff', ['-', '/right.txt'], {
+    ctx,
+    stdin: textEncoder.encode('alpha\n'),
+  });
+  assert.equal(stdinCompared.result.exitCode, 1);
+  assert.equal(stdoutText(stdinCompared.result), '1c1\n< alpha\n---\n> bravo\n');
+
+  const invalid = await runCommand('diff', ['--bogus', '/left.bin', '/right.bin'], { ctx });
+  assert.equal(invalid.result.exitCode, 2);
+  assert.match(invalid.result.stderr, /diff: unknown option: --bogus/);
+});
+
+test('fs: diff compares directories recursively and non-recursively', async () => {
+  const ctx = makeCtx();
+  await ctx.vfs.writeBytes('/left/a.txt', textEncoder.encode('alpha\n'));
+  await ctx.vfs.writeBytes('/right/a.txt', textEncoder.encode('beta\n'));
+  await ctx.vfs.writeBytes('/left/only.txt', textEncoder.encode('left only\n'));
+  await ctx.vfs.mkdir('/left/sub', true);
+  await ctx.vfs.mkdir('/right/sub', true);
+  await ctx.vfs.writeBytes('/left/sub/shared.txt', textEncoder.encode('same\n'));
+  await ctx.vfs.writeBytes('/right/sub/shared.txt', textEncoder.encode('same\n'));
+
+  const nonRecursive = await runCommand('diff', ['/left', '/right'], { ctx });
+  assert.equal(nonRecursive.result.exitCode, 1);
+  assert.match(stdoutText(nonRecursive.result), /^diff \/left\/a\.txt \/right\/a\.txt$/m);
+  assert.match(stdoutText(nonRecursive.result), /^Only in \/left: only\.txt$/m);
+  assert.match(stdoutText(nonRecursive.result), /^Common subdirectories: \/left\/sub and \/right\/sub$/m);
+
+  const recursive = await runCommand('diff', ['-r', '/left', '/right'], { ctx });
+  assert.equal(recursive.result.exitCode, 1);
+  assert.match(stdoutText(recursive.result), /^diff -r \/left\/a\.txt \/right\/a\.txt$/m);
+  assert.match(stdoutText(recursive.result), /^Only in \/left: only\.txt$/m);
+  assert.doesNotMatch(stdoutText(recursive.result), /^Common subdirectories:/m);
+});

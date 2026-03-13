@@ -92,7 +92,7 @@ There is no mutable current working directory.
 
 ## Built-in commands
 
-The runtime ships with 22 built-in commands.
+The runtime ships with 24 built-in commands.
 
 ### System commands
 
@@ -121,6 +121,7 @@ memory recent 5
 | `append` | `append <path> [content]`                                                        |   yes | Append to a file                          |
 | `mkdir`  | `mkdir <path>`                                                                   |    no | Create a directory and missing parents    |
 | `cp`     | `cp <src> <dst>`                                                                 |    no | Copy a file or directory                  |
+| `diff`   | `diff [-u\|-U N\|-c\|-C N] [-r] [-a] [-b] [-i] <left> <right>`                   |   yes | Compare files or directories              |
 | `mv`     | `mv <src> <dst>`                                                                 |    no | Move or rename a file or directory        |
 | `rm`     | `rm <path>`                                                                      |    no | Delete a file or directory recursively    |
 | `find`   | <code>find [path] [--type file&#124;dir] [--name pattern] [--max-depth N]</code> |    no | Recursively list files and directories    |
@@ -136,6 +137,7 @@ cat /logs/app.log | grep ERROR | write /reports/errors.txt
 append /reports/summary.txt "next line"
 mkdir /reports/daily/2026-03-13
 cp /drafts/qbr.md /reports/qbr-v1.md
+diff -u /drafts/qbr.md /reports/qbr-v2.md
 mv /reports/qbr-v1.md /archive/qbr.md
 rm /scratch
 find /config --type file --name "*.json"
@@ -143,14 +145,15 @@ find /config --type file --name "*.json"
 
 ### Text commands
 
-| Command | Usage                                       | Stdin | Purpose                           |
-| ------- | ------------------------------------------- | ----: | --------------------------------- |
-| `grep`  | `grep [-i] [-v] [-c] [-n] <pattern> [path]` |   yes | Filter lines by regex             |
-| `head`  | `head [-n N] [path]`                        |   yes | Show first N lines                |
-| `tail`  | `tail [-n N] [path]`                        |   yes | Show last N lines                 |
-| `sort`  | `sort [-r] [-n] [-u] [path]`                |   yes | Sort lines                        |
-| `uniq`  | `uniq [-c] [-i] [path]`                     |   yes | Collapse adjacent duplicate lines |
-| `wc`    | `wc [-l] [-w] [-c] [path]`                  |   yes | Count lines, words, and bytes     |
+| Command | Usage                                       | Stdin | Purpose                                        |
+| ------- | ------------------------------------------- | ----: | ---------------------------------------------- |
+| `grep`  | `grep [-i] [-v] [-c] [-n] <pattern> [path]` |   yes | Filter lines by regex                          |
+| `head`  | `head [-n N] [path]`                        |   yes | Show first N lines                             |
+| `tail`  | `tail [-n N] [path]`                        |   yes | Show last N lines                              |
+| `sort`  | `sort [-r] [-n] [-u] [path]`                |   yes | Sort lines                                     |
+| `tr`    | `tr [OPTION]... STRING1 [STRING2]`          |   yes | Translate, delete, or squeeze bytes from stdin |
+| `uniq`  | `uniq [-c] [-i] [path]`                     |   yes | Collapse adjacent duplicate lines              |
+| `wc`    | `wc [-l] [-w] [-c] [path]`                  |   yes | Count lines, words, and bytes                  |
 
 Examples:
 
@@ -160,6 +163,7 @@ cat /logs/app.log | grep -i timeout
 head -n 20 /logs/app.log
 tail -n 50 /logs/app.log
 find /config --type file | sort
+cat /notes/todo.txt | tr a-z A-Z
 cat /logs/app.log | sort | uniq -c
 wc -l /logs/app.log
 ```
