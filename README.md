@@ -30,6 +30,8 @@ At a glance:
 - testing helpers for command and scenario coverage
 - MCP server support for Claude Code and other MCP clients
 
+**[Try the interactive demo &rarr;](https://yshaaban.github.io/one-tool/)**
+
 <p align="center">
   <img src="docs/diagrams/tool-surface.svg" alt="Diagram showing the model calling run(command), the one-tool runtime dispatching commands, and formatted results returning through rooted files, adapters, and memory." width="980" />
 </p>
