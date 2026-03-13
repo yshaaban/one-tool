@@ -2,3 +2,6 @@ node_modules/
 dist/
 agent_state/
 .env
+*.tsbuildinfo
+site/dist/
+site/node_modules/
