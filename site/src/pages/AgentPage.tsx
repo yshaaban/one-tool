@@ -1,20 +1,19 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Link } from 'react-router-dom';
+import type { AgentCLI } from 'one-tool/browser';
 import { sourceBaseUrl } from '../config';
+import type { ExampleDef } from '../examples/types';
 import { closeRuntime, createDemoRuntime } from '../runtime/create-runtime';
 import {
+  browserModelOptions,
   createAgentSession,
   createBrowserConfig,
+  disposeAgentSession,
   runAgentTurn,
-  type AgentConfig,
   type AgentSession,
 } from '../runtime/browser-agent';
-import type { AgentCLI } from 'one-tool/browser';
-import type { ExampleDef } from '../examples/types';
-
-// ---------------------------------------------------------------------------
-// UI message types
-// ---------------------------------------------------------------------------
 
 type UIMessage =
   | { kind: 'user'; text: string }
@@ -22,472 +21,1132 @@ type UIMessage =
   | { kind: 'tool-call'; command: string; result: string }
   | { kind: 'error'; text: string };
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
+interface ActiveToolCall {
+  command: string;
+}
 
 export default function AgentPage({ example }: { example: ExampleDef }) {
   const sourceUrl = new URL(example.sourceFile, sourceBaseUrl).href;
 
-  // Runtime
   const [runtime, setRuntime] = useState<AgentCLI | null>(null);
   const [runtimeError, setRuntimeError] = useState('');
-
-  // Config (in-memory only — never persisted)
   const [apiKey, setApiKey] = useState('');
-  const [model, setModel] = useState('');
-  const [baseUrl, setBaseUrl] = useState('');
-  const [configCollapsed, setConfigCollapsed] = useState(false);
-
-  // Chat state
+  const [model, setModel] = useState(browserModelOptions[0]?.value ?? '');
   const [messages, setMessages] = useState<UIMessage[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
+  const [activeToolCall, setActiveToolCall] = useState<ActiveToolCall | null>(null);
+
   const sessionRef = useRef<AgentSession | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const apiKeyInputRef = useRef<HTMLInputElement | null>(null);
+  const mountedRef = useRef(true);
+  const activeRequestIdRef = useRef(0);
 
-  // Initialize runtime
   useEffect(() => {
     let cancelled = false;
     let createdRuntime: AgentCLI | null = null;
+    mountedRef.current = true;
+
     createDemoRuntime()
-      .then((rt) => {
-        createdRuntime = rt;
-        if (!cancelled) {
-          setRuntime(rt);
+      .then((nextRuntime) => {
+        createdRuntime = nextRuntime;
+        if (cancelled) {
+          closeRuntime(nextRuntime);
           return;
         }
 
-        closeRuntime(rt);
+        setRuntime(nextRuntime);
       })
-      .catch((err: unknown) => {
-        if (!cancelled) setRuntimeError(err instanceof Error ? err.message : String(err));
+      .catch((caught: unknown) => {
+        if (!cancelled) {
+          setRuntimeError(caught instanceof Error ? caught.message : String(caught));
+        }
       });
+
     return () => {
       cancelled = true;
+      mountedRef.current = false;
+      activeRequestIdRef.current += 1;
+      disposeAgentSession(sessionRef.current);
+      sessionRef.current = null;
       closeRuntime(createdRuntime);
     };
   }, []);
 
-  // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, busy]);
+
+  const resetConversation = useCallback((nextInput?: string) => {
+    setMessages([]);
+    setInput(nextInput ?? '');
+    setActiveToolCall(null);
+    setBusy(false);
+    activeRequestIdRef.current += 1;
+    disposeAgentSession(sessionRef.current);
+    sessionRef.current = null;
+  }, []);
 
   const handleSend = useCallback(async () => {
-    if (!runtime || !apiKey.trim() || !input.trim() || busy) return;
+    if (!runtime || busy) {
+      return;
+    }
+
+    if (!apiKey.trim()) {
+      apiKeyInputRef.current?.focus();
+      return;
+    }
+
+    if (!input.trim()) {
+      textareaRef.current?.focus();
+      return;
+    }
 
     const userText = input.trim();
+    const requestId = activeRequestIdRef.current + 1;
+    activeRequestIdRef.current = requestId;
     setInput('');
     setBusy(true);
-    setConfigCollapsed(true);
-
-    // Add user message
+    setActiveToolCall(null);
     setMessages((prev) => [...prev, { kind: 'user', text: userText }]);
 
-    // Create session on first message
+    const config = createBrowserConfig(apiKey.trim(), model.trim() || undefined);
+
     if (!sessionRef.current) {
       sessionRef.current = createAgentSession(runtime);
     }
 
-    const config: AgentConfig = createBrowserConfig(
-      apiKey.trim(),
-      model.trim() || undefined,
-      baseUrl.trim() || undefined,
-    );
-
     try {
       const result = await runAgentTurn(runtime, config, userText, sessionRef.current, {
-        onToolCall: (command, toolResult) => {
+        onToolCallStart: (command) => {
+          if (!mountedRef.current || activeRequestIdRef.current !== requestId) {
+            return;
+          }
+          setActiveToolCall({ command });
+        },
+        onToolCallComplete: (command, toolResult) => {
+          if (!mountedRef.current || activeRequestIdRef.current !== requestId) {
+            return;
+          }
+          setActiveToolCall(null);
           setMessages((prev) => [...prev, { kind: 'tool-call', command, result: toolResult }]);
         },
       });
+
+      if (!mountedRef.current || activeRequestIdRef.current !== requestId) {
+        return;
+      }
       setMessages((prev) => [...prev, { kind: 'assistant', text: result.reply }]);
-    } catch (err) {
-      const errorText = err instanceof Error ? err.message : String(err);
+    } catch (caught) {
+      if (!mountedRef.current || activeRequestIdRef.current !== requestId) {
+        return;
+      }
+      const errorText = caught instanceof Error ? caught.message : String(caught);
+      setActiveToolCall(null);
       setMessages((prev) => [...prev, { kind: 'error', text: errorText }]);
     } finally {
+      if (!mountedRef.current || activeRequestIdRef.current !== requestId) {
+        return;
+      }
+      setActiveToolCall(null);
       setBusy(false);
     }
-  }, [runtime, apiKey, input, busy, model, baseUrl]);
+  }, [apiKey, busy, input, model, runtime]);
 
   const handleClear = useCallback(() => {
-    setMessages([]);
-    sessionRef.current = null;
-  }, []);
+    resetConversation('');
+    textareaRef.current?.focus();
+  }, [resetConversation]);
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
+    (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
         void handleSend();
       }
     },
     [handleSend],
   );
 
+  const handleSuggestedPrompt = useCallback(
+    (prompt: string) => {
+      setInput(prompt);
+      if (!apiKey.trim()) {
+        apiKeyInputRef.current?.focus();
+        return;
+      }
+      textareaRef.current?.focus();
+    },
+    [apiKey],
+  );
+
+  const hasConversationState = messages.length > 0 || sessionRef.current !== null;
+  const hasApiKey = apiKey.trim().length > 0;
+  const canSend = Boolean(runtime && hasApiKey && input.trim() && !busy);
+
+  const handleApiKeyChange = useCallback(
+    (nextValue: string) => {
+      if (nextValue !== apiKey && hasConversationState) {
+        resetConversation(input);
+      }
+      setApiKey(nextValue);
+    },
+    [apiKey, hasConversationState, input, resetConversation],
+  );
+
+  const handleModelChange = useCallback(
+    (nextValue: string) => {
+      if (nextValue !== model && hasConversationState) {
+        resetConversation(input);
+      }
+      setModel(nextValue);
+    },
+    [hasConversationState, input, model, resetConversation],
+  );
+
   return (
     <div style={containerStyle}>
-      {/* Header */}
-      <div style={{ marginBottom: '1rem' }}>
-        <Link to="/examples" style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-          &larr; All examples
-        </Link>
-        <div style={experimentalBadgeStyle}>experimental browser agent</div>
-        <h1 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-mono)', marginTop: '0.5rem' }}>
-          {example.title}
-        </h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{example.description}</p>
-        <p style={{ fontSize: '0.8rem', marginTop: '0.25rem' }}>
-          <a
-            href={sourceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: 'var(--text-muted)' }}
-          >
-            View source
-          </a>
-        </p>
-      </div>
-
-      {/* Experimental warning */}
-      <div style={warningStyle}>
-        <strong>Experimental</strong> &mdash; Your API key is sent directly from your browser to the
-        configured OpenAI-compatible API. This is for development and testing only. Never use production API
-        keys.
-      </div>
-
-      {/* Runtime error */}
-      {runtimeError && (
-        <div style={errorBannerStyle}>
-          <strong>Failed to initialize runtime.</strong>
-          <div style={{ marginTop: '0.35rem' }}>{runtimeError}</div>
+      <header style={headerStyle}>
+        <div style={headerLeftStyle}>
+          <div style={headerMetaStyle}>
+            <Link to="/examples" style={backLinkStyle}>
+              &larr; Examples
+            </Link>
+            <span style={experimentalBadgeStyle}>experimental</span>
+          </div>
+          <h1 style={titleStyle}>{example.title}</h1>
+          <p style={headerSubtitleStyle}>
+            Give the agent a concrete task. It plans with one{' '}
+            <code style={headerInlineCodeStyle}>run(command)</code> tool and keeps every command, tool result,
+            and reply visible.
+          </p>
         </div>
-      )}
+        <a href={sourceUrl} target="_blank" rel="noopener noreferrer" style={sourceLinkStyle}>
+          Source &rarr;
+        </a>
+      </header>
 
-      {/* Config panel */}
-      <div style={configPanelStyle}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            cursor: 'pointer',
-          }}
-          onClick={() => setConfigCollapsed(!configCollapsed)}
-        >
-          <h3 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', margin: 0 }}>
-            Configuration {configCollapsed ? '(click to expand)' : ''}
-          </h3>
-          <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-            {configCollapsed ? '+' : '-'}
-          </span>
+      <section style={chatShellStyle}>
+        <div style={chatViewportStyle}>
+          {runtimeError ? (
+            <div style={runtimeErrorStyle}>
+              <div style={errorLabelStyle}>Runtime error</div>
+              <div>{runtimeError}</div>
+            </div>
+          ) : null}
+
+          {!runtimeError && messages.length === 0 ? (
+            <div style={emptyStateStyle}>
+              <div style={emptyHeroStyle}>
+                <div style={cursorHeroStyle}>
+                  <span style={{ color: 'var(--accent)' }}>{'>'}</span>
+                  <span style={{ color: 'var(--accent)', marginLeft: '0.35rem' }}>_</span>
+                </div>
+                <h2 style={emptyTitleStyle}>Start with a concrete task</h2>
+                <p style={emptySubtitleStyle}>
+                  Pick a model, add your OpenRouter key, then start with one of these prompts. The page is
+                  optimized for understanding how the agent works, not hiding the loop.
+                </p>
+              </div>
+
+              {example.suggestedPrompts?.length ? (
+                <div style={promptGridStyle}>
+                  {example.suggestedPrompts.map((prompt, index) => (
+                    <button
+                      key={prompt}
+                      type="button"
+                      onClick={() => handleSuggestedPrompt(prompt)}
+                      disabled={busy}
+                      style={{
+                        ...promptCardStyle,
+                        animation: `fadeInUp 0.28s ${index * 0.05}s both`,
+                      }}
+                    >
+                      <span style={promptCardLabelStyle}>Try this</span>
+                      <span style={promptCardTextStyle}>{prompt}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div style={messageListStyle}>
+              {messages.map((message, index) => (
+                <div key={`${message.kind}-${index}`} style={{ animation: 'fadeInUp 0.3s both' }}>
+                  {renderMessage(message)}
+                </div>
+              ))}
+
+              {activeToolCall ? (
+                <div style={{ animation: 'fadeInUp 0.25s both' }}>{renderActiveToolCall(activeToolCall)}</div>
+              ) : null}
+
+              {busy ? (
+                <div style={thinkingStyle}>
+                  <span style={thinkingDotStyle} />
+                  <span style={thinkingTextStyle}>
+                    {activeToolCall ? 'Running tool' : 'Planning next step'}
+                  </span>
+                  <span style={thinkingCursorStyle} />
+                </div>
+              ) : null}
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
         </div>
+      </section>
 
-        {!configCollapsed && (
-          <div
-            style={{ marginTop: '0.75rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}
-          >
-            <label style={labelStyle}>
-              OpenAI API Key
+      <footer style={inputDockStyle}>
+        <div style={inputDockInnerStyle}>
+          <div style={configRowStyle}>
+            <label style={configFieldStyle}>
+              <span style={configLabelRowStyle}>
+                <span style={configLabelStyle}>OpenRouter API key</span>
+                {!hasApiKey ? <span style={requiredBadgeStyle}>required</span> : null}
+              </span>
               <input
+                ref={apiKeyInputRef}
                 type="password"
                 value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="sk-..."
-                style={inputStyle}
+                onChange={(event) => handleApiKeyChange(event.target.value)}
+                placeholder="sk-or-v1-..."
+                disabled={busy}
+                style={{
+                  ...fieldStyle,
+                  width: '100%',
+                  borderColor: hasApiKey ? 'var(--border)' : 'rgba(110, 180, 255, 0.32)',
+                }}
               />
             </label>
 
-            <label style={labelStyle}>
-              Model (optional)
-              <input
-                type="text"
+            <label style={configFieldStyle}>
+              <span style={configLabelStyle}>Model</span>
+              <select
                 value={model}
-                onChange={(e) => setModel(e.target.value)}
-                placeholder="gpt-5.2-chat-latest"
-                style={inputStyle}
-              />
-            </label>
-
-            <label style={{ ...labelStyle, gridColumn: '1 / -1' }}>
-              Base URL (optional — for OpenAI-compatible proxies)
-              <input
-                type="text"
-                value={baseUrl}
-                onChange={(e) => setBaseUrl(e.target.value)}
-                placeholder="https://api.openai.com/v1"
-                style={inputStyle}
-              />
+                onChange={(event) => handleModelChange(event.target.value)}
+                style={fieldStyle}
+                disabled={busy}
+              >
+                {browserModelOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </label>
           </div>
-        )}
-      </div>
 
-      {/* Chat messages */}
-      <div style={chatContainerStyle}>
-        {messages.length === 0 && (
-          <div
-            style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', padding: '2rem' }}
-          >
-            Enter your API key above, then ask the agent a question.
-            <br />
-            The runtime is pre-loaded with demo files, search, and fetch adapters.
-            <br />
-            <br />
-            Try: &quot;What errors are in the logs?&quot; or &quot;Look up order 123 and tell me the
-            customer&apos;s email&quot;
+          <div style={dockHintStyle}>
+            <span style={dockHintDotStyle} />
+            <span>{getDockHint({ runtime, runtimeError, hasApiKey, busy })}</span>
           </div>
-        )}
 
-        {messages.map((msg, i) => (
-          <div key={i} style={{ marginBottom: '0.75rem' }}>
-            {msg.kind === 'user' && (
-              <div style={userMsgStyle}>
-                <span style={roleLabelStyle}>You</span>
-                <div style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</div>
-              </div>
-            )}
-            {msg.kind === 'assistant' && (
-              <div style={assistantMsgStyle}>
-                <span style={roleLabelStyle}>Agent</span>
-                <div style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</div>
-              </div>
-            )}
-            {msg.kind === 'tool-call' && (
-              <div style={toolCallStyle}>
-                <div style={toolCallHeaderStyle}>
-                  <code style={{ fontSize: '0.8rem' }}>$ {msg.command}</code>
-                </div>
-                <pre style={toolCallResultStyle}>{msg.result || '(no output)'}</pre>
-              </div>
-            )}
-            {msg.kind === 'error' && (
-              <div style={errorMsgStyle}>
-                <span style={{ fontWeight: 600 }}>Error</span>
-                <div style={{ marginTop: '0.25rem' }}>{msg.text}</div>
-              </div>
-            )}
-          </div>
-        ))}
+          <div style={composerStyle}>
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask the agent to inspect logs, fetch data, search docs, or write a report..."
+              disabled={!runtime || busy}
+              rows={1}
+              style={textareaStyle}
+            />
 
-        {busy && (
-          <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', padding: '0.5rem 0' }}>
-            Agent is thinking...
-          </div>
-        )}
+            <button
+              type="button"
+              onClick={() => void handleSend()}
+              disabled={!canSend}
+              style={sendButtonStyle}
+            >
+              {getSendButtonLabel({ hasApiKey, hasInput: input.trim().length > 0, busy })}
+            </button>
 
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input area */}
-      <div style={inputAreaStyle}>
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Ask the agent..."
-          disabled={!runtime || !apiKey.trim() || busy}
-          rows={2}
-          style={textareaStyle}
-        />
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button
-            onClick={handleSend}
-            disabled={!runtime || !apiKey.trim() || !input.trim() || busy}
-            style={sendButtonStyle}
-          >
-            {busy ? 'Running...' : 'Send'}
-          </button>
-          {messages.length > 0 && (
-            <button onClick={handleClear} disabled={busy} style={clearButtonStyle}>
+            <button type="button" onClick={handleClear} disabled={busy} style={clearButtonStyle}>
               Clear
             </button>
-          )}
+          </div>
         </div>
+      </footer>
+    </div>
+  );
+}
+
+function renderMessage(message: UIMessage): React.ReactNode {
+  switch (message.kind) {
+    case 'user':
+      return (
+        <div style={userBubbleShellStyle}>
+          <div style={userBubbleStyle}>
+            <div style={bubbleLabelStyle}>You</div>
+            <div style={messageTextStyle}>{message.text}</div>
+          </div>
+        </div>
+      );
+    case 'assistant':
+      return (
+        <div style={assistantBlockStyle}>
+          <div style={assistantLabelStyle}>
+            <span style={assistantDotStyle} />
+            Agent
+          </div>
+          <div style={messageTextStyle}>{renderMarkdown(message.text)}</div>
+        </div>
+      );
+    case 'tool-call':
+      return (
+        <div style={toolShellStyle}>
+          <div style={toolHeaderStyle}>
+            <div style={trafficLightsStyle}>
+              <span style={{ ...trafficDotStyle, background: '#f76c6c' }} />
+              <span style={{ ...trafficDotStyle, background: '#f0c761' }} />
+              <span style={{ ...trafficDotStyle, background: '#4ae68a' }} />
+            </div>
+            <span style={toolHeaderLabelStyle}>tool call</span>
+          </div>
+          <div style={toolCommandShellStyle}>
+            <div style={toolCommandLabelStyle}>Command</div>
+            <code style={toolCommandStyle}>{message.command}</code>
+          </div>
+          <pre style={toolOutputStyle}>
+            <AnimatedToolOutput text={message.result || '(no output)'} />
+          </pre>
+        </div>
+      );
+    case 'error':
+      return (
+        <div style={errorCardStyle}>
+          <div style={errorLabelStyle}>Error</div>
+          <div style={messageTextStyle}>{message.text}</div>
+        </div>
+      );
+  }
+}
+
+function renderActiveToolCall(activeToolCall: ActiveToolCall): React.ReactNode {
+  return (
+    <div style={toolShellStyle}>
+      <div style={toolHeaderStyle}>
+        <div style={trafficLightsStyle}>
+          <span style={{ ...trafficDotStyle, background: '#f76c6c' }} />
+          <span style={{ ...trafficDotStyle, background: '#f0c761' }} />
+          <span style={{ ...trafficDotStyle, background: '#4ae68a' }} />
+        </div>
+        <span style={toolHeaderLabelStyle}>tool call</span>
+        <span style={toolRunningBadgeStyle}>running</span>
+      </div>
+      <div style={toolCommandShellStyle}>
+        <div style={toolCommandLabelStyle}>Command</div>
+        <code style={toolCommandStyle}>{activeToolCall.command}</code>
+      </div>
+      <div style={toolProgressBodyStyle}>
+        <span style={thinkingDotStyle} />
+        <span style={toolProgressTextStyle}>Executing command and waiting for output…</span>
+        <span style={thinkingCursorStyle} />
       </div>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Styles
-// ---------------------------------------------------------------------------
+function getSendButtonLabel({
+  hasApiKey,
+  hasInput,
+  busy,
+}: {
+  hasApiKey: boolean;
+  hasInput: boolean;
+  busy: boolean;
+}): string {
+  if (busy) {
+    return 'Running…';
+  }
+  if (!hasApiKey) {
+    return 'Add API key';
+  }
+  if (!hasInput) {
+    return 'Enter task';
+  }
+  return 'Send';
+}
+
+function getDockHint({
+  runtime,
+  runtimeError,
+  hasApiKey,
+  busy,
+}: {
+  runtime: AgentCLI | null;
+  runtimeError: string;
+  hasApiKey: boolean;
+  busy: boolean;
+}): string {
+  if (runtimeError) {
+    return 'Runtime failed to initialize. Refresh the page or reload the example.';
+  }
+  if (!runtime) {
+    return 'Preparing the demo workspace…';
+  }
+  if (!hasApiKey) {
+    return 'Paste an OpenRouter API key to enable the agent.';
+  }
+  if (busy) {
+    return 'The agent is using the workspace and model you selected.';
+  }
+  return 'Ready. Ask for a concrete task such as counting errors, fetching data, or writing a report.';
+}
+
+function renderMarkdown(markdown: string): React.ReactNode {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        p: ({ children }) => <p style={markdownParagraphStyle}>{children}</p>,
+        ul: ({ children }) => <ul style={markdownListStyle}>{children}</ul>,
+        ol: ({ children }) => <ol style={markdownListStyle}>{children}</ol>,
+        li: ({ children }) => <li style={markdownListItemStyle}>{children}</li>,
+        strong: ({ children }) => <strong style={{ color: 'var(--text-bright)' }}>{children}</strong>,
+        em: ({ children }) => <em style={{ color: 'var(--text-bright)' }}>{children}</em>,
+        code: ({ children }) => <code style={markdownInlineCodeStyle}>{children}</code>,
+        pre: ({ children }) => <pre style={markdownCodeBlockStyle}>{children}</pre>,
+        a: ({ href, children }) => (
+          <a href={href} target="_blank" rel="noreferrer" style={markdownLinkStyle}>
+            {children}
+          </a>
+        ),
+        blockquote: ({ children }) => <blockquote style={markdownQuoteStyle}>{children}</blockquote>,
+      }}
+    >
+      {markdown}
+    </ReactMarkdown>
+  );
+}
+
+function AnimatedToolOutput({ text }: { text: string }) {
+  const [visibleLength, setVisibleLength] = useState(0);
+
+  useEffect(() => {
+    const chunkSize = Math.max(6, Math.ceil(text.length / 48));
+    const intervalMs = 12;
+    setVisibleLength(0);
+
+    const timer = window.setInterval(() => {
+      setVisibleLength((current) => {
+        if (current >= text.length) {
+          window.clearInterval(timer);
+          return current;
+        }
+
+        const next = Math.min(text.length, current + chunkSize);
+        if (next >= text.length) {
+          window.clearInterval(timer);
+        }
+        return next;
+      });
+    }, intervalMs);
+
+    return () => window.clearInterval(timer);
+  }, [text]);
+
+  const visibleText = text.slice(0, visibleLength);
+  const complete = visibleLength >= text.length;
+
+  return (
+    <>
+      {visibleText}
+      {!complete ? <span style={animatedCursorStyle} /> : null}
+    </>
+  );
+}
 
 const containerStyle: React.CSSProperties = {
-  maxWidth: 'var(--max-width)',
+  maxWidth: '1120px',
   margin: '0 auto',
-  padding: '1.5rem',
+  padding: '1.25rem 1.5rem 1rem',
+  minHeight: 'calc(100vh - 72px)',
+  display: 'grid',
+  gridTemplateRows: 'auto 1fr auto',
+  gap: '0.9rem',
+};
+
+const headerStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'flex-start',
+  justifyContent: 'space-between',
+  gap: '1.25rem',
+  flexWrap: 'wrap',
+};
+
+const headerLeftStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  height: 'calc(100vh - 120px)',
+  alignItems: 'flex-start',
+  gap: '0.45rem',
+  minWidth: 0,
 };
 
-const warningStyle: React.CSSProperties = {
-  marginBottom: '1rem',
-  padding: '0.75rem 1rem',
-  background: 'rgba(210, 153, 34, 0.12)',
-  border: '1px solid rgba(210, 153, 34, 0.3)',
-  borderRadius: '8px',
-  color: 'var(--text)',
-  fontSize: '0.85rem',
-};
-
-const errorBannerStyle: React.CSSProperties = {
-  marginBottom: '1rem',
-  padding: '0.75rem 1rem',
-  background: 'rgba(248, 81, 73, 0.12)',
-  border: '1px solid rgba(248, 81, 73, 0.3)',
-  borderRadius: '8px',
-  color: 'var(--text)',
-  fontSize: '0.85rem',
-};
-
-const configPanelStyle: React.CSSProperties = {
-  marginBottom: '1rem',
-  padding: '0.75rem 1rem',
-  background: 'var(--bg-surface)',
-  border: '1px solid var(--border)',
-  borderRadius: '8px',
-};
-
-const labelStyle: React.CSSProperties = {
+const headerMetaStyle: React.CSSProperties = {
   display: 'flex',
-  flexDirection: 'column',
-  gap: '0.25rem',
-  fontSize: '0.8rem',
+  alignItems: 'center',
+  gap: '0.65rem',
+  flexWrap: 'wrap',
+};
+
+const backLinkStyle: React.CSSProperties = {
+  fontSize: '0.82rem',
   color: 'var(--text-muted)',
 };
 
 const experimentalBadgeStyle: React.CSSProperties = {
-  display: 'inline-block',
-  marginTop: '0.85rem',
-  padding: '0.18rem 0.5rem',
-  borderRadius: '4px',
-  border: '1px solid rgba(240, 199, 97, 0.25)',
-  color: 'var(--yellow)',
+  display: 'inline-flex',
+  alignItems: 'center',
+  padding: '0.18rem 0.55rem',
+  borderRadius: '999px',
+  border: '1px solid rgba(240, 199, 97, 0.22)',
   background: 'var(--yellow-dim)',
+  color: 'var(--yellow)',
   fontFamily: 'var(--font-mono)',
-  fontSize: '0.7rem',
+  fontSize: '0.68rem',
   textTransform: 'uppercase',
   letterSpacing: '0.05em',
 };
 
-const inputStyle: React.CSSProperties = {
-  padding: '0.5rem',
-  background: 'var(--bg)',
-  border: '1px solid var(--border)',
-  borderRadius: '6px',
-  color: 'var(--text)',
+const titleStyle: React.CSSProperties = {
   fontFamily: 'var(--font-mono)',
-  fontSize: '0.85rem',
-};
-
-const chatContainerStyle: React.CSSProperties = {
-  flex: 1,
-  overflow: 'auto',
-  marginBottom: '1rem',
-  padding: '0.5rem',
-  border: '1px solid var(--border)',
-  borderRadius: '8px',
-  background: 'var(--bg-surface)',
-};
-
-const roleLabelStyle: React.CSSProperties = {
-  fontSize: '0.75rem',
-  fontWeight: 600,
-  color: 'var(--text-muted)',
-  textTransform: 'uppercase',
-  letterSpacing: '0.05em',
-  marginBottom: '0.25rem',
-  display: 'block',
-};
-
-const userMsgStyle: React.CSSProperties = {
-  padding: '0.75rem',
-  background: 'rgba(88, 166, 255, 0.08)',
-  borderRadius: '8px',
-  fontSize: '0.9rem',
-};
-
-const assistantMsgStyle: React.CSSProperties = {
-  padding: '0.75rem',
-  borderRadius: '8px',
-  fontSize: '0.9rem',
-};
-
-const toolCallStyle: React.CSSProperties = {
-  marginLeft: '1rem',
-  border: '1px solid var(--border)',
-  borderRadius: '6px',
-  overflow: 'hidden',
-};
-
-const toolCallHeaderStyle: React.CSSProperties = {
-  padding: '0.4rem 0.75rem',
-  background: 'var(--bg-hover)',
-  borderBottom: '1px solid var(--border)',
-  fontFamily: 'var(--font-mono)',
-};
-
-const toolCallResultStyle: React.CSSProperties = {
-  padding: '0.5rem 0.75rem',
+  fontSize: '1.18rem',
+  color: 'var(--text-bright)',
+  lineHeight: 1.25,
   margin: 0,
-  fontSize: '0.8rem',
-  fontFamily: 'var(--font-mono)',
+};
+
+const sourceLinkStyle: React.CSSProperties = {
+  fontSize: '0.76rem',
   color: 'var(--text-muted)',
+  whiteSpace: 'nowrap',
+  paddingTop: '0.2rem',
+};
+
+const headerSubtitleStyle: React.CSSProperties = {
+  maxWidth: '720px',
+  margin: 0,
+  color: 'var(--text-muted)',
+  fontSize: '0.86rem',
+  lineHeight: 1.6,
+};
+
+const headerInlineCodeStyle: React.CSSProperties = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.84em',
+  color: 'var(--text-bright)',
+};
+
+const chatShellStyle: React.CSSProperties = {
+  minHeight: 0,
+  overflow: 'auto',
+  padding: '1rem 1rem 1.2rem',
+  borderRadius: '14px',
+  border: '1px solid var(--border)',
+  background: 'linear-gradient(180deg, rgba(18, 22, 30, 0.96), rgba(10, 14, 20, 0.98))',
+  boxShadow: '0 20px 40px rgba(0, 0, 0, 0.2)',
+};
+
+const runtimeErrorStyle: React.CSSProperties = {
+  marginBottom: '1rem',
+  padding: '0.9rem 1rem',
+  borderLeft: '3px solid var(--red)',
+  borderRadius: '8px',
+  background: 'var(--red-dim)',
+};
+
+const chatViewportStyle: React.CSSProperties = {
+  width: '100%',
+  maxWidth: '920px',
+  margin: '0 auto',
+};
+
+const emptyStateStyle: React.CSSProperties = {
+  minHeight: '100%',
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'flex-start',
+  alignItems: 'stretch',
+  padding: '1.15rem 0 0.25rem',
+};
+
+const emptyHeroStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'flex-start',
+  textAlign: 'left',
+  marginBottom: '0.9rem',
+};
+
+const cursorHeroStyle: React.CSSProperties = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: '1.45rem',
+  fontWeight: 700,
+  letterSpacing: '-0.05em',
+  marginBottom: '0.4rem',
+  animation: 'fadeIn 0.3s both',
+};
+
+const emptyTitleStyle: React.CSSProperties = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: '1.12rem',
+  color: 'var(--text-bright)',
+  marginBottom: '0.35rem',
+  marginTop: 0,
+};
+
+const emptySubtitleStyle: React.CSSProperties = {
+  maxWidth: '680px',
+  color: 'var(--text-muted)',
+  fontSize: '0.82rem',
+  lineHeight: 1.6,
+  margin: 0,
+};
+
+const promptGridStyle: React.CSSProperties = {
+  width: '100%',
+  maxWidth: '760px',
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+  gap: '0.55rem',
+};
+
+const promptCardStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '0.32rem',
+  textAlign: 'left',
+  padding: '0.7rem 0.8rem',
+  borderRadius: '8px',
+  border: '1px solid var(--border)',
+  borderLeft: '2px solid var(--accent)',
+  background: 'var(--bg-elevated)',
+  color: 'var(--text)',
+  cursor: 'pointer',
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.75rem',
+  lineHeight: 1.45,
+  transition: 'all var(--transition)',
+};
+
+const promptCardLabelStyle: React.CSSProperties = {
+  color: 'var(--text-muted)',
+  fontSize: '0.64rem',
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+};
+
+const promptCardTextStyle: React.CSSProperties = {
+  color: 'var(--text)',
+  textWrap: 'pretty',
+};
+
+const messageListStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '0.8rem',
+  width: '100%',
+};
+
+const userBubbleShellStyle: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'flex-end',
+};
+
+const userBubbleStyle: React.CSSProperties = {
+  maxWidth: '68%',
+  padding: '0.8rem 0.95rem',
+  borderRadius: '16px 16px 6px 16px',
+  background: 'rgba(110, 180, 255, 0.08)',
+  border: '1px solid rgba(110, 180, 255, 0.18)',
+  boxShadow: '0 10px 24px rgba(0, 0, 0, 0.12)',
+};
+
+const bubbleLabelStyle: React.CSSProperties = {
+  marginBottom: '0.3rem',
+  color: 'var(--text-muted)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.68rem',
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+};
+
+const assistantBlockStyle: React.CSSProperties = {
+  padding: '0.85rem 0.95rem',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: '12px',
+  background: 'rgba(255, 255, 255, 0.02)',
+};
+
+const assistantLabelStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.45rem',
+  marginBottom: '0.4rem',
+  color: 'var(--green)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.72rem',
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+};
+
+const assistantDotStyle: React.CSSProperties = {
+  width: '7px',
+  height: '7px',
+  borderRadius: '999px',
+  background: 'var(--green)',
+  boxShadow: '0 0 0 4px rgba(74, 230, 138, 0.08)',
+};
+
+const toolShellStyle: React.CSSProperties = {
+  marginLeft: '0.55rem',
+  borderRadius: '12px',
+  border: '1px solid var(--border)',
+  overflow: 'hidden',
+  background: '#0b1016',
+  boxShadow: '0 12px 28px rgba(0, 0, 0, 0.16)',
+};
+
+const toolHeaderStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.75rem',
+  padding: '0.5rem 0.7rem',
+  borderBottom: '1px solid var(--border-subtle)',
+  background: 'rgba(23, 28, 38, 0.88)',
+};
+
+const toolHeaderLabelStyle: React.CSSProperties = {
+  color: 'var(--text-muted)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.68rem',
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+};
+
+const trafficLightsStyle: React.CSSProperties = {
+  display: 'flex',
+  gap: '0.32rem',
+  flexShrink: 0,
+};
+
+const trafficDotStyle: React.CSSProperties = {
+  width: '9px',
+  height: '9px',
+  borderRadius: '999px',
+};
+
+const toolCommandStyle: React.CSSProperties = {
+  display: 'block',
+  fontSize: '0.84rem',
+  background: 'transparent',
+  border: 'none',
+  padding: 0,
+  color: 'var(--text-bright)',
   whiteSpace: 'pre-wrap',
   wordBreak: 'break-word',
+};
+
+const toolOutputStyle: React.CSSProperties = {
+  margin: 0,
+  padding: '0.85rem',
   maxHeight: '200px',
   overflow: 'auto',
+  background: '#06090f',
+  color: 'var(--text)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.78rem',
+  lineHeight: 1.65,
+  whiteSpace: 'pre-wrap',
+  wordBreak: 'break-word',
 };
 
-const errorMsgStyle: React.CSSProperties = {
-  padding: '0.75rem',
-  background: 'rgba(248, 81, 73, 0.12)',
-  border: '1px solid rgba(248, 81, 73, 0.3)',
-  borderRadius: '8px',
-  fontSize: '0.85rem',
+const toolCommandShellStyle: React.CSSProperties = {
+  padding: '0.7rem 0.8rem 0.62rem',
+  borderBottom: '1px solid var(--border-subtle)',
+  background: 'rgba(11, 16, 22, 0.92)',
 };
 
-const inputAreaStyle: React.CSSProperties = {
+const toolCommandLabelStyle: React.CSSProperties = {
+  marginBottom: '0.35rem',
+  color: 'var(--text-muted)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.68rem',
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+};
+
+const toolRunningBadgeStyle: React.CSSProperties = {
+  marginLeft: 'auto',
+  padding: '0.12rem 0.45rem',
+  borderRadius: '999px',
+  background: 'var(--accent-dim)',
+  color: 'var(--accent)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.66rem',
+  textTransform: 'uppercase',
+  letterSpacing: '0.04em',
+};
+
+const toolProgressBodyStyle: React.CSSProperties = {
   display: 'flex',
+  alignItems: 'center',
+  gap: '0.55rem',
+  padding: '0.85rem',
+  background: '#06090f',
+  color: 'var(--text-muted)',
+};
+
+const toolProgressTextStyle: React.CSSProperties = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.78rem',
+  letterSpacing: '0.01em',
+};
+
+const errorCardStyle: React.CSSProperties = {
+  padding: '0.9rem 1rem',
+  borderLeft: '3px solid var(--red)',
+  borderRadius: '8px',
+  background: 'var(--red-dim)',
+};
+
+const errorLabelStyle: React.CSSProperties = {
+  marginBottom: '0.35rem',
+  color: 'var(--red)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.72rem',
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+  fontWeight: 600,
+};
+
+const messageTextStyle: React.CSSProperties = {
+  whiteSpace: 'pre-wrap',
+  wordBreak: 'break-word',
+};
+
+const markdownParagraphStyle: React.CSSProperties = {
+  margin: '0 0 0.65rem',
+};
+
+const markdownListStyle: React.CSSProperties = {
+  margin: '0 0 0.65rem 1.1rem',
+  padding: 0,
+};
+
+const markdownListItemStyle: React.CSSProperties = {
+  marginBottom: '0.25rem',
+};
+
+const markdownInlineCodeStyle: React.CSSProperties = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.82em',
+  background: 'rgba(255, 255, 255, 0.04)',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: '4px',
+  padding: '0.08rem 0.32rem',
+};
+
+const markdownCodeBlockStyle: React.CSSProperties = {
+  margin: '0 0 0.8rem',
+  padding: '0.8rem 0.9rem',
+  background: '#0b1016',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: '8px',
+  overflowX: 'auto',
+};
+
+const markdownCodeBlockCodeStyle: React.CSSProperties = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.8rem',
+  background: 'transparent',
+  border: 'none',
+  padding: 0,
+};
+
+const animatedCursorStyle: React.CSSProperties = {
+  display: 'inline-block',
+  width: '0.45rem',
+  height: '0.95em',
+  marginLeft: '0.1rem',
+  verticalAlign: 'text-bottom',
+  background: 'var(--accent)',
+  animation: 'blink 0.9s step-end infinite',
+};
+
+const markdownLinkStyle: React.CSSProperties = {
+  color: 'var(--accent)',
+  textDecoration: 'underline',
+};
+
+const markdownQuoteStyle: React.CSSProperties = {
+  margin: '0 0 0.8rem',
+  paddingLeft: '0.8rem',
+  borderLeft: '3px solid var(--border)',
+  color: 'var(--text-muted)',
+};
+
+const thinkingStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.55rem',
+  paddingTop: '0.4rem',
+  animation: 'fadeIn 0.3s both',
+};
+
+const thinkingDotStyle: React.CSSProperties = {
+  width: '6px',
+  height: '6px',
+  borderRadius: '999px',
+  background: 'var(--green)',
+  animation: 'pulse 1.5s ease-in-out infinite',
+};
+
+const thinkingTextStyle: React.CSSProperties = {
+  color: 'var(--text-muted)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.75rem',
+  textTransform: 'uppercase',
+  letterSpacing: '0.04em',
+};
+
+const thinkingCursorStyle: React.CSSProperties = {
+  width: '3px',
+  height: '1rem',
+  background: 'var(--accent)',
+  animation: 'blink 1s step-end infinite',
+};
+
+const inputDockStyle: React.CSSProperties = {
+  borderTop: '1px solid var(--border)',
+  paddingTop: '0.7rem',
+};
+
+const inputDockInnerStyle: React.CSSProperties = {
+  width: '100%',
+  maxWidth: '920px',
+  margin: '0 auto',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '0.55rem',
+};
+
+const configRowStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'minmax(210px, 250px) minmax(210px, 270px)',
+  gap: '0.65rem',
+  justifyContent: 'start',
+};
+
+const configFieldStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '0.3rem',
+};
+
+const configLabelRowStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.45rem',
+};
+
+const configLabelStyle: React.CSSProperties = {
+  color: 'var(--text-muted)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.68rem',
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+};
+
+const requiredBadgeStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  padding: '0.08rem 0.35rem',
+  borderRadius: '999px',
+  background: 'rgba(110, 180, 255, 0.12)',
+  color: 'var(--accent)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.62rem',
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+};
+
+const fieldStyle: React.CSSProperties = {
+  width: '100%',
+  height: '40px',
+  padding: '0.5rem 0.65rem',
+  background: 'var(--bg-surface)',
+  border: '1px solid var(--border)',
+  borderRadius: '8px',
+  color: 'var(--text)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.8rem',
+};
+
+const dockHintStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
   gap: '0.5rem',
-  alignItems: 'flex-end',
+  minHeight: '1.1rem',
+  color: 'var(--text-muted)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.72rem',
+  lineHeight: 1.5,
+};
+
+const dockHintDotStyle: React.CSSProperties = {
+  width: '6px',
+  height: '6px',
+  borderRadius: '999px',
+  background: 'var(--accent)',
+  flexShrink: 0,
+};
+
+const composerStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '1fr auto auto',
+  gap: '0.6rem',
+  alignItems: 'stretch',
 };
 
 const textareaStyle: React.CSSProperties = {
-  flex: 1,
-  padding: '0.5rem 0.75rem',
+  width: '100%',
+  minHeight: '46px',
+  resize: 'vertical',
+  padding: '0.72rem 0.82rem',
   background: 'var(--bg-surface)',
   border: '1px solid var(--border)',
-  borderRadius: '8px',
+  borderRadius: '10px',
   color: 'var(--text)',
-  fontFamily: 'var(--font-sans)',
-  fontSize: '0.9rem',
-  resize: 'none',
-  lineHeight: 1.4,
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.84rem',
+  lineHeight: 1.5,
 };
 
 const sendButtonStyle: React.CSSProperties = {
-  padding: '0.5rem 1.25rem',
+  alignSelf: 'stretch',
+  minWidth: '92px',
+  padding: '0 0.95rem',
+  borderRadius: '10px',
+  border: '1px solid transparent',
   background: 'var(--accent)',
-  color: '#fff',
-  border: 'none',
-  borderRadius: '8px',
-  fontWeight: 600,
-  fontSize: '0.85rem',
+  color: '#0a0e14',
+  fontWeight: 700,
   cursor: 'pointer',
-  whiteSpace: 'nowrap',
 };
 
 const clearButtonStyle: React.CSSProperties = {
-  padding: '0.5rem 1rem',
-  background: 'transparent',
-  color: 'var(--text-muted)',
+  alignSelf: 'stretch',
+  minWidth: '82px',
+  padding: '0 0.9rem',
+  borderRadius: '10px',
   border: '1px solid var(--border)',
-  borderRadius: '8px',
-  fontSize: '0.85rem',
+  background: 'var(--bg-surface)',
+  color: 'var(--text-muted)',
   cursor: 'pointer',
-  whiteSpace: 'nowrap',
 };
