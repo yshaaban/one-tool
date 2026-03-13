@@ -6,7 +6,10 @@ import type { AgentCLI } from 'one-tool/browser';
 const WELCOME = [
   '\x1b[36mone-tool playground\x1b[0m',
   '',
-  'Type \x1b[33mhelp\x1b[0m to list commands, or try:',
+  'Type \x1b[33mhelp\x1b[0m to list commands.',
+  'Use \x1b[33mTab\x1b[0m for autocomplete and \x1b[33m↑↓\x1b[0m for history.',
+  '',
+  'Try:',
   '  \x1b[32mls /\x1b[0m',
   '  \x1b[32mcat /logs/app.log\x1b[0m',
   '  \x1b[32mgrep -c ERROR /logs/app.log\x1b[0m',

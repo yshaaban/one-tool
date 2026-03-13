@@ -5,10 +5,8 @@ import { createDemoRuntime } from '../runtime/create-runtime';
 import {
   createAgentSession,
   createBrowserConfig,
-  getProviderDefaults,
   runAgentTurn,
   type AgentConfig,
-  type AgentProvider,
   type AgentSession,
 } from '../runtime/browser-agent';
 import type { AgentCLI } from 'one-tool/browser';
@@ -36,7 +34,6 @@ export default function AgentPage({ example }: { example: ExampleDef }) {
   const [runtimeError, setRuntimeError] = useState('');
 
   // Config (in-memory only — never persisted)
-  const [provider, setProvider] = useState<AgentProvider>('groq');
   const [apiKey, setApiKey] = useState('');
   const [model, setModel] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
@@ -69,9 +66,6 @@ export default function AgentPage({ example }: { example: ExampleDef }) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Update model placeholder when provider changes
-  const defaults = getProviderDefaults(provider);
-
   const handleSend = useCallback(async () => {
     if (!runtime || !apiKey.trim() || !input.trim() || busy) return;
 
@@ -89,7 +83,6 @@ export default function AgentPage({ example }: { example: ExampleDef }) {
     }
 
     const config: AgentConfig = createBrowserConfig(
-      provider,
       apiKey.trim(),
       model.trim() || undefined,
       baseUrl.trim() || undefined,
@@ -108,7 +101,7 @@ export default function AgentPage({ example }: { example: ExampleDef }) {
     } finally {
       setBusy(false);
     }
-  }, [runtime, apiKey, input, busy, provider, model, baseUrl]);
+  }, [runtime, apiKey, input, busy, model, baseUrl]);
 
   const handleClear = useCallback(() => {
     setMessages([]);
@@ -172,24 +165,7 @@ export default function AgentPage({ example }: { example: ExampleDef }) {
         {!configCollapsed && (
           <div style={{ marginTop: '0.75rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
             <label style={labelStyle}>
-              Provider
-              <select
-                value={provider}
-                onChange={(e) => {
-                  setProvider(e.target.value as AgentProvider);
-                  setModel('');
-                  setBaseUrl('');
-                }}
-                style={inputStyle}
-              >
-                <option value="groq">Groq</option>
-                <option value="openai">OpenAI</option>
-                <option value="anthropic">Anthropic (OpenAI-compatible)</option>
-              </select>
-            </label>
-
-            <label style={labelStyle}>
-              API Key
+              OpenAI API Key
               <input
                 type="password"
                 value={apiKey}
@@ -200,23 +176,23 @@ export default function AgentPage({ example }: { example: ExampleDef }) {
             </label>
 
             <label style={labelStyle}>
-              Model
+              Model (optional)
               <input
                 type="text"
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
-                placeholder={defaults.model}
+                placeholder="gpt-5.3-chat-latest"
                 style={inputStyle}
               />
             </label>
 
-            <label style={labelStyle}>
-              Base URL (optional)
+            <label style={{ ...labelStyle, gridColumn: '1 / -1' }}>
+              Base URL (optional — for OpenAI-compatible proxies)
               <input
                 type="text"
                 value={baseUrl}
                 onChange={(e) => setBaseUrl(e.target.value)}
-                placeholder={defaults.baseUrl}
+                placeholder="https://api.openai.com/v1"
                 style={inputStyle}
               />
             </label>

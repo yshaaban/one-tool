@@ -40,10 +40,7 @@ export interface ChatMessage {
   tool_call_id?: string;
 }
 
-export type AgentProvider = 'groq' | 'openai' | 'anthropic';
-
 export interface AgentConfig {
-  provider: AgentProvider;
   apiKey: string;
   model: string;
   baseUrl: string;
@@ -64,31 +61,21 @@ export interface AgentTurnResult {
 }
 
 // ---------------------------------------------------------------------------
-// Provider defaults
+// Defaults (OpenAI only — other providers don't support browser CORS)
 // ---------------------------------------------------------------------------
 
-const PROVIDER_DEFAULTS: Record<AgentProvider, { baseUrl: string; model: string }> = {
-  groq: { baseUrl: 'https://api.groq.com/openai/v1', model: 'openai/gpt-oss-120b' },
-  openai: { baseUrl: 'https://api.openai.com/v1', model: 'gpt-5.2' },
-  anthropic: { baseUrl: 'https://api.anthropic.com/v1', model: 'claude-haiku-4-5' },
-};
-
-export function getProviderDefaults(provider: AgentProvider) {
-  return PROVIDER_DEFAULTS[provider];
-}
+const DEFAULT_MODEL = 'gpt-5.3-chat-latest';
+const DEFAULT_BASE_URL = 'https://api.openai.com/v1';
 
 export function createBrowserConfig(
-  provider: AgentProvider,
   apiKey: string,
   model?: string,
   baseUrl?: string,
 ): AgentConfig {
-  const defaults = PROVIDER_DEFAULTS[provider];
   return {
-    provider,
     apiKey,
-    model: model || defaults.model,
-    baseUrl: normalizeBaseUrl(baseUrl || defaults.baseUrl),
+    model: model || DEFAULT_MODEL,
+    baseUrl: normalizeBaseUrl(baseUrl || DEFAULT_BASE_URL),
   };
 }
 
@@ -183,14 +170,14 @@ async function chatCompletion(
     const body = await res.text();
     const transient = res.status === 429 || res.status >= 500;
     if (!transient || attempt === 2) {
-      throw new Error(`${config.provider} API ${res.status}: ${body}`);
+      throw new Error(`${OpenAI} API ${res.status}: ${body}`);
     }
 
     const retryAfterMs = parseRetryAfter(res.headers.get('retry-after')) ?? 500 * (attempt + 1);
     await delayMs(retryAfterMs);
   }
 
-  throw new Error(`failed to call ${config.provider} after retries`);
+  throw new Error(`failed to call ${OpenAI} after retries`);
 }
 
 // ---------------------------------------------------------------------------

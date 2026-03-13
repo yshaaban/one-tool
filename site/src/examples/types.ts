@@ -17,4 +17,6 @@ export interface ExampleDef {
   sourceFile: string;
   runtimeKind?: ExampleRuntimeKind;
   executionKind?: ExampleExecutionKind;
+  autoPlay?: boolean;
+  stepDelayMs?: number;
 }

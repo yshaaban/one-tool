@@ -2,11 +2,17 @@ import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { useParams, Link } from 'react-router-dom';
 import { getExample } from '../examples';
 import { sourceBaseUrl } from '../config';
-import { TerminalComponent, type TerminalHandle } from '../components/Terminal';
+import {
+  TerminalComponent,
+  type TerminalHandle,
+  type TerminalPlaybackOptions,
+} from '../components/Terminal';
 import { createRuntimeForExample } from '../runtime/create-runtime';
 import type { AgentCLI, RunExecution } from 'one-tool/browser';
 
 const AgentPage = lazy(() => import('./AgentPage'));
+const AUTO_PLAY_TYPING_DELAY_MS = 20;
+const AUTO_PLAY_START_DELAY_MS = 500;
 
 function ExamplePage() {
   const { id } = useParams<{ id: string }>();
@@ -14,6 +20,10 @@ function ExamplePage() {
   const [runtime, setRuntime] = useState<AgentCLI | null>(null);
   const [runtimeError, setRuntimeError] = useState('');
   const [stepIndex, setStepIndex] = useState(0);
+  const [runningStepIndex, setRunningStepIndex] = useState<number | null>(null);
+  const [terminalReady, setTerminalReady] = useState(false);
+  const [isAutoplaying, setIsAutoplaying] = useState(false);
+  const [runtimeNonce, setRuntimeNonce] = useState(0);
   const terminalRef = useRef<TerminalHandle | null>(null);
   const sourceUrl = example ? new URL(example.sourceFile, sourceBaseUrl).href : '';
 
@@ -22,6 +32,9 @@ function ExamplePage() {
       setRuntime(null);
       setRuntimeError('');
       setStepIndex(0);
+      setRunningStepIndex(null);
+      setTerminalReady(false);
+      setIsAutoplaying(false);
       return;
     }
 
@@ -30,6 +43,9 @@ function ExamplePage() {
     setRuntime(null);
     setRuntimeError('');
     setStepIndex(0);
+    setRunningStepIndex(null);
+    setTerminalReady(false);
+    setIsAutoplaying(false);
 
     void createRuntimeForExample(example.runtimeKind)
       .then((nextRuntime) => {
@@ -56,22 +72,79 @@ function ExamplePage() {
         vfs.close();
       }
     };
-  }, [example]);
+  }, [example, runtimeNonce]);
+
+  const runExampleStep = useCallback(
+    async (stepNumber: number, playback?: TerminalPlaybackOptions): Promise<void> => {
+      const terminal = terminalRef.current;
+      if (!runtime || !terminal || !example?.steps || stepNumber >= example.steps.length) {
+        return;
+      }
+
+      const step = example.steps[stepNumber];
+      setRunningStepIndex(stepNumber);
+
+      try {
+        if (example.executionKind === 'runDetailed') {
+          const execution = await runtime.runDetailed(step.command);
+          await terminal.showCommandOutput(step.command, formatDetailedExecution(execution), playback);
+        } else {
+          await terminal.runCommand(step.command, playback);
+        }
+        setStepIndex(stepNumber + 1);
+      } finally {
+        setRunningStepIndex(null);
+      }
+    },
+    [example, runtime],
+  );
 
   const handleRunStep = useCallback(async () => {
-    const terminal = terminalRef.current;
-    if (!runtime || !terminal || !example?.steps || stepIndex >= example.steps.length) return;
-    const step = example.steps[stepIndex];
-
-    if (example.executionKind === 'runDetailed') {
-      const execution = await runtime.runDetailed(step.command);
-      await terminal.showCommandOutput(step.command, formatDetailedExecution(execution));
-    } else {
-      await terminal.runCommand(step.command);
+    if (!example?.steps || stepIndex >= example.steps.length || isAutoplaying) {
+      return;
     }
 
-    setStepIndex((i) => i + 1);
-  }, [runtime, example, stepIndex]);
+    await runExampleStep(stepIndex, { animate: true, typingDelayMs: AUTO_PLAY_TYPING_DELAY_MS });
+  }, [example, isAutoplaying, runExampleStep, stepIndex]);
+
+  useEffect(() => {
+    if (!runtime || !terminalReady || runtimeError || !example?.steps?.length || !example.autoPlay) {
+      return;
+    }
+
+    let cancelled = false;
+    setIsAutoplaying(true);
+
+    void (async () => {
+      await sleep(AUTO_PLAY_START_DELAY_MS);
+      for (let index = 0; index < example.steps.length; index += 1) {
+        if (cancelled) {
+          return;
+        }
+
+        await runExampleStep(index, { animate: true, typingDelayMs: AUTO_PLAY_TYPING_DELAY_MS });
+        if (cancelled || index >= example.steps.length - 1) {
+          continue;
+        }
+        await sleep(example.stepDelayMs ?? 800);
+      }
+    })().finally(() => {
+      if (!cancelled) {
+        setIsAutoplaying(false);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [example, runExampleStep, runtime, runtimeError, terminalReady]);
+
+  const handleReplay = useCallback(() => {
+    if (isAutoplaying || runningStepIndex !== null) {
+      return;
+    }
+    setRuntimeNonce((value) => value + 1);
+  }, [isAutoplaying, runningStepIndex]);
 
   if (!example) {
     return (
@@ -131,38 +204,43 @@ function ExamplePage() {
                 Steps
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {example.steps.map((step, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      padding: '0.5rem 0.75rem',
-                      background: i < stepIndex ? 'var(--bg-hover)' : 'transparent',
-                      borderRadius: '6px',
-                      opacity: i < stepIndex ? 0.6 : 1,
-                    }}
-                  >
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', minWidth: '1.5rem' }}>
-                      {i < stepIndex ? '\u2713' : `${i + 1}.`}
-                    </span>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                      {step.explanation}
-                    </span>
-                    <code style={{ fontSize: '0.8rem', marginLeft: 'auto' }}>{step.command}</code>
-                  </div>
-                ))}
+                {example.steps.map((step, i) => {
+                  return (
+                    <div
+                      key={i}
+                      style={getStepCardStyle(i, stepIndex, runningStepIndex)}
+                    >
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', minWidth: '1.5rem' }}>
+                        {getStepStatusLabel(i, stepIndex, runningStepIndex)}
+                      </span>
+                      <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                        {step.explanation}
+                      </span>
+                      <code style={{ fontSize: '0.8rem', marginLeft: 'auto' }}>{step.command}</code>
+                    </div>
+                  );
+                })}
               </div>
-              {stepIndex < example.steps.length && (
-                <button
-                  onClick={handleRunStep}
-                  style={buttonStyle}
-                  disabled={!runtime || Boolean(runtimeError)}
-                >
-                  Run next step
-                </button>
-              )}
+              <div style={actionsStyle}>
+                {stepIndex < example.steps.length && (
+                  <button
+                    onClick={handleRunStep}
+                    style={buttonStyle}
+                    disabled={!runtime || Boolean(runtimeError) || isAutoplaying || runningStepIndex !== null}
+                  >
+                    {isAutoplaying ? 'Auto-playing...' : runningStepIndex !== null ? 'Running step...' : 'Run next step'}
+                  </button>
+                )}
+                {(stepIndex > 0 || isAutoplaying) && (
+                  <button
+                    onClick={handleReplay}
+                    style={secondaryButtonStyle}
+                    disabled={isAutoplaying || runningStepIndex !== null}
+                  >
+                    Replay example
+                  </button>
+                )}
+              </div>
               {stepIndex >= example.steps.length && (
                 <p style={{ fontSize: '0.85rem', color: 'var(--green)', marginTop: '0.75rem' }}>
                   All steps complete. Try your own commands below.
@@ -173,7 +251,12 @@ function ExamplePage() {
 
           {runtime ? (
             <div style={{ height: '400px' }}>
-              <TerminalComponent ref={terminalRef} runtime={runtime} />
+              <TerminalComponent
+                ref={terminalRef}
+                runtime={runtime}
+                readOnly={isAutoplaying}
+                onReady={() => setTerminalReady(true)}
+              />
             </div>
           ) : (
             <div className="loading">Initializing runtime...</div>
@@ -185,6 +268,12 @@ function ExamplePage() {
 }
 
 export default ExamplePage;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
 
 function formatDetailedExecution(execution: RunExecution): string {
   const lines = [
@@ -208,6 +297,39 @@ function formatDetailedExecution(execution: RunExecution): string {
   return lines.join('\n');
 }
 
+function getStepCardStyle(index: number, stepIndex: number, runningStepIndex: number | null): React.CSSProperties {
+  const active = index === runningStepIndex;
+  const completed = index < stepIndex;
+
+  let background = 'transparent';
+  if (active) {
+    background = 'rgba(88, 166, 255, 0.12)';
+  } else if (completed) {
+    background = 'var(--bg-hover)';
+  }
+
+  return {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.75rem',
+    padding: '0.5rem 0.75rem',
+    background,
+    border: active ? '1px solid rgba(88, 166, 255, 0.35)' : '1px solid transparent',
+    borderRadius: '6px',
+    opacity: completed ? 0.6 : 1,
+  };
+}
+
+function getStepStatusLabel(index: number, stepIndex: number, runningStepIndex: number | null): string {
+  if (index < stepIndex) {
+    return '\u2713';
+  }
+  if (index === runningStepIndex) {
+    return '\u2026';
+  }
+  return `${index + 1}.`;
+}
+
 const containerStyle: React.CSSProperties = {
   maxWidth: 'var(--max-width)',
   margin: '0 auto',
@@ -223,7 +345,6 @@ const nonInteractiveStyle: React.CSSProperties = {
 };
 
 const buttonStyle: React.CSSProperties = {
-  marginTop: '0.75rem',
   padding: '0.5rem 1rem',
   background: 'var(--accent)',
   color: '#fff',
@@ -232,6 +353,19 @@ const buttonStyle: React.CSSProperties = {
   fontWeight: 600,
   fontSize: '0.85rem',
   cursor: 'pointer',
+};
+
+const secondaryButtonStyle: React.CSSProperties = {
+  ...buttonStyle,
+  background: 'transparent',
+  color: 'var(--text)',
+  border: '1px solid var(--border)',
+};
+
+const actionsStyle: React.CSSProperties = {
+  display: 'flex',
+  gap: '0.65rem',
+  marginTop: '0.75rem',
 };
 
 const errorStyle: React.CSSProperties = {

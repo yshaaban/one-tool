@@ -9,6 +9,8 @@ export const examples: ExampleDef[] = [
     requiresApiKey: false,
     sourceFile: 'examples/01-hello-world.ts',
     runtimeKind: 'empty',
+    autoPlay: true,
+    stepDelayMs: 700,
     steps: [
       { explanation: 'Write a file:', command: 'write /hello.txt "Hello from one-tool"' },
       { explanation: 'Read it back:', command: 'cat /hello.txt' },
@@ -24,6 +26,8 @@ export const examples: ExampleDef[] = [
     requiresApiKey: false,
     sourceFile: 'examples/02-custom-command.ts',
     runtimeKind: 'custom-command',
+    autoPlay: true,
+    stepDelayMs: 800,
     steps: [
       { explanation: 'List commands (custom ones show up too):', command: 'help' },
       {
@@ -44,6 +48,8 @@ export const examples: ExampleDef[] = [
     requiresApiKey: false,
     sourceFile: 'examples/03-readonly-agent.ts',
     runtimeKind: 'readOnly',
+    autoPlay: true,
+    stepDelayMs: 700,
     steps: [
       { explanation: 'Read commands work:', command: 'cat /logs/app.log' },
       { explanation: 'List files:', command: 'ls /' },
@@ -63,6 +69,8 @@ export const examples: ExampleDef[] = [
     sourceFile: 'examples/04-detailed-execution.ts',
     runtimeKind: 'demo',
     executionKind: 'runDetailed',
+    autoPlay: true,
+    stepDelayMs: 900,
     steps: [
       { explanation: 'Count errors in the log:', command: 'grep -c ERROR /logs/app.log' },
       {
@@ -83,6 +91,8 @@ export const examples: ExampleDef[] = [
     requiresApiKey: false,
     sourceFile: 'examples/05-adapters.ts',
     runtimeKind: 'demo',
+    autoPlay: true,
+    stepDelayMs: 850,
     steps: [
       { explanation: 'Search the knowledge base:', command: 'search refund timeout' },
       { explanation: 'Fetch structured data:', command: 'fetch order:123' },
@@ -102,6 +112,8 @@ export const examples: ExampleDef[] = [
     requiresApiKey: false,
     sourceFile: 'examples/06-browser-persistence.ts',
     runtimeKind: 'browser-persistence',
+    autoPlay: true,
+    stepDelayMs: 850,
     steps: [
       {
         explanation: 'Write a persistent file:',
