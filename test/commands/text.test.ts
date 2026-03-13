@@ -138,6 +138,12 @@ test('text: sed substitutes text from stdin and supports explicit printing', asy
   });
   assert.equal(fromSecondMatch.result.exitCode, 0);
   assert.equal(stdoutText(fromSecondMatch.result), 'a A A\n');
+
+  const groupedFlags = await runCommand('sed', ['-ne', '2p'], {
+    stdin: stdinText('alpha\nbeta\ngamma\n'),
+  });
+  assert.equal(groupedFlags.result.exitCode, 0);
+  assert.equal(stdoutText(groupedFlags.result), 'beta\n');
 });
 
 test('text: sed supports insert, append, change, and script files', async () => {
@@ -160,6 +166,10 @@ test('text: sed supports insert, append, change, and script files', async () => 
   const fromScriptFile = await runCommand('sed', ['-n', '-f', '/scripts/rewrite.sed', '/input.txt'], { ctx });
   assert.equal(fromScriptFile.result.exitCode, 0);
   assert.equal(stdoutText(fromScriptFile.result), 'bar\n');
+
+  const groupedScriptFlag = await runCommand('sed', ['-nEf/scripts/rewrite.sed', '/input.txt'], { ctx });
+  assert.equal(groupedScriptFlag.result.exitCode, 0);
+  assert.equal(stdoutText(groupedScriptFlag.result), 'bar\n');
 });
 
 test('text: sed supports in-place editing and backup suffixes', async () => {

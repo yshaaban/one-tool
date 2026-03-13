@@ -288,45 +288,104 @@ async function parseSedOption(
     };
   }
 
-  if (arg.startsWith('-')) {
-    if (arg === '-En' || arg === '-nE') {
+  return parseSedShortOptionCluster(ctx, args, index, arg);
+}
+
+async function parseSedShortOptionCluster(
+  ctx: CommandContext,
+  args: string[],
+  index: number,
+  arg: string,
+): Promise<
+  SedParseResult<{
+    nextIndex: number;
+    quiet: boolean;
+    extendedRegex: boolean;
+    inPlaceSuffix?: string | null;
+    scriptSource?: string;
+  }>
+> {
+  let quiet = false;
+  let extendedRegex = false;
+  let scanIndex = 1;
+
+  while (scanIndex < arg.length) {
+    const flag = arg[scanIndex]!;
+
+    if (flag === 'n') {
+      quiet = true;
+      scanIndex += 1;
+      continue;
+    }
+
+    if (flag === 'E') {
+      extendedRegex = true;
+      scanIndex += 1;
+      continue;
+    }
+
+    if (flag === 'i') {
       return {
         ok: true,
         value: {
           nextIndex: index,
-          quiet: true,
-          extendedRegex: true,
+          quiet,
+          extendedRegex,
+          inPlaceSuffix: arg.slice(scanIndex + 1),
         },
       };
     }
 
-    const flags = arg.slice(1).split('');
-    let quiet = false;
-    let extendedRegex = false;
+    if (flag === 'e') {
+      const scriptSource = arg.slice(scanIndex + 1) || args[index + 1];
+      if (scriptSource === undefined) {
+        return { ok: false, error: err('sed: missing script for -e') };
+      }
 
-    for (const flag of flags) {
-      if (flag === 'n') {
-        quiet = true;
-        continue;
-      }
-      if (flag === 'E') {
-        extendedRegex = true;
-        continue;
-      }
-      return { ok: false, error: err(`sed: unknown option: -${flag}`) };
+      return {
+        ok: true,
+        value: {
+          nextIndex: arg.slice(scanIndex + 1) ? index : index + 1,
+          quiet,
+          extendedRegex,
+          scriptSource,
+        },
+      };
     }
 
-    return {
-      ok: true,
-      value: {
-        nextIndex: index,
-        quiet,
-        extendedRegex,
-      },
-    };
+    if (flag === 'f') {
+      const scriptPath = arg.slice(scanIndex + 1) || args[index + 1];
+      if (scriptPath === undefined) {
+        return { ok: false, error: err('sed: missing script file for -f') };
+      }
+
+      const loadedScript = await readSedScriptFile(ctx, scriptPath);
+      if (!loadedScript.ok) {
+        return loadedScript;
+      }
+
+      return {
+        ok: true,
+        value: {
+          nextIndex: arg.slice(scanIndex + 1) ? index : index + 1,
+          quiet,
+          extendedRegex,
+          scriptSource: loadedScript.value,
+        },
+      };
+    }
+
+    return { ok: false, error: err(`sed: unknown option: -${flag}`) };
   }
 
-  return { ok: false, error: err(`sed: unknown option: ${arg}`) };
+  return {
+    ok: true,
+    value: {
+      nextIndex: index,
+      quiet,
+      extendedRegex,
+    },
+  };
 }
 
 async function readSedScriptFile(ctx: CommandContext, filePath: string): Promise<SedParseResult<string>> {

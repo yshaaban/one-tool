@@ -145,16 +145,16 @@ find /config --type file --name "*.json"
 
 ### Text commands
 
-| Command | Usage                                       | Stdin | Purpose                                                                       |
-| ------- | ------------------------------------------- | ----: | ----------------------------------------------------------------------------- |
-| `grep`  | `grep [-i] [-v] [-c] [-n] <pattern> [path]` |   yes | Filter lines by regex                                                         |
-| `head`  | `head [-n N] [path]`                        |   yes | Show first N lines                                                            |
-| `tail`  | `tail [-n N] [path]`                        |   yes | Show last N lines                                                             |
-| `sort`  | `sort [-r] [-n] [-u] [path]`                |   yes | Sort lines                                                                    |
-| `sed`   | `sed [OPTION]... [SCRIPT] [INPUTFILE...]`   |   yes | Run stream-edit scripts with `p`, `d`, `q`, `n`, `s`, `a`, `i`, `c`, and `-i` |
-| `tr`    | `tr [OPTION]... STRING1 [STRING2]`          |   yes | Translate, delete, or squeeze bytes from stdin                                |
-| `uniq`  | `uniq [-c] [-i] [path]`                     |   yes | Collapse adjacent duplicate lines                                             |
-| `wc`    | `wc [-l] [-w] [-c] [path]`                  |   yes | Count lines, words, and bytes                                                 |
+| Command | Usage                                       | Stdin | Purpose                                                                                 |
+| ------- | ------------------------------------------- | ----: | --------------------------------------------------------------------------------------- |
+| `grep`  | `grep [-i] [-v] [-c] [-n] <pattern> [path]` |   yes | Filter lines by regex                                                                   |
+| `head`  | `head [-n N] [path]`                        |   yes | Show first N lines                                                                      |
+| `tail`  | `tail [-n N] [path]`                        |   yes | Show last N lines                                                                       |
+| `sort`  | `sort [-r] [-n] [-u] [path]`                |   yes | Sort lines                                                                              |
+| `sed`   | `sed [OPTION]... [SCRIPT] [INPUTFILE...]`   |   yes | Run a GNU-compatible `sed` subset with `p`, `d`, `q`, `n`, `s`, `a`, `i`, `c`, and `-i` |
+| `tr`    | `tr [OPTION]... STRING1 [STRING2]`          |   yes | Translate, delete, or squeeze bytes from stdin                                          |
+| `uniq`  | `uniq [-c] [-i] [path]`                     |   yes | Collapse adjacent duplicate lines                                                       |
+| `wc`    | `wc [-l] [-w] [-c] [path]`                  |   yes | Count lines, words, and bytes                                                           |
 
 Examples:
 
@@ -165,6 +165,7 @@ head -n 20 /logs/app.log
 tail -n 50 /logs/app.log
 find /config --type file | sort
 sed -n '1,20p' /logs/app.log
+sed -ne '2p' /logs/app.log
 sed -i.bak 's/us-east-1/us-west-2/' /config/app.env
 cat /notes/todo.txt | tr a-z A-Z
 cat /logs/app.log | sort | uniq -c

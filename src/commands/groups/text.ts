@@ -221,7 +221,7 @@ export const sed: CommandSpec = {
   summary: 'Stream editor with in-place editing, addresses, and substitutions.',
   usage: 'sed [OPTION]... [SCRIPT] [INPUTFILE...]',
   details:
-    'Supports addresses (line, $, /regex/, range), commands p/d/q/n/s/a/i/c, and options -n, -e, -f, -E, -i[SUFFIX].\n' +
+    'Supports a GNU-compatible subset: addresses (line, $, /regex/, range), commands p/d/q/n/s/a/i/c, and options -n, -e, -f, -E, -i[SUFFIX]. Common clustered short options like -ne and -nEf<file> also work.\n' +
     'Examples:\n  sed "s/ERROR/WARN/" /logs/app.log\n  sed -n "1,5p" /logs/app.log\n  sed -i.bak "s/us-east-1/us-west-2/" /config/app.env',
   handler: cmdSed,
   acceptsStdin: true,

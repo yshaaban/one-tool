@@ -41,6 +41,13 @@ const SED_PARITY_CASES: SedParityCase[] = [
     args: ['-n', '2p', 'app.log'],
   },
   {
+    name: 'clustered -ne script option',
+    files: {
+      'app.log': 'alpha\nbeta\ngamma\n',
+    },
+    args: ['-ne', '2p', 'app.log'],
+  },
+  {
     name: 'insert and append',
     files: {
       'notes.txt': 'alpha\nbeta\n',
@@ -75,6 +82,14 @@ const SED_PARITY_CASES: SedParityCase[] = [
       'input.txt': 'foo\nfoo\n',
     },
     args: ['-n', '-f', 'rewrite.sed', 'input.txt'],
+  },
+  {
+    name: 'clustered -nEf script file option',
+    files: {
+      'rewrite.sed': 's/foo/bar/\n2p\n',
+      'input.txt': 'foo\nfoo\n',
+    },
+    args: ['-nEfrewrite.sed', 'input.txt'],
   },
   {
     name: 'in-place edit with backup',
@@ -161,36 +176,21 @@ function mapSedArgsForWorkspace(args: string[], workspace: OracleWorkspace, runt
       continue;
     }
 
-    if (
-      parsingOptions &&
-      (arg === '-n' || arg === '-E' || arg === '-En' || arg === '-nE' || arg === '-i' || arg.startsWith('-i'))
-    ) {
-      mapped.push(arg);
-      continue;
-    }
-
-    if (parsingOptions && (arg === '-e' || arg.startsWith('-e'))) {
-      mapped.push(arg);
-      if (arg === '-e') {
-        index += 1;
-        mapped.push(args[index]!);
+    if (parsingOptions && arg.startsWith('-') && arg !== '-') {
+      const remappedOption = remapSedOptionArgument(arg, args[index + 1], workspace, runtime);
+      if (remappedOption !== null) {
+        mapped.push(remappedOption.argument);
+        if (remappedOption.extraArgument !== undefined) {
+          mapped.push(remappedOption.extraArgument);
+        }
+        if (remappedOption.consumedNext) {
+          index += 1;
+        }
+        if (remappedOption.collectsScript) {
+          collectedScriptFromFlags = true;
+        }
+        continue;
       }
-      collectedScriptFromFlags = true;
-      continue;
-    }
-
-    if (parsingOptions && (arg === '-f' || arg.startsWith('-f'))) {
-      mapped.push(arg);
-      const scriptPath = arg === '-f' ? args[index + 1]! : arg.slice(2);
-      const mappedPath = runtime ? toRuntimeFilePath(scriptPath) : workspace.path(scriptPath);
-      if (arg === '-f') {
-        index += 1;
-        mapped.push(mappedPath);
-      } else {
-        mapped[mapped.length - 1] = `-f${mappedPath}`;
-      }
-      collectedScriptFromFlags = true;
-      continue;
     }
 
     if (!scriptResolved && !collectedScriptFromFlags) {
@@ -205,6 +205,85 @@ function mapSedArgsForWorkspace(args: string[], workspace: OracleWorkspace, runt
   }
 
   return mapped;
+}
+
+function remapSedOptionArgument(
+  arg: string,
+  nextArg: string | undefined,
+  workspace: OracleWorkspace,
+  runtime: boolean,
+): { argument: string; extraArgument?: string; consumedNext: boolean; collectsScript: boolean } | null {
+  let rebuilt = '-';
+  let scanIndex = 1;
+
+  while (scanIndex < arg.length) {
+    const flag = arg[scanIndex]!;
+    if (flag === 'n' || flag === 'E') {
+      rebuilt += flag;
+      scanIndex += 1;
+      continue;
+    }
+    if (flag === 'i') {
+      rebuilt += arg.slice(scanIndex);
+      return {
+        argument: rebuilt,
+        consumedNext: false,
+        collectsScript: false,
+      };
+    }
+    if (flag === 'e') {
+      rebuilt += flag;
+      const inlineScript = arg.slice(scanIndex + 1);
+      if (inlineScript) {
+        rebuilt += inlineScript;
+        return {
+          argument: rebuilt,
+          consumedNext: false,
+          collectsScript: true,
+        };
+      }
+      return {
+        argument: rebuilt,
+        consumedNext: true,
+        collectsScript: true,
+        ...(nextArg === undefined ? {} : { extraArgument: nextArg }),
+      };
+    }
+    if (flag === 'f') {
+      rebuilt += flag;
+      const inlinePath = arg.slice(scanIndex + 1);
+      const scriptPath = inlinePath || nextArg;
+      if (scriptPath === undefined) {
+        return {
+          argument: rebuilt,
+          consumedNext: false,
+          collectsScript: true,
+        };
+      }
+      const mappedPath = runtime ? toRuntimeFilePath(scriptPath) : workspace.path(scriptPath);
+      if (inlinePath) {
+        rebuilt += mappedPath;
+        return {
+          argument: rebuilt,
+          consumedNext: false,
+          collectsScript: true,
+        };
+      }
+      return {
+        argument: rebuilt,
+        extraArgument: mappedPath,
+        consumedNext: true,
+        collectsScript: true,
+      };
+    }
+    return null;
+  }
+
+  return {
+    argument: rebuilt,
+    consumedNext: false,
+    collectsScript: false,
+  };
 }
 
 function toRuntimeFilePath(path: string): string {
