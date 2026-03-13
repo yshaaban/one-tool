@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { createByteLineModel, decodeCLocaleText } from '../src/commands/shared/line-model.js';
+import {
+  createByteLineModel,
+  decodeCLocaleText,
+  encodeCLocaleText,
+} from '../src/commands/shared/line-model.js';
 
 test('createByteLineModel handles empty content', function (): void {
   const model = createByteLineModel(new Uint8Array());
@@ -50,4 +54,10 @@ test('decodeCLocaleText preserves single-byte data without utf8 decoding rules',
   assert.equal(decoded.charCodeAt(0), 0);
   assert.equal(decoded.charCodeAt(1), 255);
   assert.equal(decoded.charCodeAt(2), 65);
+});
+
+test('encodeCLocaleText preserves single-byte code points without utf8 expansion', function (): void {
+  const encoded = encodeCLocaleText('\u0000\u00ffA');
+
+  assert.deepEqual(Array.from(encoded), [0, 255, 65]);
 });

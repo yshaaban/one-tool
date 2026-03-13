@@ -20,6 +20,7 @@ test('package exports resolve the documented entrypoints', async function (): Pr
   assert.equal(typeof root.builtinCommandPresets, 'object');
   assert.equal(typeof root.find, 'object');
   assert.equal(typeof root.diff, 'object');
+  assert.equal(typeof root.sed, 'object');
   assert.equal(typeof root.sort, 'object');
   assert.equal(typeof root.tr, 'object');
   assert.equal(typeof root.uniq, 'object');
@@ -33,6 +34,7 @@ test('package exports resolve the documented entrypoints', async function (): Pr
   assert.equal(typeof commands.builtinCommandPresets, 'object');
   assert.equal(typeof commands.find, 'object');
   assert.equal(typeof commands.diff, 'object');
+  assert.equal(typeof commands.sed, 'object');
   assert.equal(typeof commands.sort, 'object');
   assert.equal(typeof commands.tr, 'object');
   assert.equal(typeof commands.uniq, 'object');

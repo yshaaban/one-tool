@@ -56,6 +56,7 @@ export {
   registerCommands,
   rm,
   search,
+  sed,
   sort,
   stat,
   systemCommands,

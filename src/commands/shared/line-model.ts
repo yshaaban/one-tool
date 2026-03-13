@@ -48,3 +48,13 @@ export function createByteLineModel(data: Uint8Array): ByteLineModel {
 export function decodeCLocaleText(data: Uint8Array): string {
   return cLocaleDecoder.decode(data);
 }
+
+export function encodeCLocaleText(text: string): Uint8Array {
+  const bytes = new Uint8Array(text.length);
+
+  for (let index = 0; index < text.length; index += 1) {
+    bytes[index] = text.charCodeAt(index) & 0xff;
+  }
+
+  return bytes;
+}

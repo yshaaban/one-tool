@@ -23,6 +23,7 @@ test('system: registerBuiltinCommands registers the expected command names once'
     'mv',
     'rm',
     'search',
+    'sed',
     'sort',
     'stat',
     'tail',

@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { textEncoder } from '../../src/types.js';
+import { textDecoder, textEncoder } from '../../src/types.js';
+import { MemoryVFS } from '../../src/vfs/memory-vfs.js';
 import { makeCtx, runCommand, stdinText, stdoutText } from './harness.js';
 
 test('text: grep filters file content with flags', async () => {
@@ -118,6 +119,112 @@ test('text: tr reports operand and class-alignment errors', async () => {
   assert.equal(misalignedClass.result.exitCode, 1);
   assert.match(misalignedClass.result.stderr, /tr: misaligned \[:upper:\] and\/or \[:lower:\] construct/);
 });
+
+test('text: sed substitutes text from stdin and supports explicit printing', async () => {
+  const substituted = await runCommand('sed', ['s/ERROR/WARN/g'], {
+    stdin: stdinText('ERROR one\nERROR two\n'),
+  });
+  assert.equal(substituted.result.exitCode, 0);
+  assert.equal(stdoutText(substituted.result), 'WARN one\nWARN two\n');
+
+  const explicitPrint = await runCommand('sed', ['-n', '2p'], {
+    stdin: stdinText('alpha\nbeta\ngamma\n'),
+  });
+  assert.equal(explicitPrint.result.exitCode, 0);
+  assert.equal(stdoutText(explicitPrint.result), 'beta\n');
+
+  const fromSecondMatch = await runCommand('sed', ['s/a/A/2g'], {
+    stdin: stdinText('a a a\n'),
+  });
+  assert.equal(fromSecondMatch.result.exitCode, 0);
+  assert.equal(stdoutText(fromSecondMatch.result), 'a A A\n');
+});
+
+test('text: sed supports insert, append, change, and script files', async () => {
+  const insertAppend = await runCommand('sed', ['-e', '1i\\TOP', '-e', '2a\\BOTTOM'], {
+    stdin: stdinText('alpha\nbeta\n'),
+  });
+  assert.equal(insertAppend.result.exitCode, 0);
+  assert.equal(stdoutText(insertAppend.result), 'TOP\nalpha\nbeta\nBOTTOM\n');
+
+  const changed = await runCommand('sed', ['2,3c\\X'], {
+    stdin: stdinText('a\nb\nc\nd\n'),
+  });
+  assert.equal(changed.result.exitCode, 0);
+  assert.equal(stdoutText(changed.result), 'a\nX\nd\n');
+
+  const ctx = makeCtx();
+  await ctx.vfs.writeBytes('/scripts/rewrite.sed', textEncoder.encode('s/foo/bar/\n2p\n'));
+  await ctx.vfs.writeBytes('/input.txt', textEncoder.encode('foo\nfoo\n'));
+
+  const fromScriptFile = await runCommand('sed', ['-n', '-f', '/scripts/rewrite.sed', '/input.txt'], { ctx });
+  assert.equal(fromScriptFile.result.exitCode, 0);
+  assert.equal(stdoutText(fromScriptFile.result), 'bar\n');
+});
+
+test('text: sed supports in-place editing and backup suffixes', async () => {
+  const ctx = makeCtx();
+  await ctx.vfs.writeBytes('/notes.txt', textEncoder.encode('alpha\nbeta\n'));
+
+  const result = await runCommand('sed', ['-i.bak', 's/alpha/ALPHA/', '/notes.txt'], { ctx });
+  assert.equal(result.result.exitCode, 0);
+  assert.equal(stdoutText(result.result), '');
+
+  const rewritten = await ctx.vfs.readBytes('/notes.txt');
+  assert.equal(textDecoder.decode(rewritten), 'ALPHA\nbeta\n');
+
+  const backup = await ctx.vfs.readBytes('/notes.txt.bak');
+  assert.equal(textDecoder.decode(backup), 'alpha\nbeta\n');
+});
+
+test('text: sed reports usage and script errors clearly', async () => {
+  const missingScript = await runCommand('sed', []);
+  assert.equal(missingScript.result.exitCode, 1);
+  assert.match(missingScript.result.stderr, /sed: missing script/);
+
+  const missingScriptFile = await runCommand('sed', ['-f', '/missing.sed', '/input.txt']);
+  assert.equal(missingScriptFile.result.exitCode, 1);
+  assert.match(missingScriptFile.result.stderr, /sed: script file not found: \/missing\.sed/);
+
+  const unsupported = await runCommand('sed', ['x']);
+  assert.equal(unsupported.result.exitCode, 1);
+  assert.match(unsupported.result.stderr, /sed: unsupported sed command: x/);
+});
+
+test('text: sed formats parent-not-directory and in-place resource-limit failures cleanly', async () => {
+  const blockedCtx = makeCtx();
+  await blockedCtx.vfs.writeBytes('/blocked', textEncoder.encode('x'));
+
+  const blockedInput = await runCommand('sed', ['s/a/b/', '/blocked/input.txt'], { ctx: blockedCtx });
+  assert.equal(blockedInput.result.exitCode, 1);
+  assert.match(blockedInput.result.stderr, /sed: parent is not a directory: \/blocked/);
+
+  const blockedScript = await runCommand('sed', ['-f', '/blocked/rewrite.sed', '/input.txt'], {
+    ctx: blockedCtx,
+  });
+  assert.equal(blockedScript.result.exitCode, 1);
+  assert.match(blockedScript.result.stderr, /sed: parent is not a directory: \/blocked/);
+
+  const limitedCtx = makeCtx({
+    vfs: new MemoryVFS({
+      resourcePolicy: {
+        maxTotalBytes: 6,
+      },
+    }),
+  });
+  await limitedCtx.vfs.writeBytes('/notes.txt', textEncoder.encode('abcd'));
+
+  const limited = await runCommand('sed', ['-i.bak', 's/a/A/', '/notes.txt'], { ctx: limitedCtx });
+  assert.equal(limited.result.exitCode, 1);
+  assert.match(
+    limited.result.stderr,
+    /sed: resource limit exceeded \(maxTotalBytes: 8 > 6\) at \/notes\.txt\.bak/,
+  );
+
+  const unchanged = await limitedCtx.vfs.readBytes('/notes.txt');
+  assert.equal(textDecoder.decode(unchanged), 'abcd');
+});
+
 test('text: uniq collapses adjacent duplicates and supports counts', async () => {
   const basic = await runCommand('uniq', [], {
     stdin: stdinText('a\na\nb\na\na'),

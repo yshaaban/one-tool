@@ -341,13 +341,13 @@ Full syntax, unsupported constructs, and examples: [`docs/command-reference.md#c
 
 ## Built-in command groups
 
-The runtime ships with 24 built-in commands.
+The runtime ships with 25 built-in commands.
 
 | Group      | Commands                                                                          | Reference                                                                                                |
 | ---------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | System     | `help`, `memory`                                                                  | [`docs/command-reference.md#system-commands`](docs/command-reference.md#system-commands)                 |
 | Filesystem | `ls`, `stat`, `cat`, `write`, `append`, `mkdir`, `cp`, `diff`, `mv`, `rm`, `find` | [`docs/command-reference.md#filesystem-commands`](docs/command-reference.md#filesystem-commands)         |
-| Text       | `grep`, `head`, `tail`, `sort`, `tr`, `uniq`, `wc`                                | [`docs/command-reference.md#text-commands`](docs/command-reference.md#text-commands)                     |
+| Text       | `grep`, `head`, `tail`, `sort`, `sed`, `tr`, `uniq`, `wc`                         | [`docs/command-reference.md#text-commands`](docs/command-reference.md#text-commands)                     |
 | Data       | `json`, `calc`                                                                    | [`docs/command-reference.md#data-commands`](docs/command-reference.md#data-commands)                     |
 | Adapters   | `search`, `fetch`                                                                 | [`docs/command-reference.md#adapter-backed-commands`](docs/command-reference.md#adapter-backed-commands) |
 
@@ -356,6 +356,7 @@ Example workflows:
 ```text
 cat /logs/app.log | grep ERROR | tail -n 20
 find /config --type file --name "*.json" | sort
+sed -n "1,20p" /logs/app.log
 diff -u /drafts/qbr.md /reports/qbr.md
 search "Acme renewal risk" | head -n 5 | write /notes/acme-risk.txt
 fetch order:123 | json get customer.email

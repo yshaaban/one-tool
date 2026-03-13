@@ -2,6 +2,7 @@ import { err, ok, okBytes } from '../../types.js';
 import { errorMessage, looksBinary, splitLines } from '../../utils.js';
 import type { CommandContext, CommandSpec } from '../core.js';
 import { parseNFlag, readTextFromFileOrStdin } from '../shared/io.js';
+import { runSedCommand } from '../shared/sed.js';
 import { compileTrProgram } from '../shared/tr-arrays.js';
 
 async function cmdGrep(ctx: CommandContext, args: string[], stdin: Uint8Array) {
@@ -205,6 +206,27 @@ export const sort: CommandSpec = {
   acceptsStdin: true,
   minArgs: 0,
   conformanceArgs: [],
+};
+
+async function cmdSed(ctx: CommandContext, args: string[], stdin: Uint8Array) {
+  if (args.length === 0) {
+    return err('sed: missing script. Usage: sed [OPTION]... [SCRIPT] [INPUTFILE...]');
+  }
+
+  return runSedCommand(ctx, args, stdin);
+}
+
+export const sed: CommandSpec = {
+  name: 'sed',
+  summary: 'Stream editor with in-place editing, addresses, and substitutions.',
+  usage: 'sed [OPTION]... [SCRIPT] [INPUTFILE...]',
+  details:
+    'Supports addresses (line, $, /regex/, range), commands p/d/q/n/s/a/i/c, and options -n, -e, -f, -E, -i[SUFFIX].\n' +
+    'Examples:\n  sed "s/ERROR/WARN/" /logs/app.log\n  sed -n "1,5p" /logs/app.log\n  sed -i.bak "s/us-east-1/us-west-2/" /config/app.env',
+  handler: cmdSed,
+  acceptsStdin: true,
+  minArgs: 1,
+  conformanceArgs: ['s/a/A/'],
 };
 
 async function cmdTr(_ctx: CommandContext, args: string[], stdin: Uint8Array) {
@@ -415,4 +437,4 @@ function countWords(text: string): number {
   return matches?.length ?? 0;
 }
 
-export const textCommands: CommandSpec[] = [grep, head, tail, sort, tr, uniq, wc];
+export const textCommands: CommandSpec[] = [grep, head, tail, sort, sed, tr, uniq, wc];
