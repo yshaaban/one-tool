@@ -148,6 +148,74 @@ assert.equal(stdoutText(result), 'hello world');
 - Prefix user-facing errors with the command name, for example `grep: invalid regex: ...`
 - Check `stdin.length > 0` for piped input
 
+## Error Handling Patterns
+
+Agent-facing errors should be easy to parse and easy to act on.
+
+Use these rules consistently:
+
+- prefix every error with the command name
+- keep the main reason short and concrete
+- include a next step when one is obvious
+- translate VFS error codes into plain language instead of leaking raw `ENOENT` or `EISDIR`
+- reserve fallback `errorMessage(...)` output for genuinely unexpected failures
+
+For read-style commands, normalize the path once and translate the common VFS cases explicitly:
+
+```ts
+import type { CommandResult } from '../../types.js';
+import { err, okBytes } from '../../types.js';
+import { errorMessage, parentPath } from '../../utils.js';
+import type { CommandContext } from '../core.js';
+import { errorCode } from '../shared/errors.js';
+
+async function cmdShow(ctx: CommandContext, args: string[], stdin: Uint8Array): Promise<CommandResult> {
+  if (stdin.length > 0) {
+    return err('show: does not accept stdin');
+  }
+  if (args.length !== 1) {
+    return err('show: usage: show <path>');
+  }
+
+  const targetPath = ctx.vfs.normalize(args[0]!);
+
+  try {
+    const bytes = await ctx.vfs.readBytes(targetPath);
+    return okBytes(bytes, 'application/octet-stream');
+  } catch (caught) {
+    const code = errorCode(caught);
+
+    if (code === 'ENOENT') {
+      return err(`show: file not found: ${targetPath}. Use: ls ${parentPath(targetPath)}`);
+    }
+    if (code === 'EISDIR') {
+      return err(`show: path is a directory: ${targetPath}. Use: ls ${targetPath}`);
+    }
+
+    return err(`show: ${errorMessage(caught)}`);
+  }
+}
+```
+
+For write-style commands, prefer reporting the blocking ancestor instead of a generic failure:
+
+```ts
+import { err } from '../../types.js';
+import { blockingParentPath } from '../shared/errors.js';
+
+const blockedParent = await blockingParentPath(ctx, outputPath);
+if (blockedParent) {
+  return err(`write: parent is not a directory: ${blockedParent}`);
+}
+```
+
+Good errors in this SDK usually follow one of these shapes:
+
+- `cat: file not found: /notes/todo.txt. Use: ls /notes`
+- `cat: path is a directory: /reports. Use: ls /reports`
+- `write: parent is not a directory: /reports`
+- `grep: invalid regex: Unterminated character class`
+
 ## Useful Helpers
 
 - `src/commands/shared/errors.ts`

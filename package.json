@@ -38,6 +38,7 @@
   "scripts": {
     "build": "rm -rf dist && tsc -p tsconfig.json",
     "demo": "npm run build && node --enable-source-maps dist/examples/demo-app.js",
+    "example:custom-command": "npm run build && node --enable-source-maps dist/examples/custom-command.js",
     "agent": "npm run build && node --enable-source-maps dist/examples/agent.js",
     "lint": "eslint src/ test/ examples/",
     "format": "prettier --ignore-unknown --write .env.example .prettierrc README.md COMMANDS.md CHANGELOG.md eslint.config.js src/ test/ examples/",

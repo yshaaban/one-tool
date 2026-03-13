@@ -1178,6 +1178,8 @@ Each `CommandSpec` can declare:
 Built-in command conformance coverage is metadata-driven through `test/commands/conformance.test.ts`.
 
 For the full workflow, examples, and checklist, see `COMMANDS.md`.
+`examples/custom-command.ts` shows a complete runtime with a domain-specific `ticket` command wired through the public API.
+Run it with `npm run example:custom-command`.
 
 ### Registering a custom command at runtime
 
@@ -1317,9 +1319,11 @@ one-tool/
 │  ├─ demo-runtime.ts
 │  ├─ demo-adapters.ts
 │  ├─ demo-app.ts
+│  ├─ custom-command.ts
 │  ├─ agent-support.ts
 │  └─ agent.ts
 └─ test/
+   ├─ custom-command.test.ts
    ├─ parser.test.ts
    ├─ memory.test.ts
    ├─ runtime.test.ts
