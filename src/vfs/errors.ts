@@ -124,6 +124,37 @@ export function vfsError(
   });
 }
 
+export function formatResourceLimitErrorMessage(commandName: string, caught: unknown): string | null {
+  const vfsError = toVfsError(caught);
+  if (!vfsError || vfsError.code !== 'ERESOURCE_LIMIT') {
+    return null;
+  }
+
+  const limitKind =
+    typeof vfsError.details?.limitKind === 'string' ? vfsError.details.limitKind : 'resource limit';
+  const limit = typeof vfsError.details?.limit === 'number' ? vfsError.details.limit : undefined;
+  const actual = typeof vfsError.details?.actual === 'number' ? vfsError.details.actual : undefined;
+
+  if (limit !== undefined && actual !== undefined) {
+    return `${commandName}: resource limit exceeded (${limitKind}: ${actual} > ${limit}) at ${vfsError.path}`;
+  }
+
+  return `${commandName}: resource limit exceeded (${limitKind}) at ${vfsError.path}`;
+}
+
+export function formatEscapePathErrorMessage(
+  commandName: string,
+  caught: unknown,
+  fallbackPath: string,
+): string | null {
+  const vfsError = toVfsError(caught);
+  if (!vfsError || vfsError.code !== 'EESCAPE') {
+    return null;
+  }
+
+  return `${commandName}: path escapes workspace root: ${vfsError.path || fallbackPath}`;
+}
+
 function isVfsErrorCode(value: unknown): value is VfsErrorCode {
   return typeof value === 'string' && VFS_ERROR_CODES.has(value as VfsErrorCode);
 }

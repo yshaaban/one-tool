@@ -1,31 +1,21 @@
 import type { CommandResult } from '../../types.js';
 import { err, ok, okBytes } from '../../types.js';
 import { errorMessage, formatSize, looksBinary, parentPath } from '../../utils.js';
-import { toVfsError } from '../../vfs/errors.js';
+import { formatEscapePathErrorMessage, formatResourceLimitErrorMessage } from '../../vfs/errors.js';
 import { baseName } from '../../vfs/path-utils.js';
 import type { CommandContext, CommandSpec } from '../core.js';
 import { blockingParentPath, errorCode, errorPath, firstFileInPath } from '../shared/errors.js';
 import { contentFromArgsOrStdin, materializedLimitError } from '../shared/io.js';
 
 function resourceLimitMessage(commandName: string, caught: unknown): string | null {
-  const vfsError = toVfsError(caught);
-  if (!vfsError || vfsError.code !== 'ERESOURCE_LIMIT') {
-    return null;
-  }
-
-  const limitKind =
-    typeof vfsError.details?.limitKind === 'string' ? vfsError.details.limitKind : 'resource limit';
-  const limit = typeof vfsError.details?.limit === 'number' ? vfsError.details.limit : undefined;
-  const actual = typeof vfsError.details?.actual === 'number' ? vfsError.details.actual : undefined;
-
-  if (limit !== undefined && actual !== undefined) {
-    return `${commandName}: resource limit exceeded (${limitKind}: ${actual} > ${limit}) at ${vfsError.path}`;
-  }
-  return `${commandName}: resource limit exceeded (${limitKind}) at ${vfsError.path}`;
+  return formatResourceLimitErrorMessage(commandName, caught);
 }
 
 function escapePathMessage(commandName: string, caught: unknown, fallbackPath: string): string {
-  return `${commandName}: path escapes workspace root: ${errorPath(caught) || fallbackPath}`;
+  return (
+    formatEscapePathErrorMessage(commandName, caught, fallbackPath) ??
+    `${commandName}: path escapes workspace root: ${errorPath(caught) || fallbackPath}`
+  );
 }
 
 function escapePathResult(commandName: string, caught: unknown, fallbackPath: string): CommandResult | null {

@@ -92,6 +92,26 @@ test('formatVfsError reports workspace-escape paths cleanly', async function ():
   }
 });
 
+test('formatVfsError uses the typed resource-limit path when it differs from the input path', async function (): Promise<void> {
+  const ctx = createTestCommandContext({
+    vfs: new NodeVFS(await mkdtemp(path.join(os.tmpdir(), 'one-tool-extension-limit-')), {
+      resourcePolicy: {
+        maxEntriesPerDirectory: 0,
+      },
+    }),
+  });
+
+  try {
+    await ctx.vfs.writeBytes('/notes/todo.txt', textEncoder.encode('hello'));
+    assert.fail('expected ERESOURCE_LIMIT');
+  } catch (caught) {
+    const result = await formatVfsError(ctx, 'write', '/notes/todo.txt', caught);
+    assert.equal(result.stderr, 'write: resource limit exceeded (maxEntriesPerDirectory: 1 > 0) at /');
+  } finally {
+    await rm((ctx.vfs as NodeVFS).rootDir, { recursive: true, force: true });
+  }
+});
+
 test('readTextInput reads from files and stdin', async function (): Promise<void> {
   const ctx = createTestCommandContext();
   await ctx.vfs.writeBytes('/notes/todo.txt', textEncoder.encode('alpha\nbeta'));

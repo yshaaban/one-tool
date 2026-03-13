@@ -3,7 +3,7 @@ import { blockingParentPath, errorCode } from '../commands/shared/errors.js';
 import type { CommandResult, ToolAdapters } from '../types.js';
 import { err } from '../types.js';
 import { errorMessage, parentPath } from '../utils.js';
-import { toVfsError } from '../vfs/errors.js';
+import { formatEscapePathErrorMessage, formatResourceLimitErrorMessage } from '../vfs/errors.js';
 
 export interface FormatVfsErrorOptions {
   notFoundLabel?: string;
@@ -54,8 +54,10 @@ export async function formatVfsError(
   }
 
   if (code === 'EESCAPE') {
-    const escapedPath = toVfsError(caught)?.path ?? normalizedPath;
-    return err(`${commandName}: path escapes workspace root: ${escapedPath}`);
+    return err(
+      formatEscapePathErrorMessage(commandName, caught, normalizedPath) ??
+        `${commandName}: path escapes workspace root: ${normalizedPath}`,
+    );
   }
 
   if (code === 'EEXIST') {
@@ -63,17 +65,10 @@ export async function formatVfsError(
   }
 
   if (code === 'ERESOURCE_LIMIT') {
-    const vfsError = toVfsError(caught);
-    const limitKind =
-      typeof vfsError?.details?.limitKind === 'string' ? vfsError.details.limitKind : 'resource limit';
-    const limit = typeof vfsError?.details?.limit === 'number' ? vfsError.details.limit : undefined;
-    const actual = typeof vfsError?.details?.actual === 'number' ? vfsError.details.actual : undefined;
-    if (limit !== undefined && actual !== undefined) {
-      return err(
-        `${commandName}: resource limit exceeded (${limitKind}: ${actual} > ${limit}) at ${normalizedPath}`,
-      );
-    }
-    return err(`${commandName}: resource limit exceeded (${limitKind}) at ${normalizedPath}`);
+    return err(
+      formatResourceLimitErrorMessage(commandName, caught) ??
+        `${commandName}: resource limit exceeded (resource limit) at ${normalizedPath}`,
+    );
   }
 
   return err(`${commandName}: ${errorMessage(caught)}`);

@@ -7,11 +7,7 @@ import {
   type CommandSpec,
   type CreateCommandRegistryOptions,
 } from './commands/index.js';
-import {
-  resolveExecutionPolicy,
-  type AgentCLIExecutionPolicy,
-  type ResolvedAgentCLIExecutionPolicy,
-} from './execution-policy.js';
+import { resolveExecutionPolicy, type AgentCLIExecutionPolicy } from './execution-policy.js';
 import { SimpleMemory } from './memory.js';
 import type { CommandResult, ToolAdapters } from './types.js';
 import { err, ok, textDecoder } from './types.js';
@@ -104,18 +100,17 @@ export class AgentCLI {
   public readonly registry: CommandRegistry;
   public readonly ctx: CommandContext;
   private readonly outputLimits: Required<AgentCLIOutputLimits>;
-  private readonly executionPolicy: ResolvedAgentCLIExecutionPolicy;
 
   constructor(options: AgentCLIOptions) {
     this.registry = resolveRegistry(options);
     this.outputLimits = resolveOutputLimits(options.outputLimits);
-    this.executionPolicy = resolveExecutionPolicy(options.executionPolicy);
+    const executionPolicy = resolveExecutionPolicy(options.executionPolicy);
     this.ctx = {
       vfs: options.vfs,
       adapters: options.adapters ?? {},
       memory: options.memory ?? new SimpleMemory(),
       registry: this.registry,
-      executionPolicy: this.executionPolicy,
+      executionPolicy,
       outputDir: '/.system/cmd-output',
       outputCounter: 0,
     };
