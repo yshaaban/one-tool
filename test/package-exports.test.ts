@@ -2,14 +2,14 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 test('package exports resolve the documented entrypoints', async function (): Promise<void> {
-  const root = await import('one-tool');
-  const commands = await import('one-tool/commands');
-  const extensions = await import('one-tool/extensions');
-  const mcp = await import('one-tool/mcp');
-  const testing = await import('one-tool/testing');
-  const memoryVfs = await import('one-tool/vfs/memory');
-  const nodeVfs = await import('one-tool/vfs/node');
-  const browserVfs = await import('one-tool/vfs/browser');
+  const root = await import('@onetool/one-tool');
+  const commands = await import('@onetool/one-tool/commands');
+  const extensions = await import('@onetool/one-tool/extensions');
+  const mcp = await import('@onetool/one-tool/mcp');
+  const testing = await import('@onetool/one-tool/testing');
+  const memoryVfs = await import('@onetool/one-tool/vfs/memory');
+  const nodeVfs = await import('@onetool/one-tool/vfs/node');
+  const browserVfs = await import('@onetool/one-tool/vfs/browser');
 
   assert.equal(typeof root.createAgentCLI, 'function');
   assert.equal(typeof root.createCommandRegistry, 'function');

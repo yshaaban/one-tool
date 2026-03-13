@@ -56,7 +56,7 @@ interface VFileInfo {
 ## `NodeVFS`
 
 ```ts
-import { NodeVFS } from 'one-tool';
+import { NodeVFS } from '@onetool/one-tool';
 
 const vfs = new NodeVFS('./agent_state');
 
@@ -87,7 +87,7 @@ Behavior:
 ## `MemoryVFS`
 
 ```ts
-import { MemoryVFS } from 'one-tool';
+import { MemoryVFS } from '@onetool/one-tool';
 
 const vfs = new MemoryVFS();
 ```
@@ -103,8 +103,8 @@ Behavior:
 ## `BrowserVFS`
 
 ```ts
-import { createAgentCLI } from 'one-tool';
-import { BrowserVFS } from 'one-tool/vfs/browser';
+import { createAgentCLI } from '@onetool/one-tool';
+import { BrowserVFS } from '@onetool/one-tool/vfs/browser';
 
 const vfs = await BrowserVFS.open('my-agent-db');
 const runtime = await createAgentCLI({ vfs });
@@ -180,7 +180,7 @@ const runtime = await createAgentCLI({
 Backends now throw typed `VfsError` instances for SDK-defined filesystem failures:
 
 ```ts
-import { VfsError, isVfsError, toVfsError } from 'one-tool';
+import { VfsError, isVfsError, toVfsError } from '@onetool/one-tool';
 ```
 
 The stable error codes are:

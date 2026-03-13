@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { TerminalComponent } from '../components/Terminal';
 import { closeRuntime, createDemoRuntime } from '../runtime/create-runtime';
-import type { AgentCLI } from 'one-tool/browser';
+import type { AgentCLI } from '@onetool/one-tool/browser';
 
 const WELCOME = [
   '\x1b[38;5;81mone-tool playground\x1b[0m',

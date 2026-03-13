@@ -1,4 +1,4 @@
-import { MemoryVFS, createAgentCLI, createCommandRegistry } from 'one-tool';
+import { MemoryVFS, createAgentCLI, createCommandRegistry } from '@onetool/one-tool';
 
 import { createExampleIO, runIfEntrypointWithErrorHandling, type ExampleOptions } from '../_example-utils.js';
 

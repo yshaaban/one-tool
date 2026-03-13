@@ -1,4 +1,4 @@
-import { MemoryVFS, buildToolDefinition, createAgentCLI } from 'one-tool';
+import { MemoryVFS, buildToolDefinition, createAgentCLI } from '@onetool/one-tool';
 
 import { createExampleIO, runIfEntrypointWithErrorHandling, type ExampleOptions } from '../_example-utils.js';
 

@@ -1,4 +1,4 @@
-import { MemoryVFS, createAgentCLI } from 'one-tool';
+import { MemoryVFS, createAgentCLI } from '@onetool/one-tool';
 
 import {
   createExampleIO,

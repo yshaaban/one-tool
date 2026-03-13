@@ -7,7 +7,7 @@ export default defineConfig({
   base: '/one-tool/',
   resolve: {
     alias: {
-      'one-tool/browser': path.resolve(__dirname, '../src/browser.ts'),
+      '@onetool/one-tool/browser': path.resolve(__dirname, '../src/browser.ts'),
     },
   },
 });

@@ -6,7 +6,7 @@ import {
   type FetchResponse,
   type SearchAdapter,
   type SearchHit,
-} from 'one-tool';
+} from '@onetool/one-tool';
 
 import { createExampleIO, runIfEntrypointWithErrorHandling, type ExampleOptions } from './_example-utils.js';
 

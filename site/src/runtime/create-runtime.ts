@@ -11,7 +11,7 @@ import {
   type AgentCLIOptions,
   type CommandContext,
   type CommandSpec,
-} from 'one-tool/browser';
+} from '@onetool/one-tool/browser';
 import type { ExampleRuntimeKind } from '../examples/types';
 import { DemoFetch, DemoSearch } from './adapters';
 

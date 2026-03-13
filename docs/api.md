@@ -1,6 +1,6 @@
 # API Reference
 
-Full API reference for `one-tool`.
+Full API reference for `@onetool/one-tool`.
 
 For the top-level overview, start with [`../README.md`](../README.md). For command authoring, see [`../COMMANDS.md`](../COMMANDS.md).
 
@@ -11,7 +11,7 @@ For the top-level overview, start with [`../README.md`](../README.md). For comma
 ### `createAgentCLI(options)`
 
 ```ts
-import { createAgentCLI, type AgentCLIOptions } from 'one-tool';
+import { createAgentCLI, type AgentCLIOptions } from '@onetool/one-tool';
 ```
 
 Creates a fully initialized runtime with the configured command registry.
@@ -52,7 +52,7 @@ Default behavior:
 Examples:
 
 ```ts
-import { createAgentCLI, MemoryVFS } from 'one-tool';
+import { createAgentCLI, MemoryVFS } from '@onetool/one-tool';
 
 const fullRuntime = await createAgentCLI({
   vfs: new MemoryVFS(),
@@ -67,7 +67,7 @@ const readOnlyRuntime = await createAgentCLI({
 To add only your own commands:
 
 ```ts
-import { createAgentCLI, MemoryVFS } from 'one-tool';
+import { createAgentCLI, MemoryVFS } from '@onetool/one-tool';
 
 const customOnlyRuntime = await createAgentCLI({
   vfs: new MemoryVFS(),
@@ -79,7 +79,7 @@ const customOnlyRuntime = await createAgentCLI({
 To mix selected built-ins with custom commands:
 
 ```ts
-import { createAgentCLI, MemoryVFS } from 'one-tool';
+import { createAgentCLI, MemoryVFS } from '@onetool/one-tool';
 
 const runtime = await createAgentCLI({
   vfs: new MemoryVFS(),
@@ -219,7 +219,7 @@ Notes:
 ### `buildToolDefinition(runtime, toolName?, options?)`
 
 ```ts
-import { buildToolDefinition } from 'one-tool';
+import { buildToolDefinition } from '@onetool/one-tool';
 
 const tool = buildToolDefinition(runtime);
 ```
@@ -263,10 +263,10 @@ The exported `ToolDefinition` type matches this object shape.
 
 ## MCP server surface
 
-Import from `one-tool/mcp` when you want to expose the runtime as a native MCP tool server:
+Import from `@onetool/one-tool/mcp` when you want to expose the runtime as a native MCP tool server:
 
 ```ts
-import { createMcpServer, serveStdioMcpServer } from 'one-tool/mcp';
+import { createMcpServer, serveStdioMcpServer } from '@onetool/one-tool/mcp';
 ```
 
 The MCP surface is intentionally small:
@@ -303,13 +303,13 @@ Example Claude Code `.mcp.json` entry:
 
 Create `mcp-server.js` from the wrapper pattern shown below.
 
-`examples/07-mcp-server.ts` is the maintained repo example for that wrapper. It uses the seeded demo runtime from `one-tool/testing`, and its default stdio path persists state under `./agent_state`.
+`examples/07-mcp-server.ts` is the maintained repo example for that wrapper. It uses the seeded demo runtime from `@onetool/one-tool/testing`, and its default stdio path persists state under `./agent_state`.
 
 Example:
 
 ```ts
-import { createAgentCLI, NodeVFS } from 'one-tool';
-import { serveStdioMcpServer } from 'one-tool/mcp';
+import { createAgentCLI, NodeVFS } from '@onetool/one-tool';
+import { serveStdioMcpServer } from '@onetool/one-tool/mcp';
 
 const runtime = await createAgentCLI({
   vfs: new NodeVFS('./agent_state'),
@@ -381,7 +381,7 @@ interface ToolAdapters {
 ## Memory
 
 ```ts
-import { SimpleMemory } from 'one-tool';
+import { SimpleMemory } from '@onetool/one-tool';
 ```
 
 `SimpleMemory` is an in-process, lightweight working-memory store used by the built-in `memory` command.
@@ -393,7 +393,7 @@ import { SimpleMemory } from 'one-tool';
 For custom commands:
 
 ```ts
-import { ok, okBytes, err } from 'one-tool';
+import { ok, okBytes, err } from '@onetool/one-tool';
 ```
 
 Use:
@@ -433,7 +433,7 @@ The metadata fields are optional in the public type, but built-in commands in th
 
 ### Public extension helpers
 
-For stable command-authoring helpers, import from `one-tool/extensions`:
+For stable command-authoring helpers, import from `@onetool/one-tool/extensions`:
 
 ```ts
 import {
@@ -447,7 +447,7 @@ import {
   readTextInput,
   stdinNotAcceptedError,
   usageError,
-} from 'one-tool/extensions';
+} from '@onetool/one-tool/extensions';
 ```
 
 These helpers cover the most common authoring needs without importing repo-internal modules:
@@ -465,8 +465,8 @@ These helpers cover the most common authoring needs without importing repo-inter
 Example:
 
 ```ts
-import { type CommandSpec, ok } from 'one-tool';
-import { stdinNotAcceptedError, usageError } from 'one-tool/extensions';
+import { type CommandSpec, ok } from '@onetool/one-tool';
+import { stdinNotAcceptedError, usageError } from '@onetool/one-tool/extensions';
 
 const echo: CommandSpec = {
   name: 'echo',
@@ -500,7 +500,12 @@ For authoring patterns and examples:
 The command system is also exported directly:
 
 ```ts
-import { CommandRegistry, createCommandRegistry, registerBuiltinCommands, registerCommands } from 'one-tool';
+import {
+  CommandRegistry,
+  createCommandRegistry,
+  registerBuiltinCommands,
+  registerCommands,
+} from '@onetool/one-tool';
 
 const registry = new CommandRegistry();
 registerBuiltinCommands(registry);
@@ -533,7 +538,7 @@ If you prefer runtime-level configuration instead of constructing a registry you
 For selective built-in enablement:
 
 ```ts
-import { createCommandRegistry } from 'one-tool';
+import { createCommandRegistry } from '@onetool/one-tool';
 
 const registry = createCommandRegistry({
   preset: 'textOnly',
@@ -561,7 +566,7 @@ Presets are exported through `builtinCommandPresets` and `builtinCommandPresetNa
 For easy overrides:
 
 ```ts
-import { createCommandRegistry, ok, registerCommands, type CommandSpec } from 'one-tool';
+import { createCommandRegistry, ok, registerCommands, type CommandSpec } from '@onetool/one-tool';
 
 const customSearch: CommandSpec = {
   name: 'search',
@@ -591,7 +596,7 @@ Built-in command groups are exported as:
 
 ## Command testing helpers
 
-The package exports stable testing helpers under `one-tool/testing`:
+The package exports stable testing helpers under `@onetool/one-tool/testing`:
 
 ```ts
 import {
@@ -600,7 +605,7 @@ import {
   createTestCommandRegistry,
   runRegisteredCommand,
   stdoutText,
-} from 'one-tool/testing';
+} from '@onetool/one-tool/testing';
 ```
 
 Use `runRegisteredCommand(...)` for focused command tests:
@@ -612,7 +617,7 @@ import {
   createTestCommandRegistry,
   runRegisteredCommand,
   stdoutText,
-} from 'one-tool/testing';
+} from '@onetool/one-tool/testing';
 
 const registry = createTestCommandRegistry({
   includeGroups: ['system'],
@@ -639,10 +644,10 @@ Each case has:
 - `name`
 - `run()`
 
-For deterministic end-to-end scenario checks, `one-tool/testing` also exports helpers to seed a test world, run a deterministic command script, and assert the result:
+For deterministic end-to-end scenario checks, `@onetool/one-tool/testing` also exports helpers to seed a test world, run a deterministic command script, and assert the result:
 
 ```ts
-import { assertScenario, buildWorld, runOracle, type ScenarioSpec } from 'one-tool/testing';
+import { assertScenario, buildWorld, runOracle, type ScenarioSpec } from '@onetool/one-tool/testing';
 
 const scenario: ScenarioSpec = {
   id: 'fetch-customer-email',
@@ -682,23 +687,23 @@ For full command-authoring and test patterns, see [`../COMMANDS.md`](../COMMANDS
 The package exposes a browser-specific subpath:
 
 ```ts
-import { BrowserVFS } from 'one-tool/vfs/browser';
+import { BrowserVFS } from '@onetool/one-tool/vfs/browser';
 ```
 
 You can also import `BrowserVFS` from the root entrypoint when your environment supports it, but the subpath is the clearest browser-specific import.
 
 ### Package exports table
 
-| Import path            | Contents                                                                                     |
-| ---------------------- | -------------------------------------------------------------------------------------------- |
-| `one-tool`             | Core runtime, types, command APIs, testing helpers, tool schema, and all VFS backends        |
-| `one-tool/commands`    | Command registry helpers, built-in command groups, and command specs                         |
-| `one-tool/extensions`  | Stable command-authoring helpers for input handling, VFS errors, flags, and command groups   |
-| `one-tool/mcp`         | MCP server helpers for exposing the runtime as a `run` tool                                  |
-| `one-tool/testing`     | Stable command-testing helpers, deterministic scenario-test helpers, and conformance helpers |
-| `one-tool/vfs/node`    | `NodeVFS` and deprecated `RootedVFS`                                                         |
-| `one-tool/vfs/memory`  | `MemoryVFS`                                                                                  |
-| `one-tool/vfs/browser` | `BrowserVFS`                                                                                 |
+| Import path                     | Contents                                                                                     |
+| ------------------------------- | -------------------------------------------------------------------------------------------- |
+| `@onetool/one-tool`             | Core runtime, types, command APIs, testing helpers, tool schema, and all VFS backends        |
+| `@onetool/one-tool/commands`    | Command registry helpers, built-in command groups, and command specs                         |
+| `@onetool/one-tool/extensions`  | Stable command-authoring helpers for input handling, VFS errors, flags, and command groups   |
+| `@onetool/one-tool/mcp`         | MCP server helpers for exposing the runtime as a `run` tool                                  |
+| `@onetool/one-tool/testing`     | Stable command-testing helpers, deterministic scenario-test helpers, and conformance helpers |
+| `@onetool/one-tool/vfs/node`    | `NodeVFS` and deprecated `RootedVFS`                                                         |
+| `@onetool/one-tool/vfs/memory`  | `MemoryVFS`                                                                                  |
+| `@onetool/one-tool/vfs/browser` | `BrowserVFS`                                                                                 |
 
 ---
 
@@ -759,7 +764,7 @@ If a VFS resource policy prevents the spill file from being saved, the runtime s
 You can tune those thresholds:
 
 ```ts
-import { createAgentCLI, MemoryVFS } from 'one-tool';
+import { createAgentCLI, MemoryVFS } from '@onetool/one-tool';
 
 const runtime = await createAgentCLI({
   vfs: new MemoryVFS(),

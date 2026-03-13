@@ -56,7 +56,7 @@ At a glance:
 - Command authoring:
   - [`COMMANDS.md`](COMMANDS.md)
   - runnable example: `npm run example:custom-command`
-  - public helper surface: `one-tool/extensions`
+  - public helper surface: `@onetool/one-tool/extensions`
 
 ---
 
@@ -118,9 +118,17 @@ Look elsewhere when:
 - Node `>= 20.11`
 - npm
 
+### Install from npm
+
+```bash
+npm install @onetool/one-tool
+```
+
 ### Run the repo locally
 
 ```bash
+git clone https://github.com/yshaaban/one-tool.git
+cd one-tool
 npm install
 npm run build
 npm run demo
@@ -171,7 +179,7 @@ import {
   type FetchResponse,
   type SearchAdapter,
   type SearchHit,
-} from 'one-tool';
+} from '@onetool/one-tool';
 
 class MySearch implements SearchAdapter {
   async search(query: string, limit = 10): Promise<SearchHit[]> {
@@ -293,7 +301,7 @@ Yes.
 
 - authoring guide: [`COMMANDS.md`](COMMANDS.md)
 - runnable custom example: `npm run example:custom-command`
-- public helper surface: `one-tool/extensions`
+- public helper surface: `@onetool/one-tool/extensions`
 - API details: [`docs/api.md#command-extension-surface`](docs/api.md#command-extension-surface)
 
 ### How do I inspect execution programmatically?
@@ -422,16 +430,16 @@ Full command tables, examples, and workflows: [`docs/command-reference.md`](docs
 
 Primary entrypoints:
 
-| Surface                                          | Purpose                                              | Reference                                                                      |
-| ------------------------------------------------ | ---------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `createAgentCLI(...)`                            | create a runtime                                     | [`docs/api.md#core-runtime`](docs/api.md#core-runtime)                         |
-| `runtime.runDetailed(...)`                       | inspect structured execution results and traces      | [`docs/api.md#structured-execution`](docs/api.md#structured-execution)         |
-| `buildToolDefinition(...)`                       | expose an OpenAI-compatible tool definition          | [`docs/api.md#tool-definition`](docs/api.md#tool-definition)                   |
-| `one-tool/mcp`                                   | expose the runtime as an MCP stdio tool server       | [`docs/api.md#mcp-server-surface`](docs/api.md#mcp-server-surface)             |
-| `CommandRegistry` / `createCommandRegistry(...)` | select, override, and compose commands               | [`docs/api.md#command-registry`](docs/api.md#command-registry)                 |
-| `one-tool/extensions`                            | author custom commands with stable helper utilities  | [`docs/api.md#public-extension-helpers`](docs/api.md#public-extension-helpers) |
-| `one-tool/testing`                               | test custom commands and deterministic scenario runs | [`docs/api.md#command-testing-helpers`](docs/api.md#command-testing-helpers)   |
-| package subpaths                                 | import focused surfaces like `one-tool/vfs/browser`  | [`docs/api.md#package-exports`](docs/api.md#package-exports)                   |
+| Surface                                          | Purpose                                                      | Reference                                                                      |
+| ------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| `createAgentCLI(...)`                            | create a runtime                                             | [`docs/api.md#core-runtime`](docs/api.md#core-runtime)                         |
+| `runtime.runDetailed(...)`                       | inspect structured execution results and traces              | [`docs/api.md#structured-execution`](docs/api.md#structured-execution)         |
+| `buildToolDefinition(...)`                       | expose an OpenAI-compatible tool definition                  | [`docs/api.md#tool-definition`](docs/api.md#tool-definition)                   |
+| `@onetool/one-tool/mcp`                          | expose the runtime as an MCP stdio tool server               | [`docs/api.md#mcp-server-surface`](docs/api.md#mcp-server-surface)             |
+| `CommandRegistry` / `createCommandRegistry(...)` | select, override, and compose commands                       | [`docs/api.md#command-registry`](docs/api.md#command-registry)                 |
+| `@onetool/one-tool/extensions`                   | author custom commands with stable helper utilities          | [`docs/api.md#public-extension-helpers`](docs/api.md#public-extension-helpers) |
+| `@onetool/one-tool/testing`                      | test custom commands and deterministic scenario runs         | [`docs/api.md#command-testing-helpers`](docs/api.md#command-testing-helpers)   |
+| package subpaths                                 | import focused surfaces like `@onetool/one-tool/vfs/browser` | [`docs/api.md#package-exports`](docs/api.md#package-exports)                   |
 
 Most integrations only need:
 

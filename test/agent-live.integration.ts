@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { createAgentSession, loadConfig, loadEnvFile, runAgentTurn } from '../examples/agent-support.js';
-import { buildDemoRuntime } from 'one-tool/testing';
+import { buildDemoRuntime } from '@onetool/one-tool/testing';
 import { MemoryVFS } from '../src/index.js';
 
 loadEnvFile();

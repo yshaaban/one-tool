@@ -1,4 +1,4 @@
-import type { SearchAdapter, SearchHit, FetchAdapter, FetchResponse } from 'one-tool/browser';
+import type { SearchAdapter, SearchHit, FetchAdapter, FetchResponse } from '@onetool/one-tool/browser';
 
 export interface DemoSearchDoc {
   title: string;

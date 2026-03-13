@@ -2,9 +2,9 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
-import { MemoryVFS } from 'one-tool';
-import { createMcpServer, serveStdioMcpServer } from 'one-tool/mcp';
-import { buildDemoRuntime } from 'one-tool/testing';
+import { MemoryVFS } from '@onetool/one-tool';
+import { createMcpServer, serveStdioMcpServer } from '@onetool/one-tool/mcp';
+import { buildDemoRuntime } from '@onetool/one-tool/testing';
 
 import {
   createExampleIO,

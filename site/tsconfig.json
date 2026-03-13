@@ -12,8 +12,9 @@
     "noFallthroughCasesInSwitch": true,
     "isolatedModules": true,
     "skipLibCheck": true,
+    "baseUrl": ".",
     "paths": {
-      "one-tool/browser": ["../src/browser.ts"]
+      "@onetool/one-tool/browser": ["../src/browser.ts"]
     }
   },
   "include": ["src"]

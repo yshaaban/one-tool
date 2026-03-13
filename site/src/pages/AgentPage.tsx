@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Link } from 'react-router-dom';
-import type { AgentCLI } from 'one-tool/browser';
+import type { AgentCLI } from '@onetool/one-tool/browser';
 import { sourceBaseUrl } from '../config';
 import type { ExampleDef } from '../examples/types';
 import { closeRuntime, createDemoRuntime } from '../runtime/create-runtime';

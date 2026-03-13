@@ -2,7 +2,7 @@ import { forwardRef, useEffect, useRef, useCallback, useImperativeHandle } from 
 import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
-import type { AgentCLI } from 'one-tool/browser';
+import type { AgentCLI } from '@onetool/one-tool/browser';
 import { tokenizeCommand, type CommandTokenKind } from '../utils/command-highlighting';
 
 interface TerminalProps {

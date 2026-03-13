@@ -11,8 +11,8 @@ import {
   json,
   ok,
   write,
-} from 'one-tool';
-import { collectCommands, stdinNotAcceptedError, usageError } from 'one-tool/extensions';
+} from '@onetool/one-tool';
+import { collectCommands, stdinNotAcceptedError, usageError } from '@onetool/one-tool/extensions';
 
 import { createExampleIO, runIfEntrypointWithErrorHandling, type ExampleOptions } from './_example-utils.js';
 

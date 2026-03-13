@@ -1,4 +1,4 @@
-import { assertScenario, buildWorld, runOracle, type ScenarioSpec } from 'one-tool/testing';
+import { assertScenario, buildWorld, runOracle, type ScenarioSpec } from '@onetool/one-tool/testing';
 
 import { createExampleIO, runIfEntrypointWithErrorHandling, type ExampleOptions } from '../_example-utils.js';
 

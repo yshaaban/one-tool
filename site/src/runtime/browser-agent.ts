@@ -7,7 +7,7 @@
  */
 
 import OpenAI from 'openai';
-import { buildToolDefinition, type AgentCLI, type ToolDescriptionVariant } from 'one-tool/browser';
+import { buildToolDefinition, type AgentCLI, type ToolDescriptionVariant } from '@onetool/one-tool/browser';
 
 export interface ToolCall {
   id: string;

@@ -3,7 +3,7 @@ import * as path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-import { buildToolDefinition, type AgentCLI, type ToolDescriptionVariant } from 'one-tool';
+import { buildToolDefinition, type AgentCLI, type ToolDescriptionVariant } from '@onetool/one-tool';
 
 export interface ToolCall {
   id: string;

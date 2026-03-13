@@ -1,7 +1,7 @@
 import http from 'node:http';
 import process from 'node:process';
 
-import { MemoryVFS, buildToolDefinition, createAgentCLI } from 'one-tool';
+import { MemoryVFS, buildToolDefinition, createAgentCLI } from '@onetool/one-tool';
 
 import {
   createExampleIO,

@@ -1,5 +1,5 @@
-import { createAgentCLI } from 'one-tool';
-import { BrowserVFS } from 'one-tool/vfs/browser';
+import { createAgentCLI } from '@onetool/one-tool';
+import { BrowserVFS } from '@onetool/one-tool/vfs/browser';
 
 import { createExampleIO, runIfEntrypointWithErrorHandling, type ExampleOptions } from './_example-utils.js';
 

@@ -1,4 +1,11 @@
-import { type CommandContext, type CommandResult, MemoryVFS, createAgentCLI, help, ok } from 'one-tool';
+import {
+  type CommandContext,
+  type CommandResult,
+  MemoryVFS,
+  createAgentCLI,
+  help,
+  ok,
+} from '@onetool/one-tool';
 import {
   collectCommands,
   defineCommandGroup,
@@ -8,7 +15,7 @@ import {
   readTextInput,
   stdinNotAcceptedError,
   usageError,
-} from 'one-tool/extensions';
+} from '@onetool/one-tool/extensions';
 
 import { createExampleIO, runIfEntrypointWithErrorHandling, type ExampleOptions } from '../_example-utils.js';
 
@@ -109,7 +116,7 @@ export async function main(options: ExampleOptions = {}): Promise<void> {
   });
 
   io.write('Advanced · Extension helpers');
-  io.write('Build custom command packs with the stable one-tool/extensions surface.');
+  io.write('Build custom command packs with the stable @onetool/one-tool/extensions surface.');
 
   for (const command of [
     'help profile',

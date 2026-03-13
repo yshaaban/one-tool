@@ -4,7 +4,7 @@ import { getExample } from '../examples';
 import { sourceBaseUrl } from '../config';
 import { TerminalComponent, type TerminalHandle, type TerminalPlaybackOptions } from '../components/Terminal';
 import { closeRuntime, createRuntimeForExample } from '../runtime/create-runtime';
-import type { AgentCLI, RunExecution } from 'one-tool/browser';
+import type { AgentCLI, RunExecution } from '@onetool/one-tool/browser';
 
 const AgentPage = lazy(() => import('./AgentPage'));
 const AUTO_PLAY_TYPING_DELAY_MS = 20;
@@ -394,7 +394,7 @@ function McpGuide({ sourceUrl }: { sourceUrl: string }): React.ReactNode {
           </div>
           <div style={mcpChoiceCardStyle}>
             <h3 style={mcpChoiceTitleStyle}>Add it to an existing project</h3>
-            <McpCodeBlock filename="terminal" code={`npm install one-tool`} />
+            <McpCodeBlock filename="terminal" code={`npm install @onetool/one-tool`} />
           </div>
         </div>
       </McpStep>
@@ -407,7 +407,7 @@ function McpGuide({ sourceUrl }: { sourceUrl: string }): React.ReactNode {
       >
         <McpCodeBlock
           filename="mcp-server.js"
-          code={`import { createAgentCLI, NodeVFS } from 'one-tool';\nimport { serveStdioMcpServer } from 'one-tool/mcp';\n\nconst runtime = await createAgentCLI({\n  vfs: new NodeVFS('./workspace'),\n});\n\nawait serveStdioMcpServer(runtime, {\n  instructions: 'Use the run tool to inspect files, memory, and adapters.',\n});`}
+          code={`import { createAgentCLI, NodeVFS } from '@onetool/one-tool';\nimport { serveStdioMcpServer } from '@onetool/one-tool/mcp';\n\nconst runtime = await createAgentCLI({\n  vfs: new NodeVFS('./workspace'),\n});\n\nawait serveStdioMcpServer(runtime, {\n  instructions: 'Use the run tool to inspect files, memory, and adapters.',\n});`}
         />
         <p style={mcpNoteStyle}>
           <code style={inlineCodeStyle}>NodeVFS('./workspace')</code> scopes file access to the{' '}

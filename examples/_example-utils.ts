@@ -1,7 +1,7 @@
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
-import type { RunExecution } from 'one-tool';
+import type { RunExecution } from '@onetool/one-tool';
 
 export interface ExampleOptions {
   quiet?: boolean;

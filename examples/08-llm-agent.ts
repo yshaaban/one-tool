@@ -1,8 +1,8 @@
 import readline from 'node:readline/promises';
 import process from 'node:process';
 
-import { MemoryVFS } from 'one-tool';
-import { buildDemoRuntime } from 'one-tool/testing';
+import { MemoryVFS } from '@onetool/one-tool';
+import { buildDemoRuntime } from '@onetool/one-tool/testing';
 
 import { createAgentSession, loadConfig, loadEnvFile, runAgentTurn } from './agent-support.js';
 import {

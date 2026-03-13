@@ -11,7 +11,7 @@ import {
   runAgentTurn,
   type ChatMessage,
 } from '../examples/agent-support.js';
-import { buildDemoRuntime } from 'one-tool/testing';
+import { buildDemoRuntime } from '@onetool/one-tool/testing';
 import { buildToolDefinition, createAgentCLI, type CommandSpec, MemoryVFS } from '../src/index.js';
 import { ok } from '../src/types.js';
 

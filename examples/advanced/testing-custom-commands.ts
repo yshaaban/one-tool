@@ -1,13 +1,18 @@
-import { help } from 'one-tool';
+import { help } from '@onetool/one-tool';
 import {
   createCommandConformanceCases,
   createTestCommandContext,
   createTestCommandRegistry,
   runRegisteredCommand,
   stdoutText,
-} from 'one-tool/testing';
-import { collectCommands, defineCommandGroup, stdinNotAcceptedError, usageError } from 'one-tool/extensions';
-import { type CommandContext, type CommandResult, type CommandSpec, ok } from 'one-tool';
+} from '@onetool/one-tool/testing';
+import {
+  collectCommands,
+  defineCommandGroup,
+  stdinNotAcceptedError,
+  usageError,
+} from '@onetool/one-tool/extensions';
+import { type CommandContext, type CommandResult, type CommandSpec, ok } from '@onetool/one-tool';
 
 import { createExampleIO, runIfEntrypointWithErrorHandling, type ExampleOptions } from '../_example-utils.js';
 
@@ -66,7 +71,7 @@ export async function main(options: ExampleOptions = {}): Promise<void> {
 
   io.write('Advanced · Testing custom commands');
   io.write(
-    'Use one-tool/testing to create registries, run commands directly, and generate conformance cases.',
+    'Use @onetool/one-tool/testing to create registries, run commands directly, and generate conformance cases.',
   );
   io.write(`Conformance cases: ${cases.length}`);
   io.write(`First case: ${cases[0]?.commandName} — ${cases[0]?.name}`);
