@@ -1,6 +1,16 @@
 // Core runtime
 export { AgentCLI, createAgentCLI } from './runtime.js';
-export type { AgentCLIOptions, AgentCLIOutputLimits, ToolDescriptionVariant } from './runtime.js';
+export type {
+  AgentCLIOptions,
+  AgentCLIOutputLimits,
+  CommandExecutionTrace,
+  PipelineExecutionTrace,
+  PipelineSkippedReason,
+  PresentationStdoutMode,
+  RunExecution,
+  RunPresentation,
+  ToolDescriptionVariant,
+} from './runtime.js';
 
 // VFS interface + backends
 export type { VFS, VFileInfo } from './vfs/interface.js';

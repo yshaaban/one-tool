@@ -3,9 +3,7 @@ import * as path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-import type { AgentCLI, ToolDescriptionVariant } from '../src/index.js';
-import { buildToolDefinition } from '../src/index.js';
-import { errorMessage } from '../src/utils.js';
+import { buildToolDefinition, type AgentCLI, type ToolDescriptionVariant } from 'one-tool';
 
 export interface ToolCall {
   id: string;
@@ -61,6 +59,10 @@ export interface AgentTurnOptions {
 export interface AgentTurnResult {
   reply: string;
   toolCallCount: number;
+}
+
+function errorMessage(caught: unknown): string {
+  return caught instanceof Error ? caught.message : String(caught);
 }
 
 export function loadEnvFile(): void {

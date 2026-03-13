@@ -1,4 +1,4 @@
-import type { AgentCLI } from '../runtime.js';
+import type { AgentCLI, RunExecution } from '../runtime.js';
 import type { OracleCommandSpec, ScenarioSpec } from './scenario.js';
 
 export interface OracleStepTrace {
@@ -7,6 +7,7 @@ export interface OracleStepTrace {
   body: string;
   exitCode: number;
   expectedExitCode: number;
+  execution: RunExecution;
 }
 
 export interface OracleTrace {
@@ -16,11 +17,6 @@ export interface OracleTrace {
   finalBody: string;
   finalExitCode: number;
   totalDurationMs: number;
-}
-
-interface PresentedOutput {
-  body: string;
-  exitCode: number;
 }
 
 export async function runOracle(runtime: AgentCLI, scenario: ScenarioSpec): Promise<OracleTrace> {
@@ -36,19 +32,19 @@ export async function runOracle(runtime: AgentCLI, scenario: ScenarioSpec): Prom
 
   for (const oracleStep of scenario.oracle) {
     const normalizedStep = normalizeOracleStep(oracleStep);
-    const output = await runtime.run(normalizedStep.command);
-    const presented = parsePresentedOutput(output);
+    const execution = await runtime.runDetailed(normalizedStep.command);
 
     steps.push({
       command: normalizedStep.command,
-      output,
-      body: presented.body,
-      exitCode: presented.exitCode,
+      output: execution.presentation.text,
+      body: execution.presentation.body,
+      exitCode: execution.exitCode,
       expectedExitCode: normalizedStep.expectedExitCode,
+      execution,
     });
-    finalOutput = output;
-    finalBody = presented.body;
-    finalExitCode = presented.exitCode;
+    finalOutput = execution.presentation.text;
+    finalBody = execution.presentation.body;
+    finalExitCode = execution.exitCode;
   }
 
   return {
@@ -72,18 +68,5 @@ function normalizeOracleStep(step: string | OracleCommandSpec): Required<OracleC
   return {
     command: step.command,
     expectedExitCode: step.expectedExitCode ?? 0,
-  };
-}
-
-function parsePresentedOutput(output: string): PresentedOutput {
-  const footerMatch = output.match(/\[exit:(\d+) \| [^\]]+\]\s*$/);
-  if (!footerMatch || footerMatch.index === undefined) {
-    throw new Error(`oracle output is missing an exit footer:\n${output}`);
-  }
-
-  const body = output.slice(0, footerMatch.index).replace(/\n+$/, '');
-  return {
-    body,
-    exitCode: Number(footerMatch[1]),
   };
 }

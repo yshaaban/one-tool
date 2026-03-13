@@ -4,6 +4,7 @@ import test from 'node:test';
 test('package exports resolve the documented entrypoints', async function (): Promise<void> {
   const root = await import('one-tool');
   const commands = await import('one-tool/commands');
+  const extensions = await import('one-tool/extensions');
   const testing = await import('one-tool/testing');
   const memoryVfs = await import('one-tool/vfs/memory');
   const nodeVfs = await import('one-tool/vfs/node');
@@ -31,6 +32,16 @@ test('package exports resolve the documented entrypoints', async function (): Pr
   assert.equal(typeof commands.sort, 'object');
   assert.equal(typeof commands.uniq, 'object');
   assert.equal(typeof commands.wc, 'object');
+
+  assert.equal(typeof extensions.collectCommands, 'function');
+  assert.equal(typeof extensions.defineCommandGroup, 'function');
+  assert.equal(typeof extensions.formatVfsError, 'function');
+  assert.equal(typeof extensions.parseCountFlag, 'function');
+  assert.equal(typeof extensions.readBytesInput, 'function');
+  assert.equal(typeof extensions.readJsonInput, 'function');
+  assert.equal(typeof extensions.readTextInput, 'function');
+  assert.equal(typeof extensions.stdinNotAcceptedError, 'function');
+  assert.equal(typeof extensions.usageError, 'function');
 
   assert.equal(typeof testing.createCommandConformanceCases, 'function');
   assert.equal(typeof testing.createTestCommandContext, 'function');

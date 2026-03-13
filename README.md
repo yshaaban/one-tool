@@ -38,11 +38,13 @@ It is built for the common agent problem:
   - full command reference in [`docs/command-reference.md`](docs/command-reference.md)
 - API and integration reference:
   - [`docs/api.md`](docs/api.md)
+  - [`docs/examples.md`](docs/examples.md)
   - [`docs/vfs.md`](docs/vfs.md)
   - [`docs/providers.md`](docs/providers.md)
 - Command authoring:
   - [`COMMANDS.md`](COMMANDS.md)
   - runnable example: `npm run example:custom-command`
+  - public helper surface: `one-tool/extensions`
 
 ---
 
@@ -87,6 +89,7 @@ The result is a model-facing interface that is simpler, but still expressive.
 npm install
 npm run build
 npm run demo
+npm run examples:list
 ```
 
 The demo runtime seeds:
@@ -113,6 +116,8 @@ cp .env.example .env
 ```
 
 Then fill in either the Groq or OpenAI section described in [`docs/providers.md`](docs/providers.md).
+
+For the full tiered sample catalog, see [`docs/examples.md`](docs/examples.md).
 
 ---
 
@@ -242,7 +247,29 @@ Yes.
 
 - authoring guide: [`COMMANDS.md`](COMMANDS.md)
 - runnable custom example: `npm run example:custom-command`
+- public helper surface: `one-tool/extensions`
 - API details: [`docs/api.md#command-extension-surface`](docs/api.md#command-extension-surface)
+
+### How do I inspect execution programmatically?
+
+Use `runtime.runDetailed(commandLine)`.
+
+It returns:
+
+- raw stdout bytes
+- structured stderr and exit code
+- per-command trace data for pipelines and chained commands
+- presentation metadata for truncation and binary-guard cases
+
+Reference: [`docs/api.md#structured-execution`](docs/api.md#structured-execution)
+
+### Where should I start with the examples?
+
+- start with [`docs/examples.md`](docs/examples.md)
+- use a **quickstart** for the first integration
+- use a **recipe** for a specific API pattern
+- use an **application** sample for a realistic workflow
+- use a **reference** example when you want the maintained end-to-end path
 
 ### Does this work with my model provider?
 
@@ -340,18 +367,22 @@ Full command tables, examples, and workflows: [`docs/command-reference.md`](docs
 
 Primary entrypoints:
 
-| Surface                                          | Purpose                                             | Reference                                                                    |
-| ------------------------------------------------ | --------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `createAgentCLI(...)`                            | create a runtime                                    | [`docs/api.md#core-runtime`](docs/api.md#core-runtime)                       |
-| `buildToolDefinition(...)`                       | expose an OpenAI-compatible tool definition         | [`docs/api.md#tool-definition`](docs/api.md#tool-definition)                 |
-| `CommandRegistry` / `createCommandRegistry(...)` | select, override, and compose commands              | [`docs/api.md#command-registry`](docs/api.md#command-registry)               |
-| `one-tool/testing`                               | test custom commands and conformance                | [`docs/api.md#command-testing-helpers`](docs/api.md#command-testing-helpers) |
-| package subpaths                                 | import focused surfaces like `one-tool/vfs/browser` | [`docs/api.md#package-exports`](docs/api.md#package-exports)                 |
+| Surface                                          | Purpose                                              | Reference                                                                      |
+| ------------------------------------------------ | ---------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `createAgentCLI(...)`                            | create a runtime                                     | [`docs/api.md#core-runtime`](docs/api.md#core-runtime)                         |
+| `runtime.runDetailed(...)`                       | inspect structured execution results and traces      | [`docs/api.md#structured-execution`](docs/api.md#structured-execution)         |
+| `buildToolDefinition(...)`                       | expose an OpenAI-compatible tool definition          | [`docs/api.md#tool-definition`](docs/api.md#tool-definition)                   |
+| `CommandRegistry` / `createCommandRegistry(...)` | select, override, and compose commands               | [`docs/api.md#command-registry`](docs/api.md#command-registry)                 |
+| `one-tool/extensions`                            | author custom commands with stable helper utilities  | [`docs/api.md#public-extension-helpers`](docs/api.md#public-extension-helpers) |
+| `one-tool/testing`                               | test custom commands and deterministic scenario runs | [`docs/api.md#command-testing-helpers`](docs/api.md#command-testing-helpers)   |
+| package subpaths                                 | import focused surfaces like `one-tool/vfs/browser`  | [`docs/api.md#package-exports`](docs/api.md#package-exports)                   |
 
 Most integrations only need:
 
 - `runtime.run(commandLine)`
 - `buildToolDefinition(runtime)`
+
+When you need observability, test assertions, or per-step telemetry, use `runtime.runDetailed(commandLine)` instead of parsing the formatted string from `run(...)`.
 
 Full API reference: [`docs/api.md`](docs/api.md)
 

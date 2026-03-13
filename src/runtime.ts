@@ -29,6 +29,64 @@ export interface AgentCLIOutputLimits {
 }
 
 export type ToolDescriptionVariant = 'full-tool-description' | 'minimal-tool-description' | 'terse';
+export type PipelineSkippedReason = 'previous_failed' | 'previous_succeeded';
+export type PresentationStdoutMode = 'plain' | 'truncated' | 'binary-guard';
+
+export interface CommandExecutionTrace {
+  argv: string[];
+  stdinBytes: number;
+  stdoutBytes: number;
+  stderr: string;
+  exitCode: number;
+  durationMs: number;
+  contentType: string;
+}
+
+export interface PipelineExecutionTrace {
+  relationFromPrevious: '&&' | '||' | ';' | null;
+  executed: boolean;
+  skippedReason?: PipelineSkippedReason;
+  commands: CommandExecutionTrace[];
+  exitCode?: number;
+}
+
+export interface RunPresentation {
+  text: string;
+  body: string;
+  stdoutMode: PresentationStdoutMode;
+  savedPath?: string;
+  totalBytes?: number;
+  totalLines?: number;
+}
+
+export interface RunExecution {
+  commandLine: string;
+  exitCode: number;
+  durationMs: number;
+  stdout: Uint8Array;
+  stderr: string;
+  contentType: string;
+  trace: PipelineExecutionTrace[];
+  presentation: RunPresentation;
+}
+
+interface ChainExecutionResult {
+  result: CommandResult;
+  trace: PipelineExecutionTrace[];
+}
+
+interface PipelineExecutionResult {
+  result: CommandResult;
+  trace: PipelineExecutionTrace;
+}
+
+interface RenderedStdout {
+  text: string;
+  stdoutMode: PresentationStdoutMode;
+  savedPath?: string;
+  totalBytes?: number;
+  totalLines?: number;
+}
 
 export class AgentCLI {
   public readonly registry: CommandRegistry;
@@ -71,85 +129,123 @@ export class AgentCLI {
   }
 
   async run(commandLine: string): Promise<string> {
+    const execution = await this.runDetailed(commandLine);
+    return execution.presentation.text;
+  }
+
+  async runDetailed(commandLine: string): Promise<RunExecution> {
     const started = performance.now();
 
     try {
       const chain = parseCommandLine(commandLine);
-      const result = await this.executeChain(chain);
-      const durationMs = Math.max(0, Math.round(performance.now() - started));
-      return this.present(result, durationMs);
+      const execution = await this.executeChain(chain);
+      return this.finalizeRunExecution(commandLine, execution.result, execution.trace, started);
     } catch (caught) {
-      const durationMs = Math.max(0, Math.round(performance.now() - started));
       if (caught instanceof ParseError) {
-        return this.present(err(caught.message, { exitCode: 2 }), durationMs);
+        return this.finalizeRunExecution(commandLine, err(caught.message, { exitCode: 2 }), [], started);
       }
-      return this.present(
+      return this.finalizeRunExecution(
+        commandLine,
         err(`internal runtime error: ${errorMessage(caught)}`, { exitCode: 1 }),
-        durationMs,
+        [],
+        started,
       );
     }
   }
 
-  private async executeChain(chain: ChainNode[]): Promise<CommandResult> {
+  private async executeChain(chain: ChainNode[]): Promise<ChainExecutionResult> {
     const aggregate: number[] = [];
     let lastResult = ok('');
+    const trace: PipelineExecutionTrace[] = [];
 
     for (const item of chain) {
-      if (!this.shouldRun(item.relationFromPrevious, lastResult.exitCode)) {
+      const skippedReason = getPipelineSkippedReason(item.relationFromPrevious, lastResult.exitCode);
+      if (skippedReason !== null) {
+        trace.push({
+          relationFromPrevious: item.relationFromPrevious,
+          executed: false,
+          skippedReason,
+          commands: [],
+        });
         continue;
       }
 
-      const pipelineResult = await this.executePipeline(item.pipeline);
-      if (pipelineResult.stdout.length > 0) {
+      const pipelineResult = await this.executePipeline(item.pipeline, item.relationFromPrevious);
+      trace.push(pipelineResult.trace);
+      if (pipelineResult.result.stdout.length > 0) {
         if (
           aggregate.length > 0 &&
           aggregate[aggregate.length - 1] !== 10 &&
-          pipelineResult.stdout[0] !== 10
+          pipelineResult.result.stdout[0] !== 10
         ) {
           aggregate.push(10);
         }
-        aggregate.push(...pipelineResult.stdout);
+        aggregate.push(...pipelineResult.result.stdout);
       }
-      lastResult = pipelineResult;
+      lastResult = pipelineResult.result;
     }
 
     return {
-      stdout: new Uint8Array(aggregate),
-      stderr: lastResult.stderr,
-      exitCode: lastResult.exitCode,
-      contentType: lastResult.contentType,
+      result: {
+        stdout: new Uint8Array(aggregate),
+        stderr: lastResult.stderr,
+        exitCode: lastResult.exitCode,
+        contentType: lastResult.contentType,
+      },
+      trace,
     };
   }
 
-  private shouldRun(relation: '&&' | '||' | ';' | null, previousExitCode: number): boolean {
-    if (relation === null || relation === ';') {
-      return true;
-    }
-    if (relation === '&&') {
-      return previousExitCode === 0;
-    }
-    if (relation === '||') {
-      return previousExitCode !== 0;
-    }
-    return true;
-  }
-
-  private async executePipeline(pipeline: PipelineNode): Promise<CommandResult> {
+  private async executePipeline(
+    pipeline: PipelineNode,
+    relationFromPrevious: '&&' | '||' | ';' | null,
+  ): Promise<PipelineExecutionResult> {
     let currentStdin = new Uint8Array();
     let last = ok('');
+    const commandTrace: CommandExecutionTrace[] = [];
 
     for (const node of pipeline.commands) {
       if (node.argv.length === 0) {
-        return err('empty command in pipeline', { exitCode: 2 });
+        last = err('empty command in pipeline', { exitCode: 2 });
+        commandTrace.push({
+          argv: [],
+          stdinBytes: currentStdin.length,
+          stdoutBytes: 0,
+          stderr: last.stderr,
+          exitCode: last.exitCode,
+          durationMs: 0,
+          contentType: last.contentType,
+        });
+        break;
       }
+
+      const started = performance.now();
       last = await this.dispatch(node.argv, currentStdin);
+      commandTrace.push({
+        argv: [...node.argv],
+        stdinBytes: currentStdin.length,
+        stdoutBytes: last.stdout.length,
+        stderr: last.stderr,
+        exitCode: last.exitCode,
+        durationMs: Math.max(0, Math.round(performance.now() - started)),
+        contentType: last.contentType,
+      });
+
       if (last.exitCode !== 0) {
-        return last;
+        break;
       }
       currentStdin = new Uint8Array(last.stdout);
     }
 
-    return last;
+    return {
+      result: last,
+      trace: {
+        relationFromPrevious,
+        executed: true,
+        commands: commandTrace,
+        exitCode: last.exitCode,
+      },
+    };
   }
 
   private async dispatch(argv: string[], stdin: Uint8Array): Promise<CommandResult> {
@@ -166,21 +262,60 @@ export class AgentCLI {
     return spec.handler(this.ctx, argv.slice(1), stdin);
   }
 
-  private async present(result: CommandResult, durationMs: number): Promise<string> {
+  private async finalizeRunExecution(
+    commandLine: string,
+    result: CommandResult,
+    trace: PipelineExecutionTrace[],
+    started: number,
+  ): Promise<RunExecution> {
+    const durationMs = Math.max(0, Math.round(performance.now() - started));
+    const presentation = await this.present(result, durationMs);
+
+    return {
+      commandLine,
+      exitCode: result.exitCode,
+      durationMs,
+      stdout: new Uint8Array(result.stdout),
+      stderr: result.stderr,
+      contentType: result.contentType,
+      trace,
+      presentation,
+    };
+  }
+
+  private async present(result: CommandResult, durationMs: number): Promise<RunPresentation> {
     const parts: string[] = [];
+    const presentation: RunPresentation = {
+      text: '',
+      body: '',
+      stdoutMode: 'plain',
+    };
 
     if (result.stdout.length > 0) {
       if (looksBinary(result.stdout)) {
         const saved = await this.storeOverflowBytes(result.stdout, '.bin');
+        presentation.stdoutMode = 'binary-guard';
+        presentation.savedPath = saved;
+        presentation.totalBytes = result.stdout.length;
         parts.push(
           '[error] command produced binary output that should not be sent to the model.\n' +
             `Saved to: ${saved}\n` +
             `Use: stat ${saved}`,
         );
       } else {
-        const stdoutText = await this.applyOverflow(textDecoder.decode(result.stdout));
-        if (stdoutText.trim().length > 0) {
-          parts.push(stdoutText.trimEnd());
+        const renderedStdout = await this.applyOverflow(textDecoder.decode(result.stdout));
+        presentation.stdoutMode = renderedStdout.stdoutMode;
+        if (renderedStdout.savedPath !== undefined) {
+          presentation.savedPath = renderedStdout.savedPath;
+        }
+        if (renderedStdout.totalBytes !== undefined) {
+          presentation.totalBytes = renderedStdout.totalBytes;
+        }
+        if (renderedStdout.totalLines !== undefined) {
+          presentation.totalLines = renderedStdout.totalLines;
+        }
+        if (renderedStdout.text.trim().length > 0) {
+          parts.push(renderedStdout.text.trimEnd());
         }
       }
     }
@@ -191,18 +326,23 @@ export class AgentCLI {
       parts.push(`[stderr] ${result.stderr.trim()}`);
     }
 
-    parts.push(`[exit:${result.exitCode} | ${formatDuration(durationMs)}]`);
-    return parts.join('\n\n');
+    presentation.body = parts.join('\n\n');
+    const footer = `[exit:${result.exitCode} | ${formatDuration(durationMs)}]`;
+    presentation.text = presentation.body.length > 0 ? `${presentation.body}\n\n${footer}` : footer;
+    return presentation;
   }
 
-  private async applyOverflow(text: string): Promise<string> {
+  private async applyOverflow(text: string): Promise<RenderedStdout> {
     const { maxLines, maxBytes } = this.outputLimits;
     const encoder = new TextEncoder();
     const encoded = encoder.encode(text);
     const lines = splitLines(text);
 
     if (lines.length <= maxLines && encoded.length <= maxBytes) {
-      return text;
+      return {
+        text,
+        stdoutMode: 'plain',
+      };
     }
 
     const saved = await this.storeOverflowText(text);
@@ -218,11 +358,13 @@ export class AgentCLI {
       `Explore: cat ${saved} | grep <pattern>\n` +
       `         cat ${saved} | tail -n 100`;
 
-    if (preview.length === 0) {
-      return meta;
-    }
-
-    return `${preview}\n\n${meta}`;
+    return {
+      text: preview.length === 0 ? meta : `${preview}\n\n${meta}`,
+      stdoutMode: 'truncated',
+      savedPath: saved,
+      totalBytes: encoded.length,
+      totalLines: lines.length,
+    };
   }
 
   private async storeOverflowText(text: string): Promise<string> {
@@ -312,6 +454,19 @@ function buildDiscoveryLines(hasHelp: boolean): string[] {
   discovery.push("  - run '<command>' with no args for usage");
   discovery.push('  - use pipes for composition');
   return discovery;
+}
+
+function getPipelineSkippedReason(
+  relation: '&&' | '||' | ';' | null,
+  previousExitCode: number,
+): PipelineSkippedReason | null {
+  if (relation === '&&' && previousExitCode !== 0) {
+    return 'previous_failed';
+  }
+  if (relation === '||' && previousExitCode === 0) {
+    return 'previous_succeeded';
+  }
+  return null;
 }
 
 export async function createAgentCLI(options: AgentCLIOptions): Promise<AgentCLI> {

@@ -1,4 +1,4 @@
-import { createAgentCLI, type AgentCLI, type VFS, NodeVFS, SimpleMemory } from '../src/index.js';
+import { createAgentCLI, type AgentCLI, type VFS, NodeVFS, SimpleMemory } from 'one-tool';
 import { DemoFetch, DemoSearch } from './demo-adapters.js';
 import {
   DEMO_FETCH_RESOURCES,

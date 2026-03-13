@@ -94,6 +94,7 @@ class AgentCLI {
 
   initialize(): Promise<void>;
   run(commandLine: string): Promise<string>;
+  runDetailed(commandLine: string): Promise<RunExecution>;
   buildToolDescription(variant?: ToolDescriptionVariant): string;
 }
 ```
@@ -119,6 +120,80 @@ type ToolDescriptionVariant = 'full-tool-description' | 'minimal-tool-descriptio
 - `terse` lists command names without summaries
 
 If you construct `new AgentCLI(options)` directly instead of using `createAgentCLI(options)`, call `await runtime.initialize()` before the first `run(...)` so the internal output directory exists.
+
+---
+
+## Structured execution
+
+`run(commandLine)` returns the traditional formatted string that is designed for model consumption.
+
+`runDetailed(commandLine)` exposes the same execution in structured form so integrations do not need to parse presentation text.
+
+```ts
+interface RunExecution {
+  commandLine: string;
+  exitCode: number;
+  durationMs: number;
+  stdout: Uint8Array;
+  stderr: string;
+  contentType: string;
+  trace: PipelineExecutionTrace[];
+  presentation: RunPresentation;
+}
+
+interface PipelineExecutionTrace {
+  relationFromPrevious: '&&' | '||' | ';' | null;
+  executed: boolean;
+  skippedReason?: 'previous_failed' | 'previous_succeeded';
+  commands: CommandExecutionTrace[];
+  exitCode?: number;
+}
+
+interface CommandExecutionTrace {
+  argv: string[];
+  stdinBytes: number;
+  stdoutBytes: number;
+  stderr: string;
+  exitCode: number;
+  durationMs: number;
+  contentType: string;
+}
+
+interface RunPresentation {
+  text: string;
+  body: string;
+  stdoutMode: 'plain' | 'truncated' | 'binary-guard';
+  savedPath?: string;
+  totalBytes?: number;
+  totalLines?: number;
+}
+```
+
+Use `runDetailed(...)` when you need:
+
+- per-command traces
+- structured exit status
+- binary-guard and truncation metadata
+- deterministic test assertions
+- application telemetry
+
+Example:
+
+```ts
+const execution = await runtime.runDetailed('cat /logs/app.log | grep ERROR');
+
+console.log(execution.exitCode);
+console.log(execution.trace[0]?.commands[1]?.argv);
+console.log(execution.presentation.stdoutMode);
+console.log(execution.presentation.body);
+```
+
+Notes:
+
+- `presentation.text` matches what `run(...)` returns
+- `presentation.body` omits the trailing `[exit:...]` footer
+- `stdout` always contains the raw command output bytes, even when `presentation.stdoutMode` is `truncated` or `binary-guard`
+- `trace` records skipped pipelines for `&&` and `||`, not just executed ones
 
 ---
 
@@ -255,6 +330,63 @@ type CommandHandler = (
 ```
 
 The metadata fields are optional in the public type, but built-in commands in this repo use them so the conformance suite can validate them automatically.
+
+### Public extension helpers
+
+For stable command-authoring helpers, import from `one-tool/extensions`:
+
+```ts
+import {
+  collectCommands,
+  defineCommandGroup,
+  formatVfsError,
+  missingAdapterError,
+  parseCountFlag,
+  readBytesInput,
+  readJsonInput,
+  readTextInput,
+  stdinNotAcceptedError,
+  usageError,
+} from 'one-tool/extensions';
+```
+
+These helpers cover the most common authoring needs without importing repo-internal modules:
+
+- `usageError(commandName, usage)` for consistent usage failures
+- `stdinNotAcceptedError(commandName)` for commands that reject piped input
+- `missingAdapterError(commandName, adapterName)` for adapter-backed commands
+- `formatVfsError(ctx, commandName, inputPath, caught, options?)` for agent-friendly VFS error translation
+- `readTextInput(...)` for file-or-stdin text input
+- `readBytesInput(...)` for file-or-stdin byte input
+- `readJsonInput(...)` for JSON input from a file or stdin
+- `parseCountFlag(...)` for `-n <count>` style flags
+- `defineCommandGroup(...)` and `collectCommands(...)` for packaging custom command sets
+
+Example:
+
+```ts
+import { type CommandSpec, ok } from 'one-tool';
+import { stdinNotAcceptedError, usageError } from 'one-tool/extensions';
+
+const echo: CommandSpec = {
+  name: 'echo',
+  summary: 'Echo text back to stdout.',
+  usage: 'echo <text...>',
+  details: 'Examples:\n  echo hello world',
+  async handler(_ctx, args, stdin) {
+    if (stdin.length > 0) {
+      return stdinNotAcceptedError('echo');
+    }
+    if (args.length === 0) {
+      return usageError('echo', 'echo <text...>');
+    }
+    return ok(args.join(' '));
+  },
+  acceptsStdin: false,
+  minArgs: 1,
+  conformanceArgs: ['hello', 'world'],
+};
+```
 
 For authoring patterns and examples:
 
@@ -461,6 +593,7 @@ You can also import `BrowserVFS` from the root entrypoint when your environment 
 | ---------------------- | -------------------------------------------------------------------------------------------- |
 | `one-tool`             | Core runtime, types, command APIs, testing helpers, tool schema, and all VFS backends        |
 | `one-tool/commands`    | Command registry helpers, built-in command groups, and command specs                         |
+| `one-tool/extensions`  | Stable command-authoring helpers for input handling, VFS errors, flags, and command groups   |
 | `one-tool/testing`     | Stable command-testing helpers, deterministic scenario-test helpers, and conformance helpers |
 | `one-tool/vfs/node`    | `NodeVFS` and deprecated `RootedVFS`                                                         |
 | `one-tool/vfs/memory`  | `MemoryVFS`                                                                                  |
@@ -471,6 +604,8 @@ You can also import `BrowserVFS` from the root entrypoint when your environment 
 ## Output model
 
 The runtime returns one formatted string per `run(...)` call.
+
+If you need structured data instead of formatted text, use [`runDetailed(...)`](#structured-execution).
 
 ### Successful text output
 

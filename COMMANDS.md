@@ -15,6 +15,7 @@ For consumers outside this repo, the public command-registration API lives in:
 
 - `one-tool/commands`
 - root exports from `one-tool`
+- stable authoring helpers live in `one-tool/extensions`
 - stable test helpers live in `one-tool/testing`
 
 Built-in group selection uses these string names:
@@ -30,15 +31,15 @@ These correspond to the exported arrays `systemCommands`, `fsCommands`, `textCom
 ## Minimal Example
 
 ```ts
-import { err, ok } from '../../types.js';
-import type { CommandContext, CommandSpec } from '../core.js';
+import { ok, type CommandContext, type CommandResult, type CommandSpec } from 'one-tool';
+import { stdinNotAcceptedError, usageError } from 'one-tool/extensions';
 
-async function cmdEcho(_ctx: CommandContext, args: string[], stdin: Uint8Array) {
+async function cmdEcho(_ctx: CommandContext, args: string[], stdin: Uint8Array): Promise<CommandResult> {
   if (stdin.length > 0) {
-    return err('echo: does not accept stdin');
+    return stdinNotAcceptedError('echo');
   }
   if (args.length === 0) {
-    return err('echo: usage: echo <text...>');
+    return usageError('echo', 'echo <text...>');
   }
   return ok(args.join(' '));
 }
@@ -160,52 +161,50 @@ Use these rules consistently:
 - translate VFS error codes into plain language instead of leaking raw `ENOENT` or `EISDIR`
 - reserve fallback `errorMessage(...)` output for genuinely unexpected failures
 
-For read-style commands, normalize the path once and translate the common VFS cases explicitly:
+For many commands, the simplest path is to use the stable helpers from `one-tool/extensions` and avoid duplicating input parsing or VFS error translation:
 
 ```ts
-import type { CommandResult } from '../../types.js';
-import { err, okBytes } from '../../types.js';
-import { errorMessage, parentPath } from '../../utils.js';
-import type { CommandContext } from '../core.js';
-import { errorCode } from '../shared/errors.js';
+import { okBytes, type CommandContext, type CommandResult } from 'one-tool';
+import { formatVfsError, stdinNotAcceptedError, usageError } from 'one-tool/extensions';
 
 async function cmdShow(ctx: CommandContext, args: string[], stdin: Uint8Array): Promise<CommandResult> {
   if (stdin.length > 0) {
-    return err('show: does not accept stdin');
+    return stdinNotAcceptedError('show');
   }
   if (args.length !== 1) {
-    return err('show: usage: show <path>');
+    return usageError('show', 'show <path>');
   }
 
-  const targetPath = ctx.vfs.normalize(args[0]!);
+  const targetPath = args[0]!;
 
   try {
     const bytes = await ctx.vfs.readBytes(targetPath);
     return okBytes(bytes, 'application/octet-stream');
   } catch (caught) {
-    const code = errorCode(caught);
-
-    if (code === 'ENOENT') {
-      return err(`show: file not found: ${targetPath}. Use: ls ${parentPath(targetPath)}`);
-    }
-    if (code === 'EISDIR') {
-      return err(`show: path is a directory: ${targetPath}. Use: ls ${targetPath}`);
-    }
-
-    return err(`show: ${errorMessage(caught)}`);
+    return formatVfsError(ctx, 'show', targetPath, caught, {
+      notFoundLabel: 'file not found',
+    });
   }
 }
 ```
 
-For write-style commands, prefer reporting the blocking ancestor instead of a generic failure:
+For text input that may come from stdin or a file, use the input helpers:
 
 ```ts
-import { err } from '../../types.js';
-import { blockingParentPath } from '../shared/errors.js';
+import { ok, type CommandContext, type CommandResult } from 'one-tool';
+import { readTextInput, usageError } from 'one-tool/extensions';
 
-const blockedParent = await blockingParentPath(ctx, outputPath);
-if (blockedParent) {
-  return err(`write: parent is not a directory: ${blockedParent}`);
+async function cmdPreview(ctx: CommandContext, args: string[], stdin: Uint8Array): Promise<CommandResult> {
+  if (args.length > 1) {
+    return usageError('preview', 'preview [path]');
+  }
+
+  const input = await readTextInput(ctx, 'preview', args[0], stdin);
+  if (!input.ok) {
+    return input.error;
+  }
+
+  return ok(input.value.slice(0, 80));
 }
 ```
 
@@ -218,20 +217,21 @@ Good errors in this SDK usually follow one of these shapes:
 
 ## Useful Helpers
 
-- `src/commands/shared/errors.ts`
-  - `errorCode(...)`
-  - `errorPath(...)`
-  - `blockingParentPath(...)`
-  - `firstFileInPath(...)`
-- `src/commands/shared/io.ts`
-  - `renderHelp(...)`
-  - `readTextFromFileOrStdin(...)`
-  - `contentFromArgsOrStdin(...)`
-  - `parseNFlag(...)`
-- `src/commands/shared/json.ts`
-  - `loadJson(...)`
-  - `extractJsonPath(...)`
-  - `renderFetchPayload(...)`
+- `one-tool/extensions`
+  - `usageError(...)`
+  - `stdinNotAcceptedError(...)`
+  - `missingAdapterError(...)`
+  - `formatVfsError(...)`
+  - `readTextInput(...)`
+  - `readBytesInput(...)`
+  - `readJsonInput(...)`
+  - `parseCountFlag(...)`
+  - `defineCommandGroup(...)`
+  - `collectCommands(...)`
+
+These are the stable helpers for downstream command authors.
+
+Repo-internal helpers under `src/commands/shared/` still exist for the built-in command implementations in this repository, but they are not the public command-authoring surface.
 
 ## Command-Specific Tests
 
