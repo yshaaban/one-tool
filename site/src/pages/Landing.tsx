@@ -94,6 +94,9 @@ export function Landing() {
             <Link to="/playground" style={primaryCtaStyle}>
               Open Playground
             </Link>
+            <Link to="/examples/08-llm-agent" style={secondaryCtaStyle}>
+              Watch Agent Example
+            </Link>
             <Link to="/examples" style={secondaryCtaStyle}>
               Browse Examples
             </Link>
@@ -144,6 +147,26 @@ export function Landing() {
               </p>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section style={{ ...sectionStyle, paddingTop: 0 }}>
+        <div style={agentHeroStyle}>
+          <div>
+            <h2 style={agentHeroTitleStyle}>See the agent loop, not just the runtime</h2>
+            <p style={agentHeroTextStyle}>
+              The agent example shows the full pattern: prompt, tool call, tool output, and final answer. It
+              is the fastest way to see why one tool works well for agents.
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <Link to="/examples/08-llm-agent" style={primaryCtaStyle}>
+              Open Agent Example
+            </Link>
+            <Link to="/examples" style={secondaryCtaStyle}>
+              Compare All Samples
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -319,6 +342,34 @@ const principlesShellStyle: React.CSSProperties = {
   borderRadius: 'var(--radius)',
   border: '1px solid var(--border-subtle)',
   background: 'linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))',
+};
+
+const agentHeroStyle: React.CSSProperties = {
+  maxWidth: 'var(--max-width)',
+  margin: '0 auto',
+  padding: '1.25rem',
+  borderRadius: 'var(--radius)',
+  border: '1px solid rgba(110, 180, 255, 0.18)',
+  background: 'linear-gradient(180deg, rgba(110, 180, 255, 0.08), rgba(110, 180, 255, 0.03))',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: '1rem',
+  flexWrap: 'wrap',
+};
+
+const agentHeroTitleStyle: React.CSSProperties = {
+  fontSize: '1.05rem',
+  fontWeight: 600,
+  color: 'var(--text-bright)',
+};
+
+const agentHeroTextStyle: React.CSSProperties = {
+  marginTop: '0.35rem',
+  color: 'var(--text-muted)',
+  fontSize: '0.9rem',
+  lineHeight: 1.6,
+  maxWidth: '620px',
 };
 
 const principlesTitleStyle: React.CSSProperties = {

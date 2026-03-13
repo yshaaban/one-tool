@@ -7,10 +7,13 @@ export type ExampleRuntimeKind = 'empty' | 'demo' | 'custom-command' | 'readOnly
 
 export type ExampleExecutionKind = 'run' | 'runDetailed';
 
+export type ExampleGroup = 'cli-capabilities' | 'agent-workflows';
+
 export interface ExampleDef {
   id: string;
   title: string;
   description: string;
+  group: ExampleGroup;
   browserRunnable: boolean;
   requiresApiKey: boolean;
   steps?: ExampleStep[];
@@ -19,4 +22,5 @@ export interface ExampleDef {
   executionKind?: ExampleExecutionKind;
   autoPlay?: boolean;
   stepDelayMs?: number;
+  suggestedPrompts?: string[];
 }

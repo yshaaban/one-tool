@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { examples } from '../examples';
+import type { ExampleDef } from '../examples/types';
 
 const CATEGORY_COLORS: Record<string, { accent: string; dim: string }> = {
   '01': { accent: 'var(--accent)', dim: 'var(--accent-dim)' },
@@ -17,165 +18,136 @@ function getColors(id: string) {
 }
 
 export function ExampleIndex() {
-  const interactive = examples.filter((e) => e.browserRunnable && !e.requiresApiKey);
-  const advanced = examples.filter((e) => !e.browserRunnable || e.requiresApiKey);
+  const cliCapabilities = examples.filter((example) => example.group === 'cli-capabilities');
+  const agentWorkflows = examples.filter((example) => example.group === 'agent-workflows');
 
   return (
     <div style={containerStyle}>
       <div style={headerStyle}>
         <h1 style={titleStyle}>Examples</h1>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', maxWidth: '500px' }}>
-          These walkthroughs run in the browser-safe runtime and auto-play their steps in a live terminal.
+          Start with CLI capabilities to understand the runtime. Move to agent workflows to see why one tool
+          works well for agents.
         </p>
       </div>
 
-      {/* Interactive examples */}
-      <div style={gridStyle}>
-        {interactive.map((ex, i) => {
-          const colors = getColors(ex.id);
-          const firstCommand = ex.steps?.[0]?.command;
-          return (
-            <Link
-              key={ex.id}
-              to={`/examples/${ex.id}`}
-              style={{
-                ...cardStyle,
-                animation: `fadeInUp 0.4s ${i * 0.06}s both`,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = colors.accent;
-                e.currentTarget.style.background = 'var(--bg-elevated)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'var(--border-subtle)';
-                e.currentTarget.style.background = 'var(--bg-surface)';
-              }}
-            >
-              <div
-                style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '0.6rem' }}
-              >
-                <span
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '0.72rem',
-                    fontWeight: 600,
-                    color: colors.accent,
-                    background: colors.dim,
-                    padding: '0.2rem 0.5rem',
-                    borderRadius: '4px',
-                    flexShrink: 0,
-                  }}
-                >
-                  {ex.id.slice(0, 2)}
-                </span>
-                <span style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-bright)' }}>
-                  {ex.title}
-                </span>
-              </div>
-              <p
-                style={{
-                  color: 'var(--text-muted)',
-                  fontSize: '0.84rem',
-                  lineHeight: 1.55,
-                  marginBottom: '0.75rem',
-                }}
-              >
-                {ex.description}
-              </p>
-              {firstCommand && (
-                <div style={commandPreviewStyle}>
-                  <span style={{ color: 'var(--accent)', marginRight: '0.4rem' }}>$</span>
-                  {firstCommand}
-                </div>
-              )}
-            </Link>
-          );
-        })}
-      </div>
+      <ExampleSection
+        title="CLI capabilities"
+        description="Learn the runtime itself: commands, traces, persistence, and custom command composition."
+        examples={cliCapabilities}
+      />
 
-      {/* Advanced / non-interactive */}
-      {advanced.length > 0 && (
-        <>
-          <div style={{ margin: '2.5rem 0 1.25rem' }}>
-            <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-bright)' }}>Advanced</h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', marginTop: '0.25rem' }}>
-              These examples require Node.js or an API key.
-            </p>
-          </div>
-          <div style={gridStyle}>
-            {advanced.map((ex, i) => {
-              const colors = getColors(ex.id);
-              return (
-                <Link
-                  key={ex.id}
-                  to={`/examples/${ex.id}`}
-                  style={{
-                    ...cardStyle,
-                    animation: `fadeInUp 0.4s ${(interactive.length + i) * 0.06}s both`,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = colors.accent;
-                    e.currentTarget.style.background = 'var(--bg-elevated)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--border-subtle)';
-                    e.currentTarget.style.background = 'var(--bg-surface)';
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: '0.75rem',
-                      marginBottom: '0.6rem',
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: '0.72rem',
-                        fontWeight: 600,
-                        color: colors.accent,
-                        background: colors.dim,
-                        padding: '0.2rem 0.5rem',
-                        borderRadius: '4px',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {ex.id.slice(0, 2)}
-                    </span>
-                    <span style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-bright)' }}>
-                      {ex.title}
-                    </span>
-                    {!ex.browserRunnable && <span style={badgeStyle}>Node.js</span>}
-                    {ex.requiresApiKey && (
-                      <span
-                        style={{
-                          ...badgeStyle,
-                          borderColor: 'rgba(240, 199, 97, 0.25)',
-                          color: 'var(--yellow)',
-                        }}
-                      >
-                        API Key
-                      </span>
-                    )}
-                  </div>
-                  <p
-                    style={{
-                      color: 'var(--text-muted)',
-                      fontSize: '0.84rem',
-                      lineHeight: 1.55,
-                    }}
-                  >
-                    {ex.description}
-                  </p>
-                </Link>
-              );
-            })}
-          </div>
-        </>
-      )}
+      <ExampleSection
+        title="Agent workflows"
+        description="See how the same runtime becomes useful for real agent loops, retrieval, safety presets, MCP, and live tool use."
+        examples={agentWorkflows}
+        topMargin="2.5rem"
+      />
     </div>
+  );
+}
+
+function ExampleSection({
+  title,
+  description,
+  examples,
+  topMargin,
+}: {
+  title: string;
+  description: string;
+  examples: ExampleDef[];
+  topMargin?: string;
+}) {
+  return (
+    <section style={{ marginTop: topMargin ?? '0' }}>
+      <div style={{ marginBottom: '1.25rem' }}>
+        <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-bright)' }}>{title}</h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', marginTop: '0.25rem' }}>{description}</p>
+      </div>
+      <div style={gridStyle}>
+        {examples.map((example, index) => (
+          <ExampleCard key={example.id} example={example} animationDelay={index * 0.06} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ExampleCard({ example, animationDelay }: { example: ExampleDef; animationDelay: number }) {
+  const colors = getColors(example.id);
+  const firstCommand = example.steps?.[0]?.command;
+
+  return (
+    <Link
+      to={`/examples/${example.id}`}
+      style={{
+        ...cardStyle,
+        animation: `fadeInUp 0.4s ${animationDelay}s both`,
+      }}
+      onMouseEnter={(event) => {
+        event.currentTarget.style.borderColor = colors.accent;
+        event.currentTarget.style.background = 'var(--bg-elevated)';
+      }}
+      onMouseLeave={(event) => {
+        event.currentTarget.style.borderColor = 'var(--border-subtle)';
+        event.currentTarget.style.background = 'var(--bg-surface)';
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '0.75rem',
+          marginBottom: '0.6rem',
+        }}
+      >
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '0.72rem',
+            fontWeight: 600,
+            color: colors.accent,
+            background: colors.dim,
+            padding: '0.2rem 0.5rem',
+            borderRadius: '4px',
+            flexShrink: 0,
+          }}
+        >
+          {example.id.slice(0, 2)}
+        </span>
+        <span style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-bright)' }}>
+          {example.title}
+        </span>
+        {!example.browserRunnable && <span style={badgeStyle}>Node.js</span>}
+        {example.requiresApiKey && (
+          <span
+            style={{
+              ...badgeStyle,
+              borderColor: 'rgba(240, 199, 97, 0.25)',
+              color: 'var(--yellow)',
+            }}
+          >
+            API Key
+          </span>
+        )}
+      </div>
+      <p
+        style={{
+          color: 'var(--text-muted)',
+          fontSize: '0.84rem',
+          lineHeight: 1.55,
+          marginBottom: firstCommand ? '0.75rem' : 0,
+        }}
+      >
+        {example.description}
+      </p>
+      {firstCommand && (
+        <div style={commandPreviewStyle}>
+          <span style={{ color: 'var(--accent)', marginRight: '0.4rem' }}>$</span>
+          {firstCommand}
+        </div>
+      )}
+    </Link>
   );
 }
 

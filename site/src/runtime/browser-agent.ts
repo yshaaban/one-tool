@@ -1,15 +1,13 @@
 /**
- * Browser-safe agent loop — ported from examples/agent-support.ts.
+ * Browser-safe agent loop for the website.
  *
- * This is a copy (not import) because the original imports from `one-tool`
- * which pulls Node-only code. The site only aliases `one-tool/browser`.
+ * This browser demo targets OpenRouter's OpenAI-compatible HTTP API. That gives
+ * the site a browser-usable endpoint without pretending direct OpenAI browser
+ * requests are reliable.
  */
 
+import OpenAI from 'openai';
 import { buildToolDefinition, type AgentCLI, type ToolDescriptionVariant } from 'one-tool/browser';
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 
 export interface ToolCall {
   id: string;
@@ -43,7 +41,6 @@ export interface ChatMessage {
 export interface AgentConfig {
   apiKey: string;
   model: string;
-  baseUrl: string;
 }
 
 export interface AgentSession {
@@ -53,6 +50,8 @@ export interface AgentSession {
 
 export interface AgentTurnOptions {
   onToolCall?: (command: string, result: string) => void;
+  onToolCallStart?: (command: string) => void;
+  onToolCallComplete?: (command: string, result: string) => void;
 }
 
 export interface AgentTurnResult {
@@ -60,48 +59,34 @@ export interface AgentTurnResult {
   toolCallCount: number;
 }
 
-// ---------------------------------------------------------------------------
-// Defaults (the browser site intentionally uses an OpenAI-compatible API path)
-// ---------------------------------------------------------------------------
+export interface BrowserModelOption {
+  value: string;
+  label: string;
+}
 
-const DEFAULT_MODEL = 'gpt-5.2-chat-latest';
-const DEFAULT_BASE_URL = 'https://api.openai.com/v1';
+const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
+const OPENROUTER_REFERER = 'https://yrsh.github.io/one-tool/';
+const OPENROUTER_TITLE = 'one-tool website demo';
+const DEFAULT_MODEL = 'openai/gpt-oss-20b';
+const MAX_TOOL_ROUNDS = 20;
 
-export function createBrowserConfig(apiKey: string, model?: string, baseUrl?: string): AgentConfig {
+export const browserModelOptions: BrowserModelOption[] = [
+  { value: 'openai/gpt-oss-20b', label: 'OpenAI: gpt-oss-20b (recommended)' },
+  { value: 'openai/gpt-oss-safeguard-20b', label: 'OpenAI: gpt-oss-safeguard-20b' },
+  { value: 'meta-llama/llama-3.1-8b-instruct', label: 'Meta: Llama 3.1 8B Instruct' },
+  { value: 'minimax/minimax-m2.5', label: 'MiniMax: MiniMax M2.5' },
+  { value: 'x-ai/grok-4-fast', label: 'xAI: Grok 4 Fast' },
+  { value: 'stepfun/step-3.5-flash:free', label: 'StepFun: Step 3.5 Flash (free)' },
+];
+
+export function createBrowserConfig(apiKey: string, model?: string): AgentConfig {
   return {
     apiKey,
-    model: model || DEFAULT_MODEL,
-    baseUrl: normalizeBaseUrl(baseUrl || DEFAULT_BASE_URL),
+    model: (model || DEFAULT_MODEL).trim(),
   };
 }
 
-function normalizeBaseUrl(baseUrl: string): string {
-  return baseUrl.replace(/\/+$/, '');
-}
-
-// ---------------------------------------------------------------------------
-// System prompt
-// ---------------------------------------------------------------------------
-
-function buildSystemPrompt(
-  runtime: AgentCLI,
-  promptVariant: ToolDescriptionVariant = 'full-tool-description',
-): string {
-  const toolDescription = runtime.buildToolDescription(promptVariant);
-  const lines = [
-    'You are a helpful agent with access to a single tool called `run`.',
-    'It executes CLI-style commands over a virtual file system and registered adapters.',
-    "Use the tool to answer the user's questions. You can chain multiple calls.",
-    'When the task asks about files, logs, search, fetch, or memory, inspect the runtime with the tool before answering.',
-    '',
-    toolDescription,
-  ];
-  return lines.join('\n');
-}
-
-// ---------------------------------------------------------------------------
-// Session
-// ---------------------------------------------------------------------------
+export function disposeAgentSession(_session: AgentSession | null): void {}
 
 export function createAgentSession(runtime: AgentCLI): AgentSession {
   return {
@@ -110,9 +95,81 @@ export function createAgentSession(runtime: AgentCLI): AgentSession {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Chat completion (OpenAI-compatible)
-// ---------------------------------------------------------------------------
+export async function runAgentTurn(
+  runtime: AgentCLI,
+  config: AgentConfig,
+  userMessage: string,
+  session: AgentSession,
+  options: AgentTurnOptions = {},
+): Promise<AgentTurnResult> {
+  const nextMessages = session.messages.slice();
+  nextMessages.push({ role: 'user', content: userMessage });
+
+  let toolCallCount = 0;
+
+  for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+    const response = await chatCompletion(config, nextMessages, session.tools);
+    const choice = response.choices[0];
+    if (!choice) throw new Error('empty response from model');
+
+    const assistantMsg = choice.message;
+    const historyEntry: ChatMessage = { role: 'assistant', content: assistantMsg.content };
+    if (assistantMsg.tool_calls?.length) {
+      historyEntry.tool_calls = assistantMsg.tool_calls;
+    }
+    nextMessages.push(historyEntry);
+
+    if (!assistantMsg.tool_calls?.length) {
+      const reply = assistantMsg.content?.trim();
+      if (reply) {
+        session.messages = nextMessages;
+        return { reply, toolCallCount };
+      }
+
+      session.messages = nextMessages;
+      return {
+        reply: [
+          `The selected model (${config.model}) returned no text and no tool calls.`,
+          `For this demo, pick one of the models in the dropdown and try again.`,
+        ].join(' '),
+        toolCallCount,
+      };
+    }
+
+    toolCallCount += assistantMsg.tool_calls.length;
+
+    for (const toolCall of assistantMsg.tool_calls) {
+      const result = await runToolCall(runtime, toolCall, options);
+      nextMessages.push({
+        role: 'tool',
+        tool_call_id: toolCall.id,
+        content: result,
+      });
+    }
+  }
+
+  session.messages = nextMessages;
+  return { reply: '(max tool rounds reached)', toolCallCount };
+}
+
+function buildSystemPrompt(
+  runtime: AgentCLI,
+  promptVariant: ToolDescriptionVariant = 'full-tool-description',
+): string {
+  const toolDescription = runtime.buildToolDescription(promptVariant);
+  const commandNames = runtime.registry.names();
+  const commandList = commandNames.length > 0 ? commandNames.join(', ') : '(none)';
+  return [
+    'You are a helpful agent with access to a single tool called `run`.',
+    'It executes CLI-style commands over a virtual file system and registered adapters.',
+    "Use the tool to answer the user's questions. You can chain multiple calls.",
+    'When the task asks about files, logs, search, fetch, or memory, inspect the runtime with the tool before answering.',
+    `Available commands: ${commandList}`,
+    'Use `help` when you need to discover exact command usage.',
+    '',
+    toolDescription,
+  ].join('\n');
+}
 
 function errorMessage(caught: unknown): string {
   return caught instanceof Error ? caught.message : String(caught);
@@ -122,13 +179,16 @@ function delayMs(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function parseRetryAfter(value: string | null): number | null {
-  if (!value) return null;
-  const seconds = Number.parseFloat(value);
-  if (Number.isFinite(seconds)) return Math.max(0, Math.round(seconds * 1000));
-  const at = Date.parse(value);
-  if (Number.isNaN(at)) return null;
-  return Math.max(0, at - Date.now());
+function createOpenRouterClient(config: AgentConfig): OpenAI {
+  return new OpenAI({
+    apiKey: config.apiKey,
+    baseURL: OPENROUTER_BASE_URL,
+    dangerouslyAllowBrowser: true,
+    defaultHeaders: {
+      'HTTP-Referer': resolveSiteReferer(),
+      'X-Title': OPENROUTER_TITLE,
+    },
+  });
 }
 
 async function chatCompletion(
@@ -136,103 +196,66 @@ async function chatCompletion(
   messages: ChatMessage[],
   tools: ReturnType<typeof buildToolDefinition>[],
 ): Promise<ChatCompletionResponse> {
-  const url = `${config.baseUrl}/chat/completions`;
+  const client = createOpenRouterClient(config);
 
   for (let attempt = 0; attempt < 3; attempt++) {
-    let res: Response;
     try {
-      res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${config.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: config.model,
-          messages,
-          tools,
-          tool_choice: 'auto',
-        }),
+      const completion = await client.chat.completions.create({
+        model: config.model,
+        messages: messages as never,
+        tools,
+        tool_choice: 'auto',
       });
+
+      return completion as unknown as ChatCompletionResponse;
     } catch (caught) {
       if (attempt === 2) {
-        throw new Error(`Network error calling ${url}: ${errorMessage(caught)}`, { cause: caught });
+        throw new Error(`OpenRouter request failed for model ${config.model}: ${errorMessage(caught)}`, {
+          cause: caught,
+        });
       }
+
       await delayMs(500 * (attempt + 1));
-      continue;
     }
-
-    if (res.ok) {
-      return (await res.json()) as ChatCompletionResponse;
-    }
-
-    const body = await res.text();
-    const transient = res.status === 429 || res.status >= 500;
-    if (!transient || attempt === 2) {
-      throw new Error(`${config.baseUrl} API ${res.status}: ${body}`);
-    }
-
-    const retryAfterMs = parseRetryAfter(res.headers.get('retry-after')) ?? 500 * (attempt + 1);
-    await delayMs(retryAfterMs);
   }
 
-  throw new Error(`failed to call ${config.baseUrl} after retries`);
+  throw new Error(`failed to call OpenRouter after retries`);
 }
 
-// ---------------------------------------------------------------------------
-// Agent turn
-// ---------------------------------------------------------------------------
-
-const MAX_TOOL_ROUNDS = 20;
-
-export async function runAgentTurn(
+async function runToolCall(
   runtime: AgentCLI,
-  config: AgentConfig,
-  userMessage: string,
-  session: AgentSession,
-  options: AgentTurnOptions = {},
-): Promise<AgentTurnResult> {
-  session.messages.push({ role: 'user', content: userMessage });
+  toolCall: ToolCall,
+  options: AgentTurnOptions,
+): Promise<string> {
+  let command = extractToolCommand(toolCall.function.arguments);
+  let result = '';
 
-  let toolCallCount = 0;
+  options.onToolCallStart?.(command);
 
-  for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-    const response = await chatCompletion(config, session.messages, session.tools);
-    const choice = response.choices[0];
-    if (!choice) throw new Error('empty response from model');
-
-    const assistantMsg = choice.message;
-    const historyEntry: ChatMessage = { role: 'assistant', content: assistantMsg.content };
-    if (assistantMsg.tool_calls?.length) {
-      historyEntry.tool_calls = assistantMsg.tool_calls;
-    }
-    session.messages.push(historyEntry);
-
-    if (!assistantMsg.tool_calls?.length) {
-      return { reply: assistantMsg.content ?? '(no response)', toolCallCount };
-    }
-
-    toolCallCount += assistantMsg.tool_calls.length;
-
-    for (const toolCall of assistantMsg.tool_calls) {
-      let result: string;
-      try {
-        const args = JSON.parse(toolCall.function.arguments) as { command?: string };
-        const command = args.command ?? '';
-        result = await runtime.run(command);
-        options.onToolCall?.(command, result);
-      } catch (caught) {
-        result = `tool error: ${errorMessage(caught)}`;
-        options.onToolCall?.(toolCall.function.arguments, result);
-      }
-
-      session.messages.push({
-        role: 'tool',
-        tool_call_id: toolCall.id,
-        content: result,
-      });
-    }
+  try {
+    result = await runtime.run(command);
+  } catch (caught) {
+    result = `tool error: ${errorMessage(caught)}`;
   }
 
-  return { reply: '(max tool rounds reached)', toolCallCount };
+  options.onToolCall?.(command, result);
+  options.onToolCallComplete?.(command, result);
+  return result;
+}
+
+function extractToolCommand(rawArguments: string): string {
+  try {
+    const args = JSON.parse(rawArguments) as { command?: string };
+    return args.command ?? rawArguments;
+  } catch {
+    return rawArguments;
+  }
+}
+
+function resolveSiteReferer(): string {
+  if (typeof globalThis.location?.origin === 'string' && globalThis.location.origin.length > 0) {
+    return `${globalThis.location.origin}/`;
+  }
+
+  return OPENROUTER_REFERER;
 }
