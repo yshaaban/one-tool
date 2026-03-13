@@ -206,10 +206,25 @@ function ExamplePage() {
             {example.steps && totalSteps > 0 && (
               <div style={stepsPanelStyle}>
                 <div style={stepsPanelHeaderStyle}>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '0.72rem',
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                      color: 'var(--text-muted)',
+                    }}
+                  >
                     Steps
                   </span>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '0.72rem',
+                      color: 'var(--text-muted)',
+                    }}
+                  >
                     {stepIndex}/{totalSteps}
                   </span>
                 </div>
@@ -235,7 +250,11 @@ function ExamplePage() {
                         key={i}
                         style={{
                           ...stepItemStyle,
-                          background: active ? 'var(--accent-dim)' : completed ? 'rgba(255,255,255,0.02)' : 'transparent',
+                          background: active
+                            ? 'var(--accent-dim)'
+                            : completed
+                              ? 'rgba(255,255,255,0.02)'
+                              : 'transparent',
                           borderColor: active ? 'rgba(110, 180, 255, 0.3)' : 'transparent',
                           opacity: completed ? 0.55 : 1,
                           animation: `slideInLeft 0.3s ${i * 0.05}s both`,
@@ -245,7 +264,13 @@ function ExamplePage() {
                           {completed ? '\u2713' : active ? '\u2026' : `${i + 1}`}
                         </span>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>
+                          <div
+                            style={{
+                              fontSize: '0.82rem',
+                              color: 'var(--text-muted)',
+                              marginBottom: '0.15rem',
+                            }}
+                          >
                             {step.explanation}
                           </div>
                           <code style={stepCommandStyle}>{step.command}</code>
@@ -261,7 +286,9 @@ function ExamplePage() {
                     <button
                       onClick={handleRunStep}
                       style={buttonStyle}
-                      disabled={!runtime || Boolean(runtimeError) || isAutoplaying || runningStepIndex !== null}
+                      disabled={
+                        !runtime || Boolean(runtimeError) || isAutoplaying || runningStepIndex !== null
+                      }
                     >
                       {getRunStepButtonLabel(isAutoplaying, runningStepIndex)}
                     </button>

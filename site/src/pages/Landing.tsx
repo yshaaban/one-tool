@@ -3,31 +3,33 @@ import { Link } from 'react-router-dom';
 const features = [
   {
     tag: 'runtime',
-    title: 'One Tool, Full CLI',
+    title: 'One Tool for AI Agents',
     description:
-      'Expose a single run(command) tool to your LLM. 26 built-in commands with pipes, &&, ||, and ; composition.',
+      'Expose a single run(command) tool. Agents get 26 built-in commands with pipes, &&, ||, and ; composition.',
     accent: 'var(--accent)',
     dim: 'var(--accent-dim)',
   },
   {
     tag: 'vfs',
-    title: 'Virtual File System',
+    title: 'Constrained Workspace',
     description:
-      'Three backends: MemoryVFS (ephemeral), BrowserVFS (IndexedDB), NodeVFS (disk). No sandbox needed.',
+      'Use MemoryVFS, BrowserVFS, or NodeVFS for rooted storage without a Python or shell sandbox.',
     accent: 'var(--green)',
     dim: 'var(--green-dim)',
   },
   {
     tag: 'adapters',
     title: 'Search & Fetch',
-    description: 'Plug in your own backends. Agents use them like CLI commands: search query | write /report.txt',
+    description:
+      'Plug in your own backends. Agents compose retrieval, files, and text processing in one tool call.',
     accent: 'var(--yellow)',
     dim: 'var(--yellow-dim)',
   },
   {
     tag: 'browser',
-    title: 'Browser-Ready',
-    description: 'The entire runtime works in the browser. Try it now in the playground — zero install.',
+    title: 'Browser-Safe Runtime',
+    description:
+      'Use the browser entrypoint directly in the playground, in client-side demos, or in middleware-style apps.',
     accent: 'var(--purple)',
     dim: 'var(--purple-dim)',
   },
@@ -38,10 +40,10 @@ const codeLines = [
   { text: "'one-tool/browser'", accent: true },
   { text: ';', dim: true },
   { text: '', blank: true },
-  { text: 'const cli = createAgentCLI({ vfs: new MemoryVFS() });', dim: false },
+  { text: 'const cli = await createAgentCLI({ vfs: new MemoryVFS() });', dim: false },
   { text: '', blank: true },
   { text: 'await cli.run(', dim: false },
-  { text: "'write /hello.txt \"Hello\"'", accent: true },
+  { text: '\'write /hello.txt "Hello"\'', accent: true },
   { text: ');', dim: true },
   { text: 'await cli.run(', dim: false },
   { text: "'cat /hello.txt'", accent: true },
@@ -63,12 +65,12 @@ export function Landing() {
           <h1 style={heroTitleStyle}>
             One tool.
             <br />
-            <span style={{ color: 'var(--accent)' }}>Every command.</span>
+            <span style={{ color: 'var(--accent)' }}>Real agent work.</span>
           </h1>
 
           <p style={heroSubtitleStyle}>
-            Stateful CLI environment for LLM agents. Replace a catalog of typed tools with a single{' '}
-            <code style={inlineCodeStyle}>run(command)</code> call.
+            A constrained workspace for AI agents. Replace a catalog of narrow tools or a code-interpreter
+            sandbox with a single <code style={inlineCodeStyle}>run(command)</code> interface.
           </p>
 
           <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -120,7 +122,9 @@ export function Landing() {
               >
                 {f.title}
               </h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.65 }}>{f.description}</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.65 }}>
+                {f.description}
+              </p>
             </div>
           ))}
         </div>

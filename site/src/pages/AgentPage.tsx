@@ -133,6 +133,7 @@ export default function AgentPage({ example }: { example: ExampleDef }) {
         <Link to="/examples" style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
           &larr; All examples
         </Link>
+        <div style={experimentalBadgeStyle}>experimental browser agent</div>
         <h1 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-mono)', marginTop: '0.5rem' }}>
           {example.title}
         </h1>
@@ -152,7 +153,8 @@ export default function AgentPage({ example }: { example: ExampleDef }) {
       {/* Experimental warning */}
       <div style={warningStyle}>
         <strong>Experimental</strong> &mdash; Your API key is sent directly from your browser to the
-        provider&apos;s API. This is for development and testing only. Never use production API keys.
+        configured OpenAI-compatible API. This is for development and testing only. Never use production API
+        keys.
       </div>
 
       {/* Runtime error */}
@@ -355,6 +357,20 @@ const labelStyle: React.CSSProperties = {
   gap: '0.25rem',
   fontSize: '0.8rem',
   color: 'var(--text-muted)',
+};
+
+const experimentalBadgeStyle: React.CSSProperties = {
+  display: 'inline-block',
+  marginTop: '0.85rem',
+  padding: '0.18rem 0.5rem',
+  borderRadius: '4px',
+  border: '1px solid rgba(240, 199, 97, 0.25)',
+  color: 'var(--yellow)',
+  background: 'var(--yellow-dim)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.7rem',
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
 };
 
 const inputStyle: React.CSSProperties = {

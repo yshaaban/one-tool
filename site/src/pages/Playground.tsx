@@ -66,7 +66,8 @@ function Playground() {
       <div style={headerStyle}>
         <h1 style={titleStyle}>Playground</h1>
         <p style={subtitleStyle}>
-          Interactive CLI running entirely in your browser. Pre-loaded with demo files, search, and fetch adapters.
+          Interactive CLI running entirely in your browser. Pre-loaded with demo files, search, and fetch
+          adapters.
         </p>
       </div>
       <div style={terminalWrapperStyle}>

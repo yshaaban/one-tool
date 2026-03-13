@@ -138,7 +138,7 @@ export const examples: ExampleDef[] = [
     id: '08-llm-agent',
     title: 'LLM Agent',
     description:
-      'Wire the runtime to an OpenAI-compatible browser agent and watch it solve tasks autonomously.',
+      'Experimental browser agent mode using an OpenAI-compatible API key entered directly in the page.',
     browserRunnable: true,
     requiresApiKey: true,
     sourceFile: 'examples/08-llm-agent.ts',

@@ -25,8 +25,7 @@ export function ExampleIndex() {
       <div style={headerStyle}>
         <h1 style={titleStyle}>Examples</h1>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', maxWidth: '500px' }}>
-          Interactive walkthroughs that run entirely in your browser. Each example auto-plays its steps in a live
-          terminal.
+          These walkthroughs run in the browser-safe runtime and auto-play their steps in a live terminal.
         </p>
       </div>
 
@@ -52,7 +51,9 @@ export function ExampleIndex() {
                 e.currentTarget.style.background = 'var(--bg-surface)';
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '0.6rem' }}>
+              <div
+                style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '0.6rem' }}
+              >
                 <span
                   style={{
                     fontFamily: 'var(--font-mono)',
@@ -67,9 +68,18 @@ export function ExampleIndex() {
                 >
                   {ex.id.slice(0, 2)}
                 </span>
-                <span style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-bright)' }}>{ex.title}</span>
+                <span style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-bright)' }}>
+                  {ex.title}
+                </span>
               </div>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', lineHeight: 1.55, marginBottom: '0.75rem' }}>
+              <p
+                style={{
+                  color: 'var(--text-muted)',
+                  fontSize: '0.84rem',
+                  lineHeight: 1.55,
+                  marginBottom: '0.75rem',
+                }}
+              >
                 {ex.description}
               </p>
               {firstCommand && (
@@ -112,7 +122,14 @@ export function ExampleIndex() {
                     e.currentTarget.style.background = 'var(--bg-surface)';
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '0.6rem' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '0.75rem',
+                      marginBottom: '0.6rem',
+                    }}
+                  >
                     <span
                       style={{
                         fontFamily: 'var(--font-mono)',
@@ -131,7 +148,17 @@ export function ExampleIndex() {
                       {ex.title}
                     </span>
                     {!ex.browserRunnable && <span style={badgeStyle}>Node.js</span>}
-                    {ex.requiresApiKey && <span style={{ ...badgeStyle, borderColor: 'rgba(240, 199, 97, 0.25)', color: 'var(--yellow)' }}>API Key</span>}
+                    {ex.requiresApiKey && (
+                      <span
+                        style={{
+                          ...badgeStyle,
+                          borderColor: 'rgba(240, 199, 97, 0.25)',
+                          color: 'var(--yellow)',
+                        }}
+                      >
+                        API Key
+                      </span>
+                    )}
                   </div>
                   <p
                     style={{

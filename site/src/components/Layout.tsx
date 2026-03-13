@@ -51,7 +51,7 @@ export function Layout({ children }: { children: ReactNode }) {
       <main style={{ flex: 1 }}>{children}</main>
       <footer style={footerStyle}>
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-          one-tool &middot; stateful CLI for LLM agents
+          one-tool &middot; constrained workspace for AI agents
         </span>
       </footer>
     </div>
