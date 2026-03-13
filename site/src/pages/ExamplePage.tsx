@@ -417,9 +417,9 @@ function McpGuide({ sourceUrl }: { sourceUrl: string }): React.ReactNode {
 
       <McpStep
         index={3}
-        title="Connect your client"
+        title="Connect Claude Code"
         animationDelay="0.16s"
-        description="Use Claude Code from the CLI."
+        description="Add the server to Claude Code."
       >
         <div style={mcpClientStackStyle}>
           {MCP_CLIENTS.map((client) => (
@@ -432,7 +432,7 @@ function McpGuide({ sourceUrl }: { sourceUrl: string }): React.ReactNode {
         index={4}
         title="What you get"
         animationDelay="0.24s"
-        description="After the client connects, the model gets one run tool. Ask for outcomes in natural language and it composes commands internally."
+        description="After setup, Claude Code gets one run tool and composes commands internally."
       >
         <p style={mcpNoteStyle}>
           Expect one tool named <code style={inlineCodeStyle}>run</code>. The model can inspect files, search,

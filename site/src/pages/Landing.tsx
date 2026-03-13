@@ -2,34 +2,31 @@ import { Link } from 'react-router-dom';
 
 const features = [
   {
-    tag: 'runtime',
-    title: 'Single tool interface',
-    description:
-      'Expose a single run(command) tool. Agents get 26 built-in commands with pipes, &&, ||, and ; composition.',
+    tag: 'tool',
+    title: 'Single tool surface',
+    description: 'Expose one run(command) tool instead of a catalog of narrow tools.',
     accent: 'var(--accent)',
     dim: 'var(--accent-dim)',
   },
   {
-    tag: 'vfs',
-    title: 'Constrained Workspace',
+    tag: 'storage',
+    title: 'Rooted storage',
     description:
-      'Use MemoryVFS, BrowserVFS, or NodeVFS for rooted storage without exposing a Python or shell sandbox.',
+      'Store and inspect files through MemoryVFS, BrowserVFS, or NodeVFS without exposing a shell or Python sandbox.',
     accent: 'var(--green)',
     dim: 'var(--green-dim)',
   },
   {
-    tag: 'adapters',
-    title: 'Search & Fetch',
-    description:
-      'Plug in your own backends. Agents compose retrieval, files, and text processing in one tool call.',
+    tag: 'commands',
+    title: 'Composable commands',
+    description: 'Compose file, text, retrieval, and memory operations with pipes, &&, ||, and ;.',
     accent: 'var(--yellow)',
     dim: 'var(--yellow-dim)',
   },
   {
-    tag: 'browser',
-    title: 'Browser-Safe Runtime',
-    description:
-      'Use the browser entrypoint directly in the playground, in client-side demos, or in middleware-style apps.',
+    tag: 'deploy',
+    title: 'Browser and MCP paths',
+    description: 'Use the browser entrypoint for in-browser demos and the MCP server for Claude Code.',
     accent: 'var(--purple)',
     dim: 'var(--purple-dim)',
   },
@@ -54,7 +51,7 @@ const agentLoopPrinciples = [
 
 const codeLines = [
   { text: 'import { createAgentCLI, MemoryVFS } from ', dim: true },
-  { text: "'one-tool/browser'", accent: true },
+  { text: "'@onetool/one-tool/browser'", accent: true },
   { text: ';', dim: true },
   { text: '', blank: true },
   { text: 'const cli = await createAgentCLI({ vfs: new MemoryVFS() });', dim: false },
@@ -76,10 +73,10 @@ export function Landing() {
         <div style={heroInnerStyle}>
           <div style={heroBadgeStyle}>
             <span style={{ color: 'var(--green)', marginRight: '0.4rem' }}>{'>'}</span>
-            npm i one-tool
+            npm i @onetool/one-tool
           </div>
 
-          <h1 style={heroTitleStyle}>A CLI-style workspace for AI agents</h1>
+          <h1 style={heroTitleStyle}>A constrained workspace for AI agents</h1>
 
           <p style={heroSubtitleStyle}>
             Use one <code style={inlineCodeStyle}>run(command)</code> tool to give agents files, text
@@ -100,7 +97,6 @@ export function Landing() {
         </div>
       </section>
 
-      {/* Features */}
       <section style={sectionStyle}>
         <div style={featuresGridStyle}>
           {features.map((f, i) => (
@@ -147,11 +143,40 @@ export function Landing() {
       </section>
 
       <section style={{ ...sectionStyle, paddingTop: 0 }}>
+        <div style={comparisonShellStyle}>
+          <div style={comparisonHeaderStyle}>
+            <h2 style={comparisonTitleStyle}>Why teams use it</h2>
+            <p style={comparisonSubtitleStyle}>
+              It sits between many narrow tools and general-purpose sandboxes.
+            </p>
+          </div>
+          <div style={comparisonGridStyle}>
+            <div style={comparisonCardStyle}>
+              <h3 style={comparisonCardTitleStyle}>Many narrow tools</h3>
+              <p style={comparisonCardTextStyle}>Flexible, but models have to plan across many schemas.</p>
+            </div>
+            <div style={comparisonCardStyle}>
+              <h3 style={comparisonCardTitleStyle}>Python or shell sandbox</h3>
+              <p style={comparisonCardTextStyle}>
+                More flexible, but harder to constrain and more expensive to operate.
+              </p>
+            </div>
+            <div style={comparisonCardStyle}>
+              <h3 style={comparisonCardTitleStyle}>one-tool</h3>
+              <p style={comparisonCardTextStyle}>
+                Narrower, easier to test, and easier to deploy in browser, server, and MCP workflows.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section style={{ ...sectionStyle, paddingTop: 0 }}>
         <div style={agentHeroStyle}>
           <div>
             <h2 style={agentHeroTitleStyle}>Agent example</h2>
             <p style={agentHeroTextStyle}>
-              The agent example shows the full loop: prompt, command, command output, and final answer.
+              Follow the agent loop directly: prompt, tool call, tool output, and final answer.
             </p>
           </div>
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -170,7 +195,7 @@ export function Landing() {
           <div style={{ marginBottom: '1rem' }}>
             <h2 style={principlesTitleStyle}>How agents use it</h2>
             <p style={principlesSubtitleStyle}>
-              Agents can discover commands, compose them, and use output and errors to choose the next step.
+              Agents discover commands, compose them, and use output and errors to choose the next step.
             </p>
           </div>
           <div style={principlesGridStyle}>
@@ -187,7 +212,7 @@ export function Landing() {
       {/* Code example */}
       <section style={{ ...sectionStyle, paddingBottom: '4rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-          <h2 style={{ fontSize: '1.15rem', fontWeight: 600, color: 'var(--text-bright)' }}>Quick start</h2>
+          <h2 style={{ fontSize: '1.15rem', fontWeight: 600, color: 'var(--text-bright)' }}>Minimal setup</h2>
         </div>
         <div style={codeBlockStyle}>
           <div style={codeHeaderStyle}>
@@ -331,6 +356,57 @@ const featureCardStyle: React.CSSProperties = {
   border: '1px solid var(--border-subtle)',
   borderRadius: 'var(--radius)',
   transition: 'border-color var(--transition), background var(--transition)',
+};
+
+const comparisonShellStyle: React.CSSProperties = {
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius)',
+  background: 'var(--bg-surface)',
+  padding: '1.25rem',
+};
+
+const comparisonHeaderStyle: React.CSSProperties = {
+  marginBottom: '1rem',
+};
+
+const comparisonTitleStyle: React.CSSProperties = {
+  fontSize: '1.05rem',
+  fontWeight: 600,
+  color: 'var(--text-bright)',
+};
+
+const comparisonSubtitleStyle: React.CSSProperties = {
+  marginTop: '0.35rem',
+  color: 'var(--text-muted)',
+  fontSize: '0.9rem',
+  lineHeight: 1.6,
+};
+
+const comparisonGridStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+  gap: '0.85rem',
+};
+
+const comparisonCardStyle: React.CSSProperties = {
+  padding: '0.95rem',
+  borderRadius: 'var(--radius-sm)',
+  border: '1px solid var(--border-subtle)',
+  background: 'var(--bg-elevated)',
+};
+
+const comparisonCardTitleStyle: React.CSSProperties = {
+  fontSize: '0.88rem',
+  fontWeight: 600,
+  color: 'var(--text-bright)',
+  marginBottom: '0.35rem',
+  fontFamily: 'var(--font-mono)',
+};
+
+const comparisonCardTextStyle: React.CSSProperties = {
+  color: 'var(--text-muted)',
+  fontSize: '0.84rem',
+  lineHeight: 1.6,
 };
 
 const principlesShellStyle: React.CSSProperties = {

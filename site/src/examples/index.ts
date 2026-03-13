@@ -4,7 +4,7 @@ export const examples: ExampleDef[] = [
   {
     id: '01-hello-world',
     title: 'Hello World',
-    description: 'Create a runtime and run your first commands.',
+    description: 'Create a runtime and run basic commands.',
     group: 'cli-capabilities',
     browserRunnable: true,
     requiresApiKey: false,
@@ -22,7 +22,7 @@ export const examples: ExampleDef[] = [
   {
     id: '02-custom-command',
     title: 'Custom Command',
-    description: 'Register a domain-specific command and compose it with builtins.',
+    description: 'Add a custom command and compose it with built-in commands.',
     group: 'cli-capabilities',
     browserRunnable: true,
     requiresApiKey: false,
@@ -45,7 +45,7 @@ export const examples: ExampleDef[] = [
   {
     id: '03-readonly-agent',
     title: 'Read-Only Agent',
-    description: 'Use the readOnly preset to restrict to safe commands.',
+    description: 'Use the read-only preset for safe inspection workflows.',
     group: 'agent-workflows',
     browserRunnable: true,
     requiresApiKey: false,
@@ -66,7 +66,7 @@ export const examples: ExampleDef[] = [
   {
     id: '04-detailed-execution',
     title: 'Detailed Execution',
-    description: 'Inspect exit codes, traces, and structured execution results.',
+    description: 'Inspect structured execution results and command traces.',
     group: 'cli-capabilities',
     browserRunnable: true,
     requiresApiKey: false,
@@ -90,7 +90,7 @@ export const examples: ExampleDef[] = [
   {
     id: '05-adapters',
     title: 'Search & Fetch Adapters',
-    description: 'Use search and fetch commands with pluggable adapter backends.',
+    description: 'Use search and fetch adapters with the runtime.',
     group: 'agent-workflows',
     browserRunnable: true,
     requiresApiKey: false,
@@ -112,7 +112,7 @@ export const examples: ExampleDef[] = [
   {
     id: '06-browser-persistence',
     title: 'Browser Persistence',
-    description: 'Use BrowserVFS with IndexedDB for data that survives page reloads.',
+    description: 'Use BrowserVFS for persistent browser storage.',
     group: 'cli-capabilities',
     browserRunnable: true,
     requiresApiKey: false,
@@ -135,7 +135,7 @@ export const examples: ExampleDef[] = [
   {
     id: '07-mcp-server',
     title: 'MCP Server',
-    description: 'Expose the runtime as a Model Context Protocol tool for Claude Code and other clients.',
+    description: 'Expose the runtime as an MCP tool for Claude Code.',
     group: 'agent-workflows',
     browserRunnable: false,
     requiresApiKey: false,
@@ -144,8 +144,7 @@ export const examples: ExampleDef[] = [
   {
     id: '08-llm-agent',
     title: 'LLM Agent',
-    description:
-      'Experimental browser agent mode using OpenRouter directly from the browser with a tested tool-calling model.',
+    description: 'Run the browser agent demo over the demo workspace with OpenRouter.',
     group: 'agent-workflows',
     browserRunnable: true,
     requiresApiKey: true,

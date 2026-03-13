@@ -227,8 +227,8 @@ export default function AgentPage({ example }: { example: ExampleDef }) {
           </div>
           <h1 style={titleStyle}>{example.title}</h1>
           <p style={headerSubtitleStyle}>
-            The agent uses one <code style={headerInlineCodeStyle}>run(command)</code> tool. This page shows
-            each command, result, and reply.
+            This page shows a model using one <code style={headerInlineCodeStyle}>run(command)</code> tool
+            over the demo workspace.
           </p>
         </div>
         <a href={sourceUrl} target="_blank" rel="noopener noreferrer" style={sourceLinkStyle}>
@@ -253,9 +253,7 @@ export default function AgentPage({ example }: { example: ExampleDef }) {
                   <span style={{ color: 'var(--accent)', marginLeft: '0.35rem' }}>_</span>
                 </div>
                 <h2 style={emptyTitleStyle}>Suggested tasks</h2>
-                <p style={emptySubtitleStyle}>
-                  Add your OpenRouter key, choose a model, then run one of these prompts.
-                </p>
+                <p style={emptySubtitleStyle}>Add your OpenRouter API key and run one of these prompts.</p>
               </div>
 
               {example.suggestedPrompts?.length ? (
@@ -342,6 +340,10 @@ export default function AgentPage({ example }: { example: ExampleDef }) {
                 ))}
               </select>
             </label>
+          </div>
+
+          <div style={configNoteStyle}>
+            Browser demo powered by OpenRouter. For the maintained Node example, use the repo example.
           </div>
 
           <div style={dockHintStyle}>
@@ -498,9 +500,9 @@ function getDockHint({
     return 'Add an OpenRouter API key to start.';
   }
   if (busy) {
-    return 'The agent is using the workspace and model you selected.';
+    return 'Running commands in the demo workspace.';
   }
-  return 'Ready. Try counting errors, fetching an order email, or writing a report.';
+  return 'Ready. Try a log, fetch, or search task.';
 }
 
 function renderMarkdown(markdown: string): React.ReactNode {
@@ -1078,6 +1080,12 @@ const configRowStyle: React.CSSProperties = {
   gridTemplateColumns: 'minmax(210px, 250px) minmax(210px, 270px)',
   gap: '0.65rem',
   justifyContent: 'start',
+};
+
+const configNoteStyle: React.CSSProperties = {
+  color: 'var(--text-muted)',
+  fontSize: '0.78rem',
+  lineHeight: 1.5,
 };
 
 const configFieldStyle: React.CSSProperties = {
