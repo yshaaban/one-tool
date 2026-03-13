@@ -180,7 +180,9 @@ function ExamplePage() {
         </div>
       </div>
 
-      {!example.browserRunnable ? (
+      {example.id === '07-mcp-server' ? (
+        <McpGuide sourceUrl={sourceUrl} />
+      ) : !example.browserRunnable ? (
         <div style={nonInteractiveStyle}>
           <div style={{ fontSize: '1.5rem', marginBottom: '0.75rem', opacity: 0.4 }}>{'{ }'}</div>
           <p style={{ marginBottom: '0.75rem', fontWeight: 500 }}>Requires Node.js</p>
@@ -373,6 +375,183 @@ function formatDetailedExecution(execution: RunExecution): string {
   return lines.join('\n');
 }
 
+function McpGuide({ sourceUrl }: { sourceUrl: string }): React.ReactNode {
+  return (
+    <div style={mcpGuideStyle}>
+      <McpStep
+        index={1}
+        title="Choose a setup"
+        animationDelay="0s"
+        description="Use the repo directly or add the package to an existing Node project."
+      >
+        <div style={mcpChoiceGridStyle}>
+          <div style={mcpChoiceCardStyle}>
+            <h3 style={mcpChoiceTitleStyle}>Try the repo example</h3>
+            <McpCodeBlock
+              filename="terminal"
+              code={`git clone https://github.com/yshaaban/one-tool.git\ncd one-tool\nnpm install`}
+            />
+          </div>
+          <div style={mcpChoiceCardStyle}>
+            <h3 style={mcpChoiceTitleStyle}>Add it to an existing project</h3>
+            <McpCodeBlock filename="terminal" code={`npm install one-tool`} />
+          </div>
+        </div>
+      </McpStep>
+
+      <McpStep
+        index={2}
+        title="Create the server"
+        animationDelay="0.08s"
+        description="Create a small Node entrypoint that exposes the runtime over stdio."
+      >
+        <McpCodeBlock
+          filename="mcp-server.js"
+          code={`import { createAgentCLI, NodeVFS } from 'one-tool';\nimport { serveStdioMcpServer } from 'one-tool/mcp';\n\nconst runtime = await createAgentCLI({\n  vfs: new NodeVFS('./workspace'),\n});\n\nawait serveStdioMcpServer(runtime, {\n  instructions: 'Use the run tool to inspect files, memory, and adapters.',\n});`}
+        />
+        <p style={mcpNoteStyle}>
+          <code style={inlineCodeStyle}>NodeVFS('./workspace')</code> scopes file access to the{' '}
+          <code style={inlineCodeStyle}>workspace/</code> directory.
+        </p>
+      </McpStep>
+
+      <McpStep
+        index={3}
+        title="Connect your client"
+        animationDelay="0.16s"
+        description="Use Claude Code from the CLI."
+      >
+        <div style={mcpClientStackStyle}>
+          {MCP_CLIENTS.map((client) => (
+            <McpClientCard key={client.name} client={client} />
+          ))}
+        </div>
+      </McpStep>
+
+      <McpStep
+        index={4}
+        title="What you get"
+        animationDelay="0.24s"
+        description="After the client connects, the model gets one run tool. Ask for outcomes in natural language and it composes commands internally."
+      >
+        <p style={mcpNoteStyle}>
+          Expect one tool named <code style={inlineCodeStyle}>run</code>. The model can inspect files, search,
+          fetch, and compose commands with pipes, <code style={inlineCodeStyle}>&amp;&amp;</code>,{' '}
+          <code style={inlineCodeStyle}>||</code>, and <code style={inlineCodeStyle}>;</code>.
+        </p>
+        <McpCodeBlock
+          filename="prompts"
+          code={`List the files in the workspace.\nCheck /logs/app.log for ERROR lines.\nFetch order 123 and tell me the customer email.\nSearch for refund timeout guidance and summarize it.`}
+        />
+      </McpStep>
+
+      <McpStep index={5} title="Customize" animationDelay="0.32s" description="Optional server settings.">
+        <div style={mcpTableShellStyle}>
+          <table style={mcpTableStyle}>
+            <thead>
+              <tr>
+                <th style={mcpTableHeadingStyle}>Option</th>
+                <th style={mcpTableHeadingStyle}>Type</th>
+                <th style={mcpTableHeadingStyle}>Default</th>
+                <th style={mcpTableHeadingStyle}>Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              {MCP_OPTION_ROWS.map((row, index) => (
+                <tr key={row.name} style={index % 2 === 0 ? mcpTableRowAltStyle : undefined}>
+                  <td style={mcpTableCodeCellStyle}>{row.name}</td>
+                  <td style={mcpTableCodeCellStyle}>{row.type}</td>
+                  <td style={mcpTableCodeCellStyle}>{row.defaultValue}</td>
+                  <td style={mcpTableCellStyle}>{row.purpose}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </McpStep>
+
+      <div style={mcpFooterStyle}>
+        <a href={sourceUrl} target="_blank" rel="noopener noreferrer" style={sourceLinkStyle}>
+          View source
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function McpClientCard({ client }: { client: McpClientConfig }): React.ReactNode {
+  return (
+    <div style={mcpClientCardStyle}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.75rem' }}>
+        <span style={{ ...mcpClientBadgeStyle, color: client.color, background: client.background }}>
+          {client.name}
+        </span>
+        <span style={mcpClientPathStyle}>{client.location}</span>
+      </div>
+      <p style={mcpClientBodyStyle}>{client.description}</p>
+      <McpCodeBlock filename={client.filename} code={client.code} />
+    </div>
+  );
+}
+
+function McpStep({
+  index,
+  title,
+  description,
+  animationDelay,
+  children,
+}: {
+  index: number;
+  title: string;
+  description: string;
+  animationDelay: string;
+  children: React.ReactNode;
+}): React.ReactNode {
+  return (
+    <section
+      style={{
+        ...mcpStepStyle,
+        animation: `fadeInUp 0.4s ${animationDelay} both`,
+      }}
+    >
+      <div style={mcpStepHeaderStyle}>
+        <span style={mcpStepNumberStyle}>{index}</span>
+        <div>
+          <h2 style={mcpStepTitleStyle}>{title}</h2>
+          <p style={mcpStepDescriptionStyle}>{description}</p>
+        </div>
+      </div>
+      <div style={mcpStepBodyStyle}>{children}</div>
+    </section>
+  );
+}
+
+function McpCodeBlock({ filename, code }: { filename: string; code: string }): React.ReactNode {
+  return (
+    <div style={mcpCodeShellStyle}>
+      <div style={mcpCodeHeaderStyle}>
+        <div style={{ display: 'flex', gap: '0.35rem' }}>
+          <span style={dot('#f76c6c')} />
+          <span style={dot('#f0c761')} />
+          <span style={dot('#4ae68a')} />
+        </div>
+        <span style={mcpCodeFilenameStyle}>{filename}</span>
+      </div>
+      <pre style={mcpCodeStyle}>{code}</pre>
+    </div>
+  );
+}
+
+function dot(color: string): React.CSSProperties {
+  return {
+    width: '0.55rem',
+    height: '0.55rem',
+    borderRadius: '999px',
+    background: color,
+    display: 'inline-block',
+  };
+}
+
 function getRunStepButtonLabel(isAutoplaying: boolean, runningStepIndex: number | null): string {
   if (isAutoplaying) return 'Auto-playing...';
   if (runningStepIndex !== null) return 'Running...';
@@ -472,6 +651,75 @@ const sourceLinkStyle: React.CSSProperties = {
   flexShrink: 0,
   transition: 'border-color var(--transition)',
 };
+
+const inlineCodeStyle: React.CSSProperties = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.8em',
+  background: 'var(--bg-elevated)',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: '4px',
+  padding: '0.08rem 0.35rem',
+  color: 'var(--text-bright)',
+};
+
+interface McpClientConfig {
+  name: string;
+  location: string;
+  description: React.ReactNode;
+  filename: string;
+  code: string;
+  color: string;
+  background: string;
+}
+
+const MCP_CLIENTS: readonly McpClientConfig[] = [
+  {
+    name: 'Claude Code',
+    location: 'project root',
+    description: (
+      <>
+        This writes the same stdio entry to <code style={inlineCodeStyle}>.mcp.json</code>.
+      </>
+    ),
+    filename: 'terminal',
+    code: `claude mcp add-json one-tool '{\n  \"type\": \"stdio\",\n  \"command\": \"node\",\n  \"args\": [\"./mcp-server.js\"]\n}'`,
+    color: 'var(--accent)',
+    background: 'var(--accent-dim)',
+  },
+];
+
+const MCP_OPTION_ROWS = [
+  {
+    name: 'serverName',
+    type: 'string',
+    defaultValue: 'one-tool',
+    purpose: 'Server name reported to the client',
+  },
+  {
+    name: 'serverVersion',
+    type: 'string',
+    defaultValue: 'package version',
+    purpose: 'Version reported to the client',
+  },
+  {
+    name: 'instructions',
+    type: 'string',
+    defaultValue: '—',
+    purpose: 'Extra instructions sent in MCP server metadata',
+  },
+  {
+    name: 'toolName',
+    type: 'string',
+    defaultValue: 'run',
+    purpose: 'Tool name exposed to the client',
+  },
+  {
+    name: 'descriptionVariant',
+    type: `'full-tool-description' | 'minimal-tool-description' | 'terse'`,
+    defaultValue: `'full-tool-description'`,
+    purpose: 'Controls how much tool description text is sent',
+  },
+] as const;
 
 const mainLayoutStyle: React.CSSProperties = {
   display: 'grid',
@@ -595,4 +843,206 @@ const errorStyle: React.CSSProperties = {
   borderRadius: 'var(--radius)',
   color: 'var(--text)',
   fontSize: '0.85rem',
+};
+
+const mcpGuideStyle: React.CSSProperties = {
+  width: '100%',
+  maxWidth: '760px',
+  margin: '0 auto',
+  overflow: 'auto',
+  paddingBottom: '1rem',
+};
+
+const mcpStepStyle: React.CSSProperties = {
+  background: 'var(--bg-surface)',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius)',
+  padding: '1.25rem',
+  marginBottom: '1rem',
+};
+
+const mcpStepHeaderStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'flex-start',
+  gap: '0.85rem',
+  marginBottom: '1rem',
+};
+
+const mcpStepNumberStyle: React.CSSProperties = {
+  width: '1.8rem',
+  height: '1.8rem',
+  borderRadius: '999px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: '0.78rem',
+  fontFamily: 'var(--font-mono)',
+  fontWeight: 600,
+  color: 'var(--accent)',
+  background: 'var(--accent-dim)',
+  border: '1px solid rgba(110, 180, 255, 0.28)',
+  flexShrink: 0,
+};
+
+const mcpStepTitleStyle: React.CSSProperties = {
+  fontSize: '1rem',
+  fontWeight: 600,
+  color: 'var(--text-bright)',
+  marginBottom: '0.25rem',
+};
+
+const mcpStepDescriptionStyle: React.CSSProperties = {
+  fontSize: '0.86rem',
+  color: 'var(--text-muted)',
+  lineHeight: 1.6,
+};
+
+const mcpStepBodyStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '0.9rem',
+};
+
+const mcpChoiceGridStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+  gap: '0.85rem',
+};
+
+const mcpChoiceCardStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '0.65rem',
+};
+
+const mcpChoiceTitleStyle: React.CSSProperties = {
+  fontSize: '0.88rem',
+  fontWeight: 600,
+  color: 'var(--text-bright)',
+};
+
+const mcpCodeShellStyle: React.CSSProperties = {
+  border: '1px solid var(--border-subtle)',
+  borderRadius: '12px',
+  overflow: 'hidden',
+  background: 'var(--bg-elevated)',
+};
+
+const mcpCodeHeaderStyle: React.CSSProperties = {
+  height: '2rem',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  padding: '0 0.8rem',
+  borderBottom: '1px solid var(--border-subtle)',
+  background: 'rgba(255, 255, 255, 0.02)',
+};
+
+const mcpCodeFilenameStyle: React.CSSProperties = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.72rem',
+  color: 'var(--text-muted)',
+};
+
+const mcpCodeStyle: React.CSSProperties = {
+  margin: 0,
+  padding: '0.9rem 1rem',
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.79rem',
+  lineHeight: 1.7,
+  color: 'var(--text-bright)',
+  background: 'var(--bg)',
+  overflowX: 'auto',
+  whiteSpace: 'pre-wrap',
+  wordBreak: 'break-word',
+};
+
+const mcpNoteStyle: React.CSSProperties = {
+  fontSize: '0.82rem',
+  color: 'var(--text-muted)',
+  lineHeight: 1.6,
+};
+
+const mcpClientStackStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '0.9rem',
+};
+
+const mcpClientCardStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '0.75rem',
+};
+
+const mcpClientBadgeStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  padding: '0.18rem 0.55rem',
+  borderRadius: '999px',
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.68rem',
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  letterSpacing: '0.04em',
+};
+
+const mcpClientPathStyle: React.CSSProperties = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.72rem',
+  color: 'var(--text-muted)',
+};
+
+const mcpClientBodyStyle: React.CSSProperties = {
+  fontSize: '0.84rem',
+  color: 'var(--text-muted)',
+  lineHeight: 1.6,
+};
+
+const mcpTableShellStyle: React.CSSProperties = {
+  overflowX: 'auto',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: '12px',
+};
+
+const mcpTableStyle: React.CSSProperties = {
+  width: '100%',
+  borderCollapse: 'collapse',
+  minWidth: '680px',
+};
+
+const mcpTableHeadingStyle: React.CSSProperties = {
+  textAlign: 'left',
+  padding: '0.75rem 0.9rem',
+  fontSize: '0.74rem',
+  fontFamily: 'var(--font-mono)',
+  fontWeight: 600,
+  color: 'var(--text-muted)',
+  background: 'var(--bg-elevated)',
+  borderBottom: '1px solid var(--border-subtle)',
+};
+
+const mcpTableCellStyle: React.CSSProperties = {
+  padding: '0.75rem 0.9rem',
+  fontSize: '0.82rem',
+  color: 'var(--text-muted)',
+  borderTop: '1px solid var(--border-subtle)',
+  verticalAlign: 'top',
+  lineHeight: 1.55,
+};
+
+const mcpTableCodeCellStyle: React.CSSProperties = {
+  ...mcpTableCellStyle,
+  fontFamily: 'var(--font-mono)',
+  color: 'var(--text-bright)',
+};
+
+const mcpTableRowAltStyle: React.CSSProperties = {
+  background: 'rgba(255, 255, 255, 0.015)',
+};
+
+const mcpFooterStyle: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'flex-end',
+  paddingTop: '0.35rem',
 };

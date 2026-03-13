@@ -26,20 +26,20 @@ export function ExampleIndex() {
       <div style={headerStyle}>
         <h1 style={titleStyle}>Examples</h1>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', maxWidth: '500px' }}>
-          Start with CLI capabilities to understand the runtime. Move to agent workflows to see why one tool
-          works well for agents.
+          Start with the runtime examples. Then move to the agent examples for MCP, adapters, and live model
+          use.
         </p>
       </div>
 
       <ExampleSection
         title="CLI capabilities"
-        description="Learn the runtime itself: commands, traces, persistence, and custom command composition."
+        description="Commands, traces, persistence, and custom command composition."
         examples={cliCapabilities}
       />
 
       <ExampleSection
         title="Agent workflows"
-        description="See how the same runtime becomes useful for real agent loops, retrieval, safety presets, MCP, and live tool use."
+        description="Agent-oriented examples: adapters, safety presets, MCP, and live model use."
         examples={agentWorkflows}
         topMargin="2.5rem"
       />

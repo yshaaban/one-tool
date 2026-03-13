@@ -79,13 +79,11 @@ export function Landing() {
             npm i one-tool
           </div>
 
-          <h1 style={heroTitleStyle}>
-            A single <code style={inlineCodeStyle}>run(command)</code> interface for agent workspaces
-          </h1>
+          <h1 style={heroTitleStyle}>A CLI-style workspace for AI agents</h1>
 
           <p style={heroSubtitleStyle}>
-            one-tool gives agents a constrained workspace with files, text processing, retrieval, and memory,
-            without exposing a shell or Python sandbox.
+            Use one <code style={inlineCodeStyle}>run(command)</code> tool to give agents files, text
+            processing, retrieval, and memory without exposing a shell or Python sandbox.
           </p>
 
           <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
