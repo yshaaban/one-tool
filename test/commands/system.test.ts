@@ -11,6 +11,7 @@ test('system: registerBuiltinCommands registers the expected command names once'
     'cat',
     'cp',
     'diff',
+    'echo',
     'fetch',
     'find',
     'grep',

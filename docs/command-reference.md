@@ -92,7 +92,7 @@ There is no mutable current working directory.
 
 ## Built-in commands
 
-The runtime ships with 25 built-in commands.
+The runtime ships with 26 built-in commands.
 
 ### System commands
 
@@ -147,6 +147,7 @@ find /config --type file --name "*.json"
 
 | Command | Usage                                       | Stdin | Purpose                                                                                 |
 | ------- | ------------------------------------------- | ----: | --------------------------------------------------------------------------------------- |
+| `echo`  | `echo [text ...]`                           |    no | Write arguments back as plain text output                                               |
 | `grep`  | `grep [-i] [-v] [-c] [-n] <pattern> [path]` |   yes | Filter lines by regex                                                                   |
 | `head`  | `head [-n N] [path]`                        |   yes | Show first N lines                                                                      |
 | `tail`  | `tail [-n N] [path]`                        |   yes | Show last N lines                                                                       |
@@ -159,6 +160,7 @@ find /config --type file --name "*.json"
 Examples:
 
 ```text
+echo "ready for review"
 grep ERROR /logs/app.log
 cat /logs/app.log | grep -i timeout
 head -n 20 /logs/app.log

@@ -5,6 +5,26 @@ import { parseNFlag, readTextFromFileOrStdin } from '../shared/io.js';
 import { runSedCommand } from '../shared/sed.js';
 import { compileTrProgram } from '../shared/tr-arrays.js';
 
+async function cmdEcho(_ctx: CommandContext, args: string[], stdin: Uint8Array) {
+  if (stdin.length > 0) {
+    return err('echo: does not accept stdin');
+  }
+
+  return ok(args.join(' '));
+}
+
+export const echo: CommandSpec = {
+  name: 'echo',
+  summary: 'Write arguments back as plain text output.',
+  usage: 'echo [text ...]',
+  details:
+    'Examples:\n  echo hello world\n  echo "ready for review"\n  echo status:ok | write /notes/status.txt',
+  handler: cmdEcho,
+  acceptsStdin: false,
+  minArgs: 0,
+  conformanceArgs: [],
+};
+
 async function cmdGrep(ctx: CommandContext, args: string[], stdin: Uint8Array) {
   if (args.length === 0) {
     return err('grep: usage: grep [-i] [-v] [-c] [-n] <pattern> [path]');
@@ -437,4 +457,4 @@ function countWords(text: string): number {
   return matches?.length ?? 0;
 }
 
-export const textCommands: CommandSpec[] = [grep, head, tail, sort, sed, tr, uniq, wc];
+export const textCommands: CommandSpec[] = [echo, grep, head, tail, sort, sed, tr, uniq, wc];

@@ -24,4 +24,4 @@ export { adapterCommands, fetch, search } from './groups/adapters.js';
 export { calc, dataCommands, json } from './groups/data.js';
 export { append, cat, cp, diff, find, fsCommands, ls, mkdir, mv, rm, stat, write } from './groups/fs.js';
 export { help, memory, systemCommands } from './groups/system.js';
-export { grep, head, sed, sort, tail, textCommands, tr, uniq, wc } from './groups/text.js';
+export { echo, grep, head, sed, sort, tail, textCommands, tr, uniq, wc } from './groups/text.js';

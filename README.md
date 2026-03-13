@@ -23,7 +23,7 @@ It is built for the common agent problem:
 At a glance:
 
 - one model-facing tool: `run(command)`
-- 25 built-in commands for files, text, data, memory, and adapters
+- 26 built-in commands for files, text, data, memory, and adapters
 - rooted storage through `NodeVFS`, `MemoryVFS`, or `BrowserVFS`
 - structured execution via `runDetailed(...)`
 - extension helpers for custom commands
@@ -391,7 +391,7 @@ Full syntax, unsupported constructs, and examples: [`docs/command-reference.md#c
 
 ## Built-in command groups
 
-The runtime ships with 25 built-in commands.
+The runtime ships with 26 built-in commands.
 
 | Group      | Commands                                                                          | Reference                                                                                                |
 | ---------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |

@@ -4,7 +4,7 @@ const features = [
   {
     title: 'One Tool, Full CLI',
     description:
-      'Expose a single run(command) tool to your LLM agent. 25 built-in commands with pipes, &&, ||, and ; composition.',
+      'Expose a single run(command) tool to your LLM agent. 26 built-in commands with pipes, &&, ||, and ; composition.',
   },
   {
     title: 'Virtual File System',

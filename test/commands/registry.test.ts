@@ -40,7 +40,18 @@ test('createCommandRegistry supports group selection and command exclusion', fun
     excludeCommands: ['memory'],
   });
 
-  assert.deepEqual(registry.names(), ['grep', 'head', 'help', 'sed', 'sort', 'tail', 'tr', 'uniq', 'wc']);
+  assert.deepEqual(registry.names(), [
+    'echo',
+    'grep',
+    'head',
+    'help',
+    'sed',
+    'sort',
+    'tail',
+    'tr',
+    'uniq',
+    'wc',
+  ]);
   assert.deepEqual(
     listBuiltinCommands({ includeGroups: ['adapters'] }).map(function (spec) {
       return spec.name;
@@ -60,6 +71,7 @@ test('builtin command presets expose stable, useful default selections', functio
     'calc',
     'cat',
     'diff',
+    'echo',
     'fetch',
     'find',
     'grep',
@@ -81,6 +93,7 @@ test('builtin command presets expose stable, useful default selections', functio
     'cat',
     'cp',
     'diff',
+    'echo',
     'find',
     'grep',
     'head',

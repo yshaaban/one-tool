@@ -38,6 +38,7 @@ export {
   CommandRegistry,
   cp,
   diff,
+  echo,
   createCommandRegistry,
   dataCommands,
   fetch,

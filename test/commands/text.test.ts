@@ -5,6 +5,20 @@ import { textDecoder, textEncoder } from '../../src/types.js';
 import { MemoryVFS } from '../../src/vfs/memory-vfs.js';
 import { makeCtx, runCommand, stdinText, stdoutText } from './harness.js';
 
+test('text: echo joins arguments and rejects stdin', async () => {
+  const inline = await runCommand('echo', ['hello', 'world']);
+  assert.equal(inline.result.exitCode, 0);
+  assert.equal(stdoutText(inline.result), 'hello world');
+
+  const empty = await runCommand('echo');
+  assert.equal(empty.result.exitCode, 0);
+  assert.equal(stdoutText(empty.result), '');
+
+  const stdin = await runCommand('echo', [], { stdin: stdinText('ignored') });
+  assert.equal(stdin.result.exitCode, 1);
+  assert.match(stdin.result.stderr, /echo: does not accept stdin/);
+});
+
 test('text: grep filters file content with flags', async () => {
   const ctx = makeCtx();
   await ctx.vfs.writeBytes(
