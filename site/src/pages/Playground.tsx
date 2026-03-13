@@ -8,6 +8,7 @@ const WELCOME = [
   '',
   'Type \x1b[38;5;229mhelp\x1b[0m to list commands.',
   'Use \x1b[38;5;229mTab\x1b[0m for autocomplete and \x1b[38;5;229m\u2191\u2193\x1b[0m for history.',
+  'Use stderr, exit codes, and saved overflow files to guide the next command.',
   '',
   'Try:',
   '  \x1b[38;5;114mls /\x1b[0m',
@@ -66,8 +67,8 @@ function Playground() {
       <div style={headerStyle}>
         <h1 style={titleStyle}>Playground</h1>
         <p style={subtitleStyle}>
-          Interactive CLI running entirely in your browser. Pre-loaded with demo files, search, and fetch
-          adapters.
+          Interactive CLI running entirely in your browser. Use help, compose commands, and inspect output the
+          same way an agent would.
         </p>
       </div>
       <div style={terminalWrapperStyle}>

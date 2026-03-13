@@ -35,6 +35,23 @@ const features = [
   },
 ];
 
+const agentLoopPrinciples = [
+  {
+    title: 'Discover',
+    description:
+      'Start with help. Commands describe themselves instead of forcing the model to memorize a tool catalog.',
+  },
+  {
+    title: 'Compose',
+    description: 'Keep file, text, JSON, retrieval, and memory work inside one run(command) call.',
+  },
+  {
+    title: 'Recover',
+    description:
+      'stderr, exit codes, and truncated-output saves give the agent useful feedback for the next step.',
+  },
+];
+
 const codeLines = [
   { text: 'import { createAgentCLI, MemoryVFS } from ', dim: true },
   { text: "'one-tool/browser'", accent: true },
@@ -127,6 +144,26 @@ export function Landing() {
               </p>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section style={{ ...sectionStyle, paddingTop: 0 }}>
+        <div style={principlesShellStyle}>
+          <div style={{ marginBottom: '1rem' }}>
+            <h2 style={principlesTitleStyle}>Built for agent feedback loops</h2>
+            <p style={principlesSubtitleStyle}>
+              one-tool works because models can discover commands, compose them, and use output and errors to
+              decide what to do next.
+            </p>
+          </div>
+          <div style={principlesGridStyle}>
+            {agentLoopPrinciples.map((principle) => (
+              <div key={principle.title} style={principleCardStyle}>
+                <h3 style={principleHeadingStyle}>{principle.title}</h3>
+                <p style={principleTextStyle}>{principle.description}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -273,6 +310,55 @@ const featureCardStyle: React.CSSProperties = {
   border: '1px solid var(--border-subtle)',
   borderRadius: 'var(--radius)',
   transition: 'border-color var(--transition), background var(--transition)',
+};
+
+const principlesShellStyle: React.CSSProperties = {
+  maxWidth: 'var(--max-width)',
+  margin: '0 auto',
+  padding: '1.25rem',
+  borderRadius: 'var(--radius)',
+  border: '1px solid var(--border-subtle)',
+  background: 'linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))',
+};
+
+const principlesTitleStyle: React.CSSProperties = {
+  fontSize: '1.05rem',
+  fontWeight: 600,
+  color: 'var(--text-bright)',
+};
+
+const principlesSubtitleStyle: React.CSSProperties = {
+  marginTop: '0.35rem',
+  color: 'var(--text-muted)',
+  fontSize: '0.9rem',
+  lineHeight: 1.6,
+};
+
+const principlesGridStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+  gap: '0.85rem',
+};
+
+const principleCardStyle: React.CSSProperties = {
+  padding: '0.95rem',
+  borderRadius: 'var(--radius-sm)',
+  background: 'var(--bg-surface)',
+  border: '1px solid var(--border-subtle)',
+};
+
+const principleHeadingStyle: React.CSSProperties = {
+  fontSize: '0.88rem',
+  fontWeight: 600,
+  color: 'var(--text-bright)',
+  marginBottom: '0.35rem',
+  fontFamily: 'var(--font-mono)',
+};
+
+const principleTextStyle: React.CSSProperties = {
+  color: 'var(--text-muted)',
+  fontSize: '0.84rem',
+  lineHeight: 1.6,
 };
 
 const codeBlockStyle: React.CSSProperties = {
