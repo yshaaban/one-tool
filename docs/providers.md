@@ -21,6 +21,20 @@ AGENT_PROVIDER=groq npm run agent
 AGENT_PROVIDER=openai npm run agent
 ```
 
+When you use `examples/agent-support.ts` directly for evaluation work, `createAgentSession(...)` also accepts a prompt variant:
+
+```ts
+const fullSession = createAgentSession(runtime);
+const minimalSession = createAgentSession(runtime, {
+  promptVariant: 'minimal-tool-description',
+});
+const terseSession = createAgentSession(runtime, {
+  promptVariant: 'terse',
+});
+```
+
+Use the default full variant for production-like runs. Use the minimal and terse variants to compare how much command detail the model needs.
+
 Provider selection rules:
 
 - if `AGENT_PROVIDER` is unset and `GROQ_API_KEY` exists, Groq is preferred

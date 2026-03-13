@@ -1,4 +1,4 @@
-import type { AgentCLIOutputLimits } from '../runtime.js';
+import type { AgentCLIOutputLimits, ToolDescriptionVariant } from '../runtime.js';
 import type { DemoSearchDocument } from './adapters.js';
 
 export type ScenarioCategory =
@@ -12,7 +12,7 @@ export type ScenarioCategory =
   | 'safety'
   | 'long_horizon';
 
-export type ScenarioPromptVariant = 'full-tool-description' | 'minimal-tool-description' | 'terse';
+export type ScenarioPromptVariant = ToolDescriptionVariant;
 
 export interface ScenarioSpec {
   id: string;

@@ -1,4 +1,4 @@
-import type { AgentCLI } from './runtime.js';
+import type { AgentCLI, ToolDescriptionVariant } from './runtime.js';
 
 /** OpenAI-compatible function tool definition. */
 export interface ToolDefinition {
@@ -14,17 +14,25 @@ export interface ToolDefinition {
   };
 }
 
+export interface BuildToolDefinitionOptions {
+  descriptionVariant?: ToolDescriptionVariant;
+}
+
 /**
  * Build a tool definition from an AgentCLI instance.
  * The returned object is compatible with OpenAI, Groq, Anthropic,
  * and any provider that accepts the OpenAI tool-calling format.
  */
-export function buildToolDefinition(cli: AgentCLI, toolName = 'run'): ToolDefinition {
+export function buildToolDefinition(
+  cli: AgentCLI,
+  toolName = 'run',
+  options: BuildToolDefinitionOptions = {},
+): ToolDefinition {
   return {
     type: 'function',
     function: {
       name: toolName,
-      description: cli.buildToolDescription(),
+      description: cli.buildToolDescription(options.descriptionVariant),
       parameters: {
         type: 'object',
         properties: {

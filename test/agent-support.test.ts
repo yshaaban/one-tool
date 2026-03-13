@@ -3,7 +3,8 @@ import test from 'node:test';
 
 import { createAgentSession, loadConfig, runAgentTurn, type ChatMessage } from '../examples/agent-support.js';
 import { buildDemoRuntime } from '../examples/demo-runtime.js';
-import { MemoryVFS } from '../src/index.js';
+import { buildToolDefinition, createAgentCLI, type CommandSpec, MemoryVFS } from '../src/index.js';
+import { ok } from '../src/types.js';
 
 const ENV_KEYS = [
   'AGENT_PROVIDER',
@@ -51,6 +52,22 @@ function withEnv(
     restore();
     throw caught;
   }
+}
+
+function getSystemPrompt(messages: ChatMessage[]): string {
+  return messages[0]?.content ?? '';
+}
+
+function createEchoCommand(): CommandSpec {
+  return {
+    name: 'echo',
+    summary: 'Echo text.',
+    usage: 'echo <text...>',
+    details: 'Examples:\n  echo hello',
+    async handler(_ctx, args) {
+      return ok(args.join(' '));
+    },
+  };
 }
 
 test('loadConfig prefers groq when both keys exist', () =>
@@ -120,6 +137,65 @@ test('createAgentSession seeds the system prompt and one run tool', async () => 
   assert.match(session.messages[0]?.content ?? '', /single tool called `run`/);
   assert.equal(session.tools.length, 1);
   assert.equal(session.tools[0]?.function.name, 'run');
+});
+
+test('createAgentSession keeps the system prompt and tool description aligned for prompt variants', async function () {
+  const runtime = await buildDemoRuntime({ vfs: new MemoryVFS() });
+
+  const minimal = createAgentSession(runtime, { promptVariant: 'minimal-tool-description' });
+  const minimalPrompt = getSystemPrompt(minimal.messages);
+  assert.match(minimalPrompt, /Use `help` to discover commands and usage when needed\./);
+  assert.match(minimalPrompt, /detailed command catalog omitted in this variant/);
+  assert.equal(
+    minimal.tools[0]?.function.description,
+    runtime.buildToolDescription('minimal-tool-description'),
+  );
+
+  const terse = createAgentSession(runtime, { promptVariant: 'terse' });
+  const tersePrompt = getSystemPrompt(terse.messages);
+  assert.match(tersePrompt, /Command summaries are intentionally terse\./);
+  assert.match(terse.tools[0]?.function.description ?? '', /Available commands:/);
+  assert.doesNotMatch(
+    terse.tools[0]?.function.description ?? '',
+    /Inspect JSON from stdin or a file: pretty, keys, get\./,
+  );
+  assert.equal(terse.tools[0]?.function.description, runtime.buildToolDescription('terse'));
+});
+
+test('buildToolDefinition supports prompt-description variants directly', async function () {
+  const runtime = await buildDemoRuntime({ vfs: new MemoryVFS() });
+
+  const defaultTool = buildToolDefinition(runtime);
+  const minimalTool = buildToolDefinition(runtime, 'run', {
+    descriptionVariant: 'minimal-tool-description',
+  });
+  const terseTool = buildToolDefinition(runtime, 'run', {
+    descriptionVariant: 'terse',
+  });
+
+  assert.equal(defaultTool.function.description, runtime.buildToolDescription());
+  assert.equal(minimalTool.function.description, runtime.buildToolDescription('minimal-tool-description'));
+  assert.equal(terseTool.function.description, runtime.buildToolDescription('terse'));
+});
+
+test('createAgentSession keeps discovery instructions accurate when help is unavailable', async function () {
+  const runtime = await createAgentCLI({
+    vfs: new MemoryVFS(),
+    builtinCommands: false,
+    commands: [createEchoCommand()],
+  });
+
+  const minimal = createAgentSession(runtime, { promptVariant: 'minimal-tool-description' });
+  const minimalPrompt = getSystemPrompt(minimal.messages);
+  assert.doesNotMatch(minimalPrompt, /Use `help` to discover commands/);
+  assert.match(minimalPrompt, /Run '<command>' with no args to discover usage/);
+  assert.match(minimalPrompt, /available command names:/);
+  assert.match(minimalPrompt, /\n {6}echo\n?/);
+
+  const terse = createAgentSession(runtime, { promptVariant: 'terse' });
+  const tersePrompt = getSystemPrompt(terse.messages);
+  assert.doesNotMatch(tersePrompt, /Use `help` when you need details/);
+  assert.match(tersePrompt, /Run '<command>' with no args when you need details/);
 });
 
 test('runAgentTurn executes tool calls and returns the final assistant reply', async () => {

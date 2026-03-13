@@ -1,6 +1,6 @@
 // Core runtime
 export { AgentCLI, createAgentCLI } from './runtime.js';
-export type { AgentCLIOptions, AgentCLIOutputLimits } from './runtime.js';
+export type { AgentCLIOptions, AgentCLIOutputLimits, ToolDescriptionVariant } from './runtime.js';
 
 // VFS interface + backends
 export type { VFS, VFileInfo } from './vfs/interface.js';
@@ -76,7 +76,7 @@ export { SimpleMemory } from './memory.js';
 
 // Tool schema helpers
 export { buildToolDefinition } from './tool-schema.js';
-export type { ToolDefinition } from './tool-schema.js';
+export type { BuildToolDefinitionOptions, ToolDefinition } from './tool-schema.js';
 
 // Testing helpers
 export {

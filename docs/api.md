@@ -94,7 +94,7 @@ class AgentCLI {
 
   initialize(): Promise<void>;
   run(commandLine: string): Promise<string>;
-  buildToolDescription(): string;
+  buildToolDescription(variant?: ToolDescriptionVariant): string;
 }
 ```
 
@@ -108,6 +108,15 @@ Advanced integrations can also:
 - inspect `runtime.registry`
 - register custom commands
 - access `runtime.ctx`
+- vary the generated tool description for evaluation experiments
+
+```ts
+type ToolDescriptionVariant = 'full-tool-description' | 'minimal-tool-description' | 'terse';
+```
+
+- `full-tool-description` lists commands with summaries
+- `minimal-tool-description` keeps the shell/safety guidance and discovery instructions, and falls back to command names when `help` is unavailable
+- `terse` lists command names without summaries
 
 If you construct `new AgentCLI(options)` directly instead of using `createAgentCLI(options)`, call `await runtime.initialize()` before the first `run(...)` so the internal output directory exists.
 
@@ -115,7 +124,7 @@ If you construct `new AgentCLI(options)` directly instead of using `createAgentC
 
 ## Tool definition
 
-### `buildToolDefinition(runtime, toolName?)`
+### `buildToolDefinition(runtime, toolName?, options?)`
 
 ```ts
 import { buildToolDefinition } from 'one-tool';
@@ -143,6 +152,18 @@ Returns an OpenAI-compatible function-tool definition:
 ```
 
 The generated description includes the runtime’s current command list, so register any custom commands before building the tool definition.
+
+To vary the tool description during evaluation, pass a description variant:
+
+```ts
+const minimalTool = buildToolDefinition(runtime, 'run', {
+  descriptionVariant: 'minimal-tool-description',
+});
+
+const terseTool = buildToolDefinition(runtime, 'run', {
+  descriptionVariant: 'terse',
+});
+```
 
 The exported `ToolDefinition` type matches this object shape.
 

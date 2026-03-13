@@ -56,6 +56,33 @@ test('AgentCLI can start with a selective built-in set', async function (): Prom
   assert.match(result, /unknown command: ls/);
 });
 
+test('AgentCLI supports minimal and terse tool-description variants', async function (): Promise<void> {
+  const runtime = new AgentCLI({
+    vfs: new MemoryVFS(),
+    builtinCommands: {
+      includeGroups: ['system', 'text'],
+      excludeCommands: ['memory'],
+    },
+  });
+  await runtime.initialize();
+
+  const full = runtime.buildToolDescription();
+  const minimal = runtime.buildToolDescription('minimal-tool-description');
+  const terse = runtime.buildToolDescription('terse');
+
+  assert.match(full, /grep\s+— Filter lines by regex\. Supports -i, -v, -c, -n\./);
+
+  assert.match(minimal, /run 'help' to list commands/);
+  assert.match(minimal, /detailed command catalog omitted in this variant/);
+  assert.doesNotMatch(minimal, /grep\s+—/);
+  assert.doesNotMatch(minimal, /Available commands:/);
+
+  assert.match(terse, /Available commands:/);
+  assert.match(terse, /\n {2}grep\n/);
+  assert.match(terse, /\n {2}tail\n/);
+  assert.doesNotMatch(terse, /Filter lines by regex\. Supports -i, -v, -c, -n\./);
+});
+
 test('AgentCLI supports builtin command presets', async function (): Promise<void> {
   const runtime = new AgentCLI({
     vfs: new MemoryVFS(),
@@ -93,10 +120,29 @@ test('AgentCLI reports an empty registry clearly', async function (): Promise<vo
 
   assert.match(runtime.buildToolDescription(), /\(no commands registered\)/);
   assert.match(runtime.buildToolDescription(), /Register built-in or custom commands/);
+  assert.match(runtime.buildToolDescription('minimal-tool-description'), /\(no commands registered\)/);
+  assert.match(runtime.buildToolDescription('terse'), /\(no commands registered\)/);
 
   const result = await runtime.run('echo hello');
   assert.match(result, /unknown command: echo/);
   assert.match(result, /Available: \(none\)/);
+});
+
+test('AgentCLI omits help-based discovery text when help is not registered', async function (): Promise<void> {
+  const runtime = new AgentCLI({
+    vfs: new MemoryVFS(),
+    builtinCommands: false,
+    commands: [echo],
+  });
+  await runtime.initialize();
+
+  const minimalDescription = runtime.buildToolDescription('minimal-tool-description');
+  const terseDescription = runtime.buildToolDescription('terse');
+
+  assert.doesNotMatch(minimalDescription, /run 'help' to list commands/);
+  assert.match(minimalDescription, /available command names:/);
+  assert.match(minimalDescription, /\n {6}echo\n?/);
+  assert.doesNotMatch(terseDescription, /run 'help' to list commands/);
 });
 
 test('AgentCLI extra commands replace built-ins by default', async function (): Promise<void> {

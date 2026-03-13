@@ -28,6 +28,8 @@ export interface AgentCLIOutputLimits {
   maxBytes?: number;
 }
 
+export type ToolDescriptionVariant = 'full-tool-description' | 'minimal-tool-description' | 'terse';
+
 export class AgentCLI {
   public readonly registry: CommandRegistry;
   public readonly ctx: CommandContext;
@@ -50,38 +52,22 @@ export class AgentCLI {
     await this.ctx.vfs.mkdir(this.ctx.outputDir, true);
   }
 
-  buildToolDescription(): string {
+  buildToolDescription(variant: ToolDescriptionVariant = 'full-tool-description'): string {
     const commands = this.registry.all();
-    const lines = [
-      'Run CLI-style commands over registered tools and a rooted virtual file system.',
-      'This is not a real shell. Only registered commands are allowed.',
-      'Supported operators: |  &&  ||  ;',
-      'No env expansion, no globbing, no command substitution, no redirection.',
-      "Paths are rooted to '/'. Relative paths also resolve under '/'.",
-      '',
-      'Available commands:',
-    ];
+    const hasHelp = this.registry.has('help');
 
     if (commands.length === 0) {
-      lines.push('  (no commands registered)');
-      lines.push('', 'Register built-in or custom commands before exposing the run tool.');
-      return lines.join('\n');
+      return buildEmptyToolDescription();
     }
 
-    for (const spec of commands) {
-      lines.push(`  ${spec.name.padEnd(8, ' ')} — ${spec.summary}`);
+    switch (variant) {
+      case 'minimal-tool-description':
+        return buildMinimalToolDescription(commands, hasHelp);
+      case 'terse':
+        return buildTerseToolDescription(commands, hasHelp);
+      case 'full-tool-description':
+        return buildFullToolDescription(commands, hasHelp);
     }
-
-    const discovery = ['Discovery pattern:'];
-    if (this.registry.has('help')) {
-      discovery.push("  - run 'help' to list commands");
-    }
-    discovery.push("  - run '<command>' with no args for usage");
-    discovery.push('  - use pipes for composition');
-
-    lines.push('', ...discovery);
-
-    return lines.join('\n');
   }
 
   async run(commandLine: string): Promise<string> {
@@ -252,6 +238,80 @@ export class AgentCLI {
     await this.ctx.vfs.writeBytes(target, data);
     return target;
   }
+}
+
+function buildFullToolDescription(commands: CommandSpec[], hasHelp: boolean): string {
+  const lines = [...buildDescriptionHeader(), '', 'Available commands:'];
+
+  for (const spec of commands) {
+    lines.push(`  ${spec.name.padEnd(8, ' ')} — ${spec.summary}`);
+  }
+
+  lines.push('', ...buildDiscoveryLines(hasHelp));
+
+  return lines.join('\n');
+}
+
+function buildMinimalToolDescription(commands: CommandSpec[], hasHelp: boolean): string {
+  const lines = buildDescriptionHeader();
+
+  lines.push('');
+  lines.push('Command discovery:');
+  if (hasHelp) {
+    lines.push("  - run 'help' to list commands");
+  } else {
+    lines.push('  - available command names:');
+    for (const spec of commands) {
+      lines.push(`      ${spec.name}`);
+    }
+  }
+  lines.push("  - run '<command>' with no args for usage");
+  lines.push('  - use pipes for composition');
+  if (hasHelp) {
+    lines.push('  - detailed command catalog omitted in this variant');
+  }
+
+  return lines.join('\n');
+}
+
+function buildTerseToolDescription(commands: CommandSpec[], hasHelp: boolean): string {
+  const lines = buildDescriptionHeader();
+
+  lines.push('', 'Available commands:');
+  for (const spec of commands) {
+    lines.push(`  ${spec.name}`);
+  }
+  lines.push('', ...buildDiscoveryLines(hasHelp));
+
+  return lines.join('\n');
+}
+
+function buildEmptyToolDescription(): string {
+  const lines = buildDescriptionHeader();
+  lines.push('', 'Available commands:');
+  lines.push('  (no commands registered)');
+  lines.push('', 'Register built-in or custom commands before exposing the run tool.');
+  return lines.join('\n');
+}
+
+function buildDescriptionHeader(): string[] {
+  return [
+    'Run CLI-style commands over registered tools and a rooted virtual file system.',
+    'This is not a real shell. Only registered commands are allowed.',
+    'Supported operators: |  &&  ||  ;',
+    'No env expansion, no globbing, no command substitution, no redirection.',
+    "Paths are rooted to '/'. Relative paths also resolve under '/'.",
+  ];
+}
+
+function buildDiscoveryLines(hasHelp: boolean): string[] {
+  const discovery = ['Discovery pattern:'];
+  if (hasHelp) {
+    discovery.push("  - run 'help' to list commands");
+  }
+  discovery.push("  - run '<command>' with no args for usage");
+  discovery.push('  - use pipes for composition');
+  return discovery;
 }
 
 export async function createAgentCLI(options: AgentCLIOptions): Promise<AgentCLI> {

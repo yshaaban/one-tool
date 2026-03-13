@@ -3,7 +3,7 @@ import * as path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-import type { AgentCLI } from '../src/index.js';
+import type { AgentCLI, ToolDescriptionVariant } from '../src/index.js';
 import { buildToolDefinition } from '../src/index.js';
 import { errorMessage } from '../src/utils.js';
 
@@ -48,6 +48,10 @@ export interface AgentConfig {
 export interface AgentSession {
   messages: ChatMessage[];
   tools: ReturnType<typeof buildToolDefinition>[];
+}
+
+export interface AgentSessionOptions {
+  promptVariant?: ToolDescriptionVariant;
 }
 
 export interface AgentTurnOptions {
@@ -129,21 +133,64 @@ export function loadConfig(preferredProvider = process.env.AGENT_PROVIDER): Agen
   };
 }
 
-function buildSystemPrompt(runtime: AgentCLI): string {
-  return [
-    'You are a helpful agent with access to a single tool called `run`.',
-    'It executes CLI-style commands over a virtual file system and registered adapters.',
-    "Use the tool to answer the user's questions. You can chain multiple calls.",
-    'When the task asks about files, logs, search, fetch, or memory, inspect the runtime with the tool before answering.',
-    '',
-    runtime.buildToolDescription(),
-  ].join('\n');
+function buildSystemPrompt(
+  runtime: AgentCLI,
+  promptVariant: ToolDescriptionVariant = 'full-tool-description',
+): string {
+  const toolDescription = runtime.buildToolDescription(promptVariant);
+  const lines = buildPromptIntro(promptVariant, runtime.registry.has('help'));
+  lines.push('', toolDescription);
+  return lines.join('\n');
 }
 
-export function createAgentSession(runtime: AgentCLI): AgentSession {
+function buildPromptIntro(promptVariant: ToolDescriptionVariant, hasHelp: boolean): string[] {
+  switch (promptVariant) {
+    case 'minimal-tool-description': {
+      const lines = buildToolInspectionPromptIntro();
+      lines.push(buildDiscoveryPromptLine(hasHelp, 'usage when needed.'));
+      return lines;
+    }
+    case 'terse': {
+      const lines = buildToolInspectionPromptIntro();
+      if (hasHelp) {
+        lines.push('Command summaries are intentionally terse. Use `help` when you need details.');
+      } else {
+        lines.push(
+          "Command summaries are intentionally terse. Run '<command>' with no args when you need details.",
+        );
+      }
+      return lines;
+    }
+    case 'full-tool-description':
+      return [
+        'You are a helpful agent with access to a single tool called `run`.',
+        'It executes CLI-style commands over a virtual file system and registered adapters.',
+        "Use the tool to answer the user's questions. You can chain multiple calls.",
+        'When the task asks about files, logs, search, fetch, or memory, inspect the runtime with the tool before answering.',
+      ];
+  }
+}
+
+function buildToolInspectionPromptIntro(): string[] {
+  return [
+    'You are a helpful agent with access to a single tool called `run`.',
+    'It behaves like a CLI over a virtual file system and registered adapters.',
+    'Use the tool to inspect state before answering.',
+  ];
+}
+
+function buildDiscoveryPromptLine(hasHelp: boolean, suffix: string): string {
+  if (hasHelp) {
+    return `Use \`help\` to discover commands and ${suffix}`;
+  }
+  return `Run '<command>' with no args to discover ${suffix}`;
+}
+
+export function createAgentSession(runtime: AgentCLI, options: AgentSessionOptions = {}): AgentSession {
+  const promptVariant = options.promptVariant ?? 'full-tool-description';
   return {
-    messages: [{ role: 'system', content: buildSystemPrompt(runtime) }],
-    tools: [buildToolDefinition(runtime)],
+    messages: [{ role: 'system', content: buildSystemPrompt(runtime, promptVariant) }],
+    tools: [buildToolDefinition(runtime, 'run', { descriptionVariant: promptVariant })],
   };
 }
 
