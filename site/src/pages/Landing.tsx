@@ -63,7 +63,7 @@ const codeLines = [
   { text: 'await cli.run(', dim: false },
   { text: "'ls -a /'", accent: true },
   { text: ');', dim: true },
-  { text: '// → .system/ hello.txt', comment: true },
+  { text: '// → ., .., .system, hello.txt', comment: true },
 ];
 
 export function Landing() {
@@ -177,7 +177,7 @@ export function Landing() {
           <div>
             <h2 style={agentHeroTitleStyle}>Agent example</h2>
             <p style={agentHeroTextStyle}>
-              Follow the agent loop directly while the model uses the same familiar command subset over the
+              Follow the agent loop directly while the model uses the same familiar command forms over the
               demo workspace.
             </p>
           </div>

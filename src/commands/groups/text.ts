@@ -533,7 +533,7 @@ export const sort: CommandSpec = {
   summary: 'Sort lines from stdin or a file.',
   usage: SORT_USAGE,
   details:
-    'Examples:\n  sort /notes/todo.txt\n  sort -f /tmp/names.txt\n  sort -V /tmp/releases.txt\n  find /config --type file | sort -r',
+    'Examples:\n  sort /notes/todo.txt\n  sort -f /tmp/names.txt\n  sort -V /tmp/releases.txt\n  find /config -type f | sort -r',
   handler: cmdSort,
   acceptsStdin: true,
   minArgs: 0,
@@ -917,9 +917,11 @@ function compareSortLines(left: string, right: string, options: SortOptions): nu
   const rightNumber = numericSortValue(right);
 
   if (leftNumber !== null && rightNumber !== null) {
-    return leftNumber === rightNumber
-      ? compareTextSortLines(left, right, options.ignoreCase)
-      : leftNumber - rightNumber;
+    if (leftNumber === rightNumber) {
+      return compareTextSortLines(left, right, options.ignoreCase);
+    }
+
+    return leftNumber - rightNumber;
   }
   if (leftNumber !== null) {
     return 1;

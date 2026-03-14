@@ -11,7 +11,7 @@ import { contentFromArgsOrStdin, materializedLimitError } from '../shared/io.js'
 
 const LS_USAGE = 'ls [-1aRl] [path]';
 const FIND_USAGE =
-  'find [path] [--type file|dir|-type f|d] [--name pattern|-name pattern] [--max-depth N|-maxdepth N]';
+  'find [path] [--type file|dir|-type f|-type d] [--name pattern|-name pattern] [--max-depth N|-maxdepth N]';
 
 interface LsOptions {
   all: boolean;
@@ -521,6 +521,7 @@ async function cmdFind(ctx: CommandContext, args: string[], stdin: Uint8Array): 
   const { maxDepth, namePattern, targetPath, typeFilter } = parsed.value;
   const startPath = targetPath ?? '/';
   const normalizedStart = ctx.vfs.normalize(startPath);
+  const namePatternRegex = namePattern === undefined ? undefined : compileWildcardPattern(namePattern);
 
   try {
     const startInfo = await ctx.vfs.stat(startPath);
@@ -535,7 +536,7 @@ async function cmdFind(ctx: CommandContext, args: string[], stdin: Uint8Array): 
       normalizedStart,
       startInfo.isDir,
       0,
-      { maxDepth, typeFilter, namePattern },
+      { maxDepth, typeFilter, namePatternRegex },
       matches,
     );
 
@@ -583,8 +584,8 @@ export const diff: CommandSpec = {
 
 interface FindFilters {
   maxDepth: number;
+  namePatternRegex: RegExp | undefined;
   typeFilter: 'file' | 'dir' | undefined;
-  namePattern: string | undefined;
 }
 
 async function collectFindMatches(
@@ -620,16 +621,15 @@ function matchesFindFilters(path: string, isDir: boolean, filters: FindFilters):
   if (filters.typeFilter === 'dir' && !isDir) {
     return false;
   }
-  if (filters.namePattern !== undefined && !matchesWildcard(baseName(path), filters.namePattern)) {
+  if (filters.namePatternRegex !== undefined && !filters.namePatternRegex.test(baseName(path))) {
     return false;
   }
   return true;
 }
 
-function matchesWildcard(value: string, pattern: string): boolean {
+function compileWildcardPattern(pattern: string): RegExp {
   const escaped = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&');
-  const regex = new RegExp(`^${escaped.replace(/\*/g, '.*').replace(/\?/g, '.')}$`);
-  return regex.test(value);
+  return new RegExp(`^${escaped.replace(/\*/g, '.*').replace(/\?/g, '.')}$`);
 }
 
 function parseLsArgs(args: string[]): { ok: true; value: LsOptions } | { ok: false; error: string } {
@@ -841,8 +841,8 @@ function parseFindArgs(args: string[]):
     }
 
     if (parsingOptions && isFindTypeFlag(arg)) {
-      const value = args[index + 1];
-      if (value === undefined) {
+      const value = readFindOptionValue(args, index);
+      if (value === null) {
         return { ok: false, error: `find: missing value for ${arg}. Usage: ${FIND_USAGE}` };
       }
       const normalizedType = normalizeFindTypeValue(value);
@@ -855,8 +855,8 @@ function parseFindArgs(args: string[]):
     }
 
     if (parsingOptions && isFindNameFlag(arg)) {
-      const value = args[index + 1];
-      if (value === undefined) {
+      const value = readFindOptionValue(args, index);
+      if (value === null) {
         return { ok: false, error: `find: missing value for ${arg}. Usage: ${FIND_USAGE}` };
       }
       namePattern = value;
@@ -865,8 +865,8 @@ function parseFindArgs(args: string[]):
     }
 
     if (parsingOptions && isFindMaxDepthFlag(arg)) {
-      const value = args[index + 1];
-      if (value === undefined) {
+      const value = readFindOptionValue(args, index);
+      if (value === null) {
         return { ok: false, error: `find: missing value for ${arg}. Usage: ${FIND_USAGE}` };
       }
       const parsedDepth = Number.parseInt(value, 10);
@@ -923,6 +923,10 @@ function normalizeFindTypeValue(value: string): 'file' | 'dir' | null {
     default:
       return null;
   }
+}
+
+function readFindOptionValue(args: string[], index: number): string | null {
+  return args[index + 1] ?? null;
 }
 
 export const fsCommands: CommandSpec[] = [ls, stat, cat, write, append, mkdir, cp, diff, mv, rm, find];

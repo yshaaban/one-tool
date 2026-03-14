@@ -117,19 +117,19 @@ memory recent 5
 
 ### Filesystem commands
 
-| Command  | Usage                                                                                                                                    | Stdin | Purpose                                   |
-| -------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ----: | ----------------------------------------- |
-| `ls`     | `ls [-1aRl] [path]`                                                                                                                      |    no | List files or directories                 |
-| `stat`   | `stat <path>`                                                                                                                            |    no | Show file metadata                        |
-| `cat`    | `cat <path>`                                                                                                                             |    no | Read a text file                          |
-| `write`  | `write <path> [content]`                                                                                                                 |   yes | Write a file from inline content or stdin |
-| `append` | `append <path> [content]`                                                                                                                |   yes | Append to a file                          |
-| `mkdir`  | `mkdir <path>`                                                                                                                           |    no | Create a directory and missing parents    |
-| `cp`     | `cp <src> <dst>`                                                                                                                         |    no | Copy a file or directory                  |
-| `diff`   | `diff [-u\|-U N\|-c\|-C N] [-r] [-a] [-b] [-i] <left> <right>`                                                                           |   yes | Compare files or directories              |
-| `mv`     | `mv <src> <dst>`                                                                                                                         |    no | Move or rename a file or directory        |
-| `rm`     | `rm <path>`                                                                                                                              |    no | Delete a file or directory recursively    |
-| `find`   | <code>find [path] [--type file&#124;dir&#124;-type f&#124;d] [--name pattern&#124;-name pattern] [--max-depth N&#124;-maxdepth N]</code> |    no | Recursively list files and directories    |
+| Command  | Usage                                                                                                                                          | Stdin | Purpose                                   |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ----: | ----------------------------------------- |
+| `ls`     | `ls [-1aRl] [path]`                                                                                                                            |    no | List files or directories                 |
+| `stat`   | `stat <path>`                                                                                                                                  |    no | Show file metadata                        |
+| `cat`    | `cat <path>`                                                                                                                                   |    no | Read a text file                          |
+| `write`  | `write <path> [content]`                                                                                                                       |   yes | Write a file from inline content or stdin |
+| `append` | `append <path> [content]`                                                                                                                      |   yes | Append to a file                          |
+| `mkdir`  | `mkdir <path>`                                                                                                                                 |    no | Create a directory and missing parents    |
+| `cp`     | `cp <src> <dst>`                                                                                                                               |    no | Copy a file or directory                  |
+| `diff`   | `diff [-u\|-U N\|-c\|-C N] [-r] [-a] [-b] [-i] <left> <right>`                                                                                 |   yes | Compare files or directories              |
+| `mv`     | `mv <src> <dst>`                                                                                                                               |    no | Move or rename a file or directory        |
+| `rm`     | `rm <path>`                                                                                                                                    |    no | Delete a file or directory recursively    |
+| `find`   | <code>find [path] [--type file&#124;dir&#124;-type f&#124;-type d] [--name pattern&#124;-name pattern] [--max-depth N&#124;-maxdepth N]</code> |    no | Recursively list files and directories    |
 
 Examples:
 
