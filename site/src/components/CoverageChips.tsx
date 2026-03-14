@@ -4,7 +4,7 @@ type CoverageVariant = 'card' | 'page';
 
 interface CoverageChipsProps {
   items?: string[];
-  limit?: number;
+  maxItems?: number;
   variant?: CoverageVariant;
 }
 
@@ -44,12 +44,12 @@ const chipStyles: Record<CoverageVariant, CSSProperties> = {
   },
 };
 
-export function CoverageChips({ items, limit, variant = 'page' }: CoverageChipsProps): ReactNode {
+export function CoverageChips({ items, maxItems, variant = 'page' }: CoverageChipsProps): ReactNode {
   if (!items || items.length === 0) {
     return null;
   }
 
-  const visibleItems = limit === undefined ? items : items.slice(0, limit);
+  const visibleItems = maxItems === undefined ? items : items.slice(0, maxItems);
   if (visibleItems.length === 0) {
     return null;
   }

@@ -84,7 +84,7 @@ function ExampleSection({ title, description, examples, topMargin }: ExampleSect
 function ExampleCard({ example, animationDelay }: ExampleCardProps): React.ReactNode {
   const colors = getColors(example.id);
   const firstCommand = example.steps?.[0]?.command;
-  const highlightedCoverage = example.covers?.slice(0, 4) ?? [];
+  const hasCoverage = (example.covers?.length ?? 0) > 0;
 
   return (
     <Link
@@ -145,12 +145,12 @@ function ExampleCard({ example, animationDelay }: ExampleCardProps): React.React
           color: 'var(--text-muted)',
           fontSize: '0.84rem',
           lineHeight: 1.55,
-          marginBottom: firstCommand || highlightedCoverage.length > 0 ? '0.75rem' : 0,
+          marginBottom: firstCommand || hasCoverage ? '0.75rem' : 0,
         }}
       >
         {example.description}
       </p>
-      <CoverageChips items={highlightedCoverage} variant="card" />
+      <CoverageChips items={example.covers} maxItems={4} variant="card" />
       {firstCommand && (
         <div style={commandPreviewStyle}>
           <span style={{ color: 'var(--accent)', marginRight: '0.4rem' }}>$</span>
