@@ -5,14 +5,30 @@ import { textDecoder, textEncoder } from '../../src/types.js';
 import { MemoryVFS } from '../../src/vfs/memory-vfs.js';
 import { makeCtx, runCommand, stdinText, stdoutText } from './harness.js';
 
-test('text: echo joins arguments and rejects stdin', async () => {
+test('text: echo supports newline and escape flags, and rejects stdin', async () => {
   const inline = await runCommand('echo', ['hello', 'world']);
   assert.equal(inline.result.exitCode, 0);
-  assert.equal(stdoutText(inline.result), 'hello world');
+  assert.equal(stdoutText(inline.result), 'hello world\n');
 
   const empty = await runCommand('echo');
   assert.equal(empty.result.exitCode, 0);
-  assert.equal(stdoutText(empty.result), '');
+  assert.equal(stdoutText(empty.result), '\n');
+
+  const noNewline = await runCommand('echo', ['-n', 'hello']);
+  assert.equal(noNewline.result.exitCode, 0);
+  assert.equal(stdoutText(noNewline.result), 'hello');
+
+  const escapes = await runCommand('echo', ['-e', 'line\\none\\tindent']);
+  assert.equal(escapes.result.exitCode, 0);
+  assert.equal(stdoutText(escapes.result), 'line\none\tindent\n');
+
+  const rawEscapes = await runCommand('echo', ['-e', '-E', 'line\\none']);
+  assert.equal(rawEscapes.result.exitCode, 0);
+  assert.equal(stdoutText(rawEscapes.result), 'line\\none\n');
+
+  const doubleDashLiteral = await runCommand('echo', ['--', 'value']);
+  assert.equal(doubleDashLiteral.result.exitCode, 0);
+  assert.equal(stdoutText(doubleDashLiteral.result), '-- value\n');
 
   const stdin = await runCommand('echo', [], { stdin: stdinText('ignored') });
   assert.equal(stdin.result.exitCode, 1);
@@ -23,16 +39,28 @@ test('text: grep filters file content with flags', async () => {
   const ctx = makeCtx();
   await ctx.vfs.writeBytes(
     '/logs/app.log',
-    textEncoder.encode('INFO startup\nerror timeout\nWARN retry\nerror db'),
+    textEncoder.encode('INFO startup\nerror timeout\nWARN retry\nerror db\nerror timeout timeout'),
   );
 
   const insensitive = await runCommand('grep', ['-i', '-n', 'error', '/logs/app.log'], { ctx });
   assert.equal(insensitive.result.exitCode, 0);
-  assert.equal(stdoutText(insensitive.result), '2:error timeout\n4:error db');
+  assert.equal(stdoutText(insensitive.result), '2:error timeout\n4:error db\n5:error timeout timeout');
 
   const inverted = await runCommand('grep', ['-v', 'WARN', '/logs/app.log'], { ctx });
   assert.equal(inverted.result.exitCode, 0);
   assert.doesNotMatch(stdoutText(inverted.result), /WARN retry/);
+
+  const fixed = await runCommand('grep', ['-F', '-o', 'timeout', '/logs/app.log'], { ctx });
+  assert.equal(fixed.result.exitCode, 0);
+  assert.equal(stdoutText(fixed.result), 'timeout\ntimeout\ntimeout');
+
+  const wholeWord = await runCommand('grep', ['-F', '-w', 'error', '/logs/app.log'], { ctx });
+  assert.equal(wholeWord.result.exitCode, 0);
+  assert.equal(stdoutText(wholeWord.result), 'error timeout\nerror db\nerror timeout timeout');
+
+  const wholeLine = await runCommand('grep', ['-x', 'WARN retry', '/logs/app.log'], { ctx });
+  assert.equal(wholeLine.result.exitCode, 0);
+  assert.equal(stdoutText(wholeLine.result), 'WARN retry');
 });
 
 test('text: grep supports stdin, counts, and invalid regex errors', async () => {
@@ -42,6 +70,30 @@ test('text: grep supports stdin, counts, and invalid regex errors', async () => 
   assert.equal(counted.result.exitCode, 0);
   assert.equal(stdoutText(counted.result), '2');
 
+  const quietMatch = await runCommand('grep', ['-q', 'refund'], {
+    stdin: stdinText('refund created\nskip'),
+  });
+  assert.equal(quietMatch.result.exitCode, 0);
+  assert.equal(stdoutText(quietMatch.result), '');
+
+  const noMatch = await runCommand('grep', ['-F', 'missing'], {
+    stdin: stdinText('refund created\nrefund updated\nskip'),
+  });
+  assert.equal(noMatch.result.exitCode, 1);
+  assert.equal(stdoutText(noMatch.result), '');
+
+  const noMatchCount = await runCommand('grep', ['-F', '-c', 'missing'], {
+    stdin: stdinText('refund created\nrefund updated\nskip'),
+  });
+  assert.equal(noMatchCount.result.exitCode, 1);
+  assert.equal(stdoutText(noMatchCount.result), '0');
+
+  const onlyMatches = await runCommand('grep', ['-E', '-o', 'refund|updated'], {
+    stdin: stdinText('refund created\nrefund updated\nskip'),
+  });
+  assert.equal(onlyMatches.result.exitCode, 0);
+  assert.equal(stdoutText(onlyMatches.result), 'refund\nrefund\nupdated');
+
   const invalid = await runCommand('grep', ['[unterminated'], {
     stdin: stdinText('anything'),
   });
@@ -49,24 +101,37 @@ test('text: grep supports stdin, counts, and invalid regex errors', async () => 
   assert.match(invalid.result.stderr, /grep: invalid regex/);
 });
 
-test('text: head reads from files and stdin, and rejects binary stdin', async () => {
+test('text: head reads lines and bytes, and rejects binary stdin in line mode', async () => {
   const ctx = makeCtx();
   await ctx.vfs.writeBytes('/notes.txt', textEncoder.encode('a\nb\nc\nd'));
+  await ctx.vfs.writeBytes('/bytes.bin', new Uint8Array([0, 1, 2, 3, 4]));
 
   const fileResult = await runCommand('head', ['-n', '2', '/notes.txt'], { ctx });
   assert.equal(fileResult.result.exitCode, 0);
-  assert.equal(stdoutText(fileResult.result), 'a\nb');
+  assert.equal(stdoutText(fileResult.result), 'a\nb\n');
 
   const stdinResult = await runCommand('head', ['-n', '3'], { stdin: stdinText('a\nb\nc\nd') });
   assert.equal(stdinResult.result.exitCode, 0);
-  assert.equal(stdoutText(stdinResult.result), 'a\nb\nc');
+  assert.equal(stdoutText(stdinResult.result), 'a\nb\nc\n');
+
+  const byteResult = await runCommand('head', ['-c', '3', '/bytes.bin'], { ctx });
+  assert.equal(byteResult.result.exitCode, 0);
+  assert.deepEqual(Array.from(byteResult.result.stdout), [0, 1, 2]);
+
+  const attachedByteCount = await runCommand('head', ['-c3', '/bytes.bin'], { ctx });
+  assert.equal(attachedByteCount.result.exitCode, 0);
+  assert.deepEqual(Array.from(attachedByteCount.result.stdout), [0, 1, 2]);
+
+  const shorthand = await runCommand('head', ['-2', '/notes.txt'], { ctx });
+  assert.equal(shorthand.result.exitCode, 0);
+  assert.equal(stdoutText(shorthand.result), 'a\nb\n');
 
   const binary = await runCommand('head', [], { stdin: new Uint8Array([0, 1, 2]) });
   assert.equal(binary.result.exitCode, 1);
   assert.match(binary.result.stderr, /head: stdin is binary/);
 });
 
-test('text: tail reads from stdin and file paths', async () => {
+test('text: tail reads lines and bytes from stdin and file paths', async () => {
   const fromStdin = await runCommand('tail', ['-n', '2'], {
     stdin: stdinText('a\nb\nc\nd'),
   });
@@ -75,12 +140,25 @@ test('text: tail reads from stdin and file paths', async () => {
 
   const ctx = makeCtx();
   await ctx.vfs.writeBytes('/tail.txt', textEncoder.encode('1\n2\n3\n4'));
+  await ctx.vfs.writeBytes('/bytes.bin', new Uint8Array([0, 1, 2, 3, 4]));
   const fromFile = await runCommand('tail', ['/tail.txt'], { ctx });
   assert.equal(fromFile.result.exitCode, 0);
   assert.equal(stdoutText(fromFile.result), '1\n2\n3\n4');
+
+  const byteTail = await runCommand('tail', ['-c', '2', '/bytes.bin'], { ctx });
+  assert.equal(byteTail.result.exitCode, 0);
+  assert.deepEqual(Array.from(byteTail.result.stdout), [3, 4]);
+
+  const attachedByteTail = await runCommand('tail', ['-c2', '/bytes.bin'], { ctx });
+  assert.equal(attachedByteTail.result.exitCode, 0);
+  assert.deepEqual(Array.from(attachedByteTail.result.stdout), [3, 4]);
+
+  const shorthandTail = await runCommand('tail', ['-2', '/tail.txt'], { ctx });
+  assert.equal(shorthandTail.result.exitCode, 0);
+  assert.equal(stdoutText(shorthandTail.result), '3\n4');
 });
 
-test('text: sort orders lines lexically, numerically, and uniquely', async () => {
+test('text: sort orders lines lexically, numerically, case-insensitively, by version, and uniquely', async () => {
   const lexical = await runCommand('sort', [], {
     stdin: stdinText('pear\napple\nbanana\napple'),
   });
@@ -91,13 +169,43 @@ test('text: sort orders lines lexically, numerically, and uniquely', async () =>
     stdin: stdinText('10\n2\n30\napple'),
   });
   assert.equal(numeric.result.exitCode, 0);
-  assert.equal(stdoutText(numeric.result), '2\n10\n30\napple');
+  assert.equal(stdoutText(numeric.result), 'apple\n2\n10\n30');
 
   const unique = await runCommand('sort', ['-u'], {
     stdin: stdinText('pear\napple\npear\napple'),
   });
   assert.equal(unique.result.exitCode, 0);
   assert.equal(stdoutText(unique.result), 'apple\npear');
+
+  const numericUnique = await runCommand('sort', ['-n', '-u'], {
+    stdin: stdinText('2\n02\napple\napple'),
+  });
+  assert.equal(numericUnique.result.exitCode, 0);
+  assert.equal(stdoutText(numericUnique.result), 'apple\n2');
+
+  const folded = await runCommand('sort', ['-f'], {
+    stdin: stdinText('beta\nAlpha\napple'),
+  });
+  assert.equal(folded.result.exitCode, 0);
+  assert.equal(stdoutText(folded.result), 'Alpha\napple\nbeta');
+
+  const versioned = await runCommand('sort', ['-V'], {
+    stdin: stdinText('v1.10\nv1.2\nv1.3'),
+  });
+  assert.equal(versioned.result.exitCode, 0);
+  assert.equal(stdoutText(versioned.result), 'v1.2\nv1.3\nv1.10');
+
+  const foldedUnique = await runCommand('sort', ['-f', '-u'], {
+    stdin: stdinText('a\nA\nbeta'),
+  });
+  assert.equal(foldedUnique.result.exitCode, 0);
+  assert.equal(stdoutText(foldedUnique.result), 'a\nbeta');
+
+  const ctx = makeCtx();
+  await ctx.vfs.writeBytes('/versions.txt', textEncoder.encode('v1.10\nv1.2\nv1.3'));
+  const fileSort = await runCommand('sort', ['-V', '/versions.txt'], { ctx });
+  assert.equal(fileSort.result.exitCode, 0);
+  assert.equal(stdoutText(fileSort.result), 'v1.2\nv1.3\nv1.10');
 });
 
 test('text: tr translates, deletes, squeezes, and preserves empty stdin', async () => {
@@ -249,7 +357,7 @@ test('text: sed formats parent-not-directory and in-place resource-limit failure
   assert.equal(textDecoder.decode(unchanged), 'abcd');
 });
 
-test('text: uniq collapses adjacent duplicates and supports counts', async () => {
+test('text: uniq collapses adjacent duplicates and supports counts and group filters', async () => {
   const basic = await runCommand('uniq', [], {
     stdin: stdinText('a\na\nb\na\na'),
   });
@@ -260,30 +368,42 @@ test('text: uniq collapses adjacent duplicates and supports counts', async () =>
     stdin: stdinText('a\na\nb\nb\nb'),
   });
   assert.equal(counted.result.exitCode, 0);
-  assert.equal(stdoutText(counted.result), '2\ta\n3\tb');
+  assert.equal(stdoutText(counted.result), '      2 a\n      3 b');
 
   const insensitive = await runCommand('uniq', ['-i'], {
     stdin: stdinText('Error\nerror\nWARN'),
   });
   assert.equal(insensitive.result.exitCode, 0);
   assert.equal(stdoutText(insensitive.result), 'Error\nWARN');
+
+  const duplicatesOnly = await runCommand('uniq', ['-d'], {
+    stdin: stdinText('a\na\nb\nc\nc'),
+  });
+  assert.equal(duplicatesOnly.result.exitCode, 0);
+  assert.equal(stdoutText(duplicatesOnly.result), 'a\nc');
+
+  const uniquesOnly = await runCommand('uniq', ['-u'], {
+    stdin: stdinText('a\na\nb\nc\nc'),
+  });
+  assert.equal(uniquesOnly.result.exitCode, 0);
+  assert.equal(stdoutText(uniquesOnly.result), 'b');
 });
 
 test('text: wc reports line, word, and byte counts', async () => {
   const ctx = makeCtx();
-  await ctx.vfs.writeBytes('/counts.txt', textEncoder.encode('alpha beta\ngamma\n'));
+  await ctx.vfs.writeBytes('/counts.txt', textEncoder.encode('alpha beta\ngamma'));
 
   const summary = await runCommand('wc', ['/counts.txt'], { ctx });
   assert.equal(summary.result.exitCode, 0);
-  assert.equal(stdoutText(summary.result), 'lines: 2\nwords: 3\nbytes: 17');
+  assert.equal(stdoutText(summary.result), ' 1  3 16 /counts.txt');
 
   const linesOnly = await runCommand('wc', ['-l', '/counts.txt'], { ctx });
   assert.equal(linesOnly.result.exitCode, 0);
-  assert.equal(stdoutText(linesOnly.result), '2');
+  assert.equal(stdoutText(linesOnly.result), '1 /counts.txt');
 
   const wordsAndBytes = await runCommand('wc', ['-w', '-c'], {
     stdin: stdinText('one two'),
   });
   assert.equal(wordsAndBytes.result.exitCode, 0);
-  assert.equal(stdoutText(wordsAndBytes.result), 'words: 2\nbytes: 7');
+  assert.equal(stdoutText(wordsAndBytes.result), '      2       7');
 });

@@ -17,6 +17,39 @@ test('fs: ls reports missing paths', async () => {
   assert.match(result.stderr, /ls: path not found: \/missing/);
 });
 
+test('fs: ls hides dot entries by default and shows them with -a', async () => {
+  const ctx = makeCtx();
+  await ctx.vfs.writeBytes('/visible.txt', textEncoder.encode('visible'));
+  await ctx.vfs.writeBytes('/.hidden.txt', textEncoder.encode('hidden'));
+
+  const hiddenByDefault = await runCommand('ls', ['/'], { ctx });
+  assert.equal(hiddenByDefault.result.exitCode, 0);
+  assert.equal(stdoutText(hiddenByDefault.result), 'visible.txt');
+
+  const shownWithAll = await runCommand('ls', ['-a', '/'], { ctx });
+  assert.equal(shownWithAll.result.exitCode, 0);
+  assert.equal(stdoutText(shownWithAll.result), '.\n..\n.hidden.txt\nvisible.txt');
+});
+
+test('fs: ls supports files, recursion, and long output', async () => {
+  const ctx = makeCtx();
+  await ctx.vfs.writeBytes('/docs/a.txt', textEncoder.encode('alpha'));
+  await ctx.vfs.writeBytes('/docs/sub/b.txt', textEncoder.encode('beta'));
+
+  const fileListing = await runCommand('ls', ['/docs/a.txt'], { ctx });
+  assert.equal(fileListing.result.exitCode, 0);
+  assert.equal(stdoutText(fileListing.result), '/docs/a.txt');
+
+  const recursive = await runCommand('ls', ['-R', '/docs'], { ctx });
+  assert.equal(recursive.result.exitCode, 0);
+  assert.equal(stdoutText(recursive.result), '/docs:\na.txt\nsub\n\n/docs/sub:\nb.txt');
+
+  const long = await runCommand('ls', ['-l', '/docs'], { ctx });
+  assert.equal(long.result.exitCode, 0);
+  assert.match(stdoutText(long.result), /^- +5 +\d{4}-\d{2}-\d{2}T.*Z a\.txt$/m);
+  assert.match(stdoutText(long.result), /^d +0 +\d{4}-\d{2}-\d{2}T.*Z sub$/m);
+});
+
 test('fs: stat reports missing paths', async () => {
   const { result } = await runCommand('stat', ['/missing.txt']);
   assert.equal(result.exitCode, 1);
@@ -190,15 +223,38 @@ test('fs: find walks recursively and supports filters', async () => {
 
   const all = await runCommand('find', ['/docs'], { ctx });
   assert.equal(all.result.exitCode, 0);
-  assert.equal(stdoutText(all.result), '/docs\n/docs/empty\n/docs/nested\n/docs/nested/b.md\n/docs/a.txt');
+  assert.equal(stdoutText(all.result), '/docs\n/docs/a.txt\n/docs/empty\n/docs/nested\n/docs/nested/b.md');
 
   const filesOnly = await runCommand('find', ['/docs', '--type', 'file'], { ctx });
   assert.equal(filesOnly.result.exitCode, 0);
-  assert.equal(stdoutText(filesOnly.result), '/docs/nested/b.md\n/docs/a.txt');
+  assert.equal(stdoutText(filesOnly.result), '/docs/a.txt\n/docs/nested/b.md');
 
   const named = await runCommand('find', ['/docs', '--name', '*.md'], { ctx });
   assert.equal(named.result.exitCode, 0);
   assert.equal(stdoutText(named.result), '/docs/nested/b.md');
+});
+
+test('fs: find accepts GNU-style aliases and short type values', async () => {
+  const ctx = makeCtx();
+  await ctx.vfs.writeBytes('/tree/top.txt', textEncoder.encode('top'));
+  await ctx.vfs.writeBytes('/tree/deep/down.md', textEncoder.encode('down'));
+  await ctx.vfs.mkdir('/tree/empty', true);
+
+  const filesOnly = await runCommand('find', ['/tree', '-type', 'f'], { ctx });
+  assert.equal(filesOnly.result.exitCode, 0);
+  assert.equal(stdoutText(filesOnly.result), '/tree/deep/down.md\n/tree/top.txt');
+
+  const dirsOnly = await runCommand('find', ['/tree', '-type', 'd'], { ctx });
+  assert.equal(dirsOnly.result.exitCode, 0);
+  assert.equal(stdoutText(dirsOnly.result), '/tree\n/tree/deep\n/tree/empty');
+
+  const maxDepth = await runCommand('find', ['/tree', '-maxdepth', '1'], { ctx });
+  assert.equal(maxDepth.result.exitCode, 0);
+  assert.equal(stdoutText(maxDepth.result), '/tree\n/tree/deep\n/tree/empty\n/tree/top.txt');
+
+  const named = await runCommand('find', ['/tree', '-name', '*.md'], { ctx });
+  assert.equal(named.result.exitCode, 0);
+  assert.equal(stdoutText(named.result), '/tree/deep/down.md');
 });
 
 test('fs: find supports max depth and validates flags', async () => {

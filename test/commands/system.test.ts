@@ -39,11 +39,14 @@ test('system: help lists commands and renders detailed command help', async () =
   const list = await runCommand('help');
   assert.equal(list.result.exitCode, 0);
   assert.match(stdoutText(list.result), /Available commands:/);
-  assert.match(stdoutText(list.result), /grep\s+— Filter lines by regex/);
+  assert.match(stdoutText(list.result), /grep\s+— Filter lines by pattern/);
 
   const detail = await runCommand('help', ['grep'], { ctx: list.ctx });
   assert.equal(detail.result.exitCode, 0);
-  assert.match(stdoutText(detail.result), /Usage: grep \[-i\] \[-v\] \[-c\] \[-n\] <pattern> \[path\]/);
+  assert.match(
+    stdoutText(detail.result),
+    /Usage: grep \[-i\] \[-v\] \[-c\] \[-n\] \[-F\] \[-E\] \[-o\] \[-w\] \[-x\] \[-q\] <pattern> \[path\]/,
+  );
 });
 
 test('system: help reports unknown commands and rejects stdin', async () => {

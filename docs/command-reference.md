@@ -4,6 +4,11 @@ Complete reference for the built-in command language and built-in command surfac
 
 For the top-level overview, start with [`../README.md`](../README.md). For API details, see [`api.md`](api.md).
 
+For the GNU-style subset we support and the oracle-backed compatibility target, see:
+
+- [`parity/gnu-command-parity.md`](parity/gnu-command-parity.md)
+- [`parity/compatibility-matrix.md`](parity/compatibility-matrix.md)
+
 ---
 
 ## Command language
@@ -112,24 +117,26 @@ memory recent 5
 
 ### Filesystem commands
 
-| Command  | Usage                                                                            | Stdin | Purpose                                   |
-| -------- | -------------------------------------------------------------------------------- | ----: | ----------------------------------------- |
-| `ls`     | `ls [path]`                                                                      |    no | List a directory                          |
-| `stat`   | `stat <path>`                                                                    |    no | Show file metadata                        |
-| `cat`    | `cat <path>`                                                                     |    no | Read a text file                          |
-| `write`  | `write <path> [content]`                                                         |   yes | Write a file from inline content or stdin |
-| `append` | `append <path> [content]`                                                        |   yes | Append to a file                          |
-| `mkdir`  | `mkdir <path>`                                                                   |    no | Create a directory and missing parents    |
-| `cp`     | `cp <src> <dst>`                                                                 |    no | Copy a file or directory                  |
-| `diff`   | `diff [-u\|-U N\|-c\|-C N] [-r] [-a] [-b] [-i] <left> <right>`                   |   yes | Compare files or directories              |
-| `mv`     | `mv <src> <dst>`                                                                 |    no | Move or rename a file or directory        |
-| `rm`     | `rm <path>`                                                                      |    no | Delete a file or directory recursively    |
-| `find`   | <code>find [path] [--type file&#124;dir] [--name pattern] [--max-depth N]</code> |    no | Recursively list files and directories    |
+| Command  | Usage                                                                                                                                    | Stdin | Purpose                                   |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ----: | ----------------------------------------- |
+| `ls`     | `ls [-1aRl] [path]`                                                                                                                      |    no | List files or directories                 |
+| `stat`   | `stat <path>`                                                                                                                            |    no | Show file metadata                        |
+| `cat`    | `cat <path>`                                                                                                                             |    no | Read a text file                          |
+| `write`  | `write <path> [content]`                                                                                                                 |   yes | Write a file from inline content or stdin |
+| `append` | `append <path> [content]`                                                                                                                |   yes | Append to a file                          |
+| `mkdir`  | `mkdir <path>`                                                                                                                           |    no | Create a directory and missing parents    |
+| `cp`     | `cp <src> <dst>`                                                                                                                         |    no | Copy a file or directory                  |
+| `diff`   | `diff [-u\|-U N\|-c\|-C N] [-r] [-a] [-b] [-i] <left> <right>`                                                                           |   yes | Compare files or directories              |
+| `mv`     | `mv <src> <dst>`                                                                                                                         |    no | Move or rename a file or directory        |
+| `rm`     | `rm <path>`                                                                                                                              |    no | Delete a file or directory recursively    |
+| `find`   | <code>find [path] [--type file&#124;dir&#124;-type f&#124;d] [--name pattern&#124;-name pattern] [--max-depth N&#124;-maxdepth N]</code> |    no | Recursively list files and directories    |
 
 Examples:
 
 ```text
 ls /
+ls -a /
+ls -R /logs
 stat /logs/app.log
 cat /notes/todo.txt
 write /reports/summary.txt "ready"
@@ -140,38 +147,49 @@ cp /drafts/qbr.md /reports/qbr-v1.md
 diff -u /drafts/qbr.md /reports/qbr-v2.md
 mv /reports/qbr-v1.md /archive/qbr.md
 rm /scratch
-find /config --type file --name "*.json"
+find /config -type f -name "*.json"
 ```
 
 ### Text commands
 
-| Command | Usage                                       | Stdin | Purpose                                                                                 |
-| ------- | ------------------------------------------- | ----: | --------------------------------------------------------------------------------------- |
-| `echo`  | `echo [text ...]`                           |    no | Write arguments back as plain text output                                               |
-| `grep`  | `grep [-i] [-v] [-c] [-n] <pattern> [path]` |   yes | Filter lines by regex                                                                   |
-| `head`  | `head [-n N] [path]`                        |   yes | Show first N lines                                                                      |
-| `tail`  | `tail [-n N] [path]`                        |   yes | Show last N lines                                                                       |
-| `sort`  | `sort [-r] [-n] [-u] [path]`                |   yes | Sort lines                                                                              |
-| `sed`   | `sed [OPTION]... [SCRIPT] [INPUTFILE...]`   |   yes | Run a GNU-compatible `sed` subset with `p`, `d`, `q`, `n`, `s`, `a`, `i`, `c`, and `-i` |
-| `tr`    | `tr [OPTION]... STRING1 [STRING2]`          |   yes | Translate, delete, or squeeze bytes from stdin                                          |
-| `uniq`  | `uniq [-c] [-i] [path]`                     |   yes | Collapse adjacent duplicate lines                                                       |
-| `wc`    | `wc [-l] [-w] [-c] [path]`                  |   yes | Count lines, words, and bytes                                                           |
+| Command | Usage                                                                     | Stdin | Purpose                                                                                 |
+| ------- | ------------------------------------------------------------------------- | ----: | --------------------------------------------------------------------------------------- |
+| `echo`  | `echo [-n] [-e\|-E] [text ...]`                                           |    no | Write arguments back as plain text output                                               |
+| `grep`  | `grep [-i] [-v] [-c] [-n] [-F] [-E] [-o] [-w] [-x] [-q] <pattern> [path]` |   yes | Filter lines by pattern                                                                 |
+| `head`  | `head [-n N\|-c N\|-N] [path]`                                            |   yes | Show first N lines or bytes                                                             |
+| `tail`  | `tail [-n N\|-c N\|-N] [path]`                                            |   yes | Show last N lines or bytes                                                              |
+| `sort`  | `sort [-r] [-n] [-u] [-f] [-V] [path]`                                    |   yes | Sort lines                                                                              |
+| `sed`   | `sed [OPTION]... [SCRIPT] [INPUTFILE...]`                                 |   yes | Run a GNU-compatible `sed` subset with `p`, `d`, `q`, `n`, `s`, `a`, `i`, `c`, and `-i` |
+| `tr`    | `tr [OPTION]... STRING1 [STRING2]`                                        |   yes | Translate, delete, or squeeze bytes from stdin                                          |
+| `uniq`  | `uniq [-c] [-d] [-i] [-u] [path]`                                         |   yes | Collapse adjacent duplicate lines, or select duplicate-only / unique-only groups        |
+| `wc`    | `wc [-l] [-w] [-c] [path]`                                                |   yes | Count lines, words, and bytes in GNU-style field order                                  |
 
 Examples:
 
 ```text
 echo "ready for review"
+echo -e "line 1\nline 2"
 grep ERROR /logs/app.log
+grep -F -o timeout /logs/app.log
 cat /logs/app.log | grep -i timeout
 head -n 20 /logs/app.log
+head -5 /logs/app.log
+head -c 16 /notes/todo.txt
 tail -n 50 /logs/app.log
-find /config --type file | sort
+tail -2 /logs/app.log
+tail -c 16 /notes/todo.txt
+find /config -type f | sort
+sort -f /tmp/names.txt
+sort -V /tmp/releases.txt
 sed -n '1,20p' /logs/app.log
 sed -ne '2p' /logs/app.log
 sed -i.bak 's/us-east-1/us-west-2/' /config/app.env
 cat /notes/todo.txt | tr a-z A-Z
 cat /logs/app.log | sort | uniq -c
+sort /logs/errors.txt | uniq -d
+sort /logs/errors.txt | uniq -u
 wc -l /logs/app.log
+fetch text:runbook | wc -w
 ```
 
 ### Data commands
@@ -218,7 +236,7 @@ cat /logs/app.log | grep ERROR | tail -n 20
 ### Inventory config files
 
 ```text
-find /config --type file --name "*.json" | sort
+find /config -type f -name "*.json" | sort
 ```
 
 ### Fallback config inspection
@@ -249,5 +267,5 @@ memory search "Acme owner"
 ### Count discovered files
 
 ```text
-find /config --type file --name "*.json" | wc -l
+find /config -type f -name "*.json" | wc -w
 ```

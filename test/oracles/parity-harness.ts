@@ -187,6 +187,34 @@ export async function runTrOracle(
   return runOracleProcess('tr', args, options);
 }
 
+export async function runEchoOracle(
+  args: string[],
+  options: OracleProcessOptions = {},
+): Promise<OracleCommandResult> {
+  return runOracleProcess('echo', args, options);
+}
+
+export async function runGrepOracle(
+  args: string[],
+  options: OracleProcessOptions = {},
+): Promise<OracleCommandResult> {
+  return runOracleProcess('grep', args, options);
+}
+
+export async function runLsOracle(
+  args: string[],
+  options: OracleProcessOptions = {},
+): Promise<OracleCommandResult> {
+  return runOracleProcess('ls', args, options);
+}
+
+export async function runFindOracle(
+  args: string[],
+  options: OracleProcessOptions = {},
+): Promise<OracleCommandResult> {
+  return runOracleProcess('find', args, options);
+}
+
 export async function runDiffOracle(
   args: string[],
   options: OracleProcessOptions = {},

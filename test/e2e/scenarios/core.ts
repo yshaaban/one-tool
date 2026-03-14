@@ -26,7 +26,7 @@ export const coreScenarios: ScenarioSpec[] = [
           {
             index: 0,
             exitCode: 0,
-            contains: ['Usage: tail [-n N] [path]'],
+            contains: ['Usage: tail [-n N|-c N|-N] [path]'],
           },
         ],
         maxCalls: 2,
@@ -239,7 +239,7 @@ export const coreScenarios: ScenarioSpec[] = [
         maxLines: 50,
       },
     }),
-    oracle: ['cat /logs/large.log', 'cat /.system/cmd-output/cmd-0001.txt | grep "timeout user=bob" | wc -l'],
+    oracle: ['cat /logs/large.log', 'grep -c "timeout user=bob" /.system/cmd-output/cmd-0001.txt'],
     assertions: {
       finalAnswer: {
         exact: '15',

@@ -468,17 +468,17 @@ Example:
 import { type CommandSpec, ok } from '@onetool/one-tool';
 import { stdinNotAcceptedError, usageError } from '@onetool/one-tool/extensions';
 
-const echo: CommandSpec = {
-  name: 'echo',
-  summary: 'Echo text back to stdout.',
-  usage: 'echo <text...>',
-  details: 'Examples:\n  echo hello world',
+const say: CommandSpec = {
+  name: 'say',
+  summary: 'Write text back to stdout.',
+  usage: 'say <text...>',
+  details: 'Examples:\n  say hello world',
   async handler(_ctx, args, stdin) {
     if (stdin.length > 0) {
-      return stdinNotAcceptedError('echo');
+      return stdinNotAcceptedError('say');
     }
     if (args.length === 0) {
-      return usageError('echo', 'echo <text...>');
+      return usageError('say', 'say <text...>');
     }
     return ok(args.join(' '));
   },

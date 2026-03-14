@@ -81,7 +81,7 @@ test('AgentCLI supports minimal and terse tool-description variants', async func
   const minimal = runtime.buildToolDescription('minimal-tool-description');
   const terse = runtime.buildToolDescription('terse');
 
-  assert.match(full, /grep\s+— Filter lines by regex\. Supports -i, -v, -c, -n\./);
+  assert.match(full, /grep\s+— Filter lines by pattern\. Supports a common GNU grep subset\./);
 
   assert.match(minimal, /run 'help' to list commands/);
   assert.match(minimal, /detailed command catalog omitted in this variant/);
@@ -91,7 +91,7 @@ test('AgentCLI supports minimal and terse tool-description variants', async func
   assert.match(terse, /Available commands:/);
   assert.match(terse, /\n {2}grep\n/);
   assert.match(terse, /\n {2}tail\n/);
-  assert.doesNotMatch(terse, /Filter lines by regex\. Supports -i, -v, -c, -n\./);
+  assert.doesNotMatch(terse, /Filter lines by pattern\. Supports a common GNU grep subset\./);
 });
 
 test('AgentCLI supports builtin command presets', async function (): Promise<void> {

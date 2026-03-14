@@ -85,7 +85,7 @@ for (const backend of backends) {
 
   test(`${backend.name}: counts discovered files through wc`, async () => {
     await backend.withRuntime(async (runtime) => {
-      const output = await runtime.run('find /config --type file --name "*.json" | wc -l');
+      const output = await runtime.run('find /config --type file --name "*.json" | wc -w');
       assert.match(output, /^2$/m);
       assert.match(output, /\[exit:0 \| /);
     });
