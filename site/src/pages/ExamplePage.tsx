@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { CoverageChips } from '../components/CoverageChips';
 import { getExample } from '../examples';
 import { sourceBaseUrl } from '../config';
 import { TerminalComponent, type TerminalHandle, type TerminalPlaybackOptions } from '../components/Terminal';
@@ -10,7 +11,7 @@ const AgentPage = lazy(() => import('./AgentPage'));
 const AUTO_PLAY_TYPING_DELAY_MS = 20;
 const AUTO_PLAY_START_DELAY_MS = 500;
 
-function ExamplePage() {
+function ExamplePage(): React.ReactNode {
   const { id } = useParams<{ id: string }>();
   const example = id ? getExample(id) : undefined;
   const [runtime, setRuntime] = useState<AgentCLI | null>(null);
@@ -178,6 +179,7 @@ function ExamplePage() {
             Source
           </a>
         </div>
+        <CoverageChips items={example.covers} />
       </div>
 
       {example.id === '07-mcp-server' ? (

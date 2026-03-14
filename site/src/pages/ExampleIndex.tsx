@@ -1,8 +1,26 @@
 import { Link } from 'react-router-dom';
+import { CoverageChips } from '../components/CoverageChips';
 import { examples } from '../examples';
 import type { ExampleDef } from '../examples/types';
 
-const CATEGORY_COLORS: Record<string, { accent: string; dim: string }> = {
+interface ExampleSectionProps {
+  title: string;
+  description: string;
+  examples: ExampleDef[];
+  topMargin?: string;
+}
+
+interface ExampleCardProps {
+  example: ExampleDef;
+  animationDelay: number;
+}
+
+interface ColorPair {
+  accent: string;
+  dim: string;
+}
+
+const CATEGORY_COLORS: Record<string, ColorPair> = {
   '01': { accent: 'var(--accent)', dim: 'var(--accent-dim)' },
   '02': { accent: 'var(--yellow)', dim: 'var(--yellow-dim)' },
   '03': { accent: 'var(--red)', dim: 'var(--red-dim)' },
@@ -13,11 +31,11 @@ const CATEGORY_COLORS: Record<string, { accent: string; dim: string }> = {
   '08': { accent: 'var(--green)', dim: 'var(--green-dim)' },
 };
 
-function getColors(id: string) {
+function getColors(id: string): ColorPair {
   return CATEGORY_COLORS[id.slice(0, 2)] ?? { accent: 'var(--accent)', dim: 'var(--accent-dim)' };
 }
 
-export function ExampleIndex() {
+export function ExampleIndex(): React.ReactNode {
   const cliCapabilities = examples.filter((example) => example.group === 'cli-capabilities');
   const agentWorkflows = examples.filter((example) => example.group === 'agent-workflows');
 
@@ -26,20 +44,20 @@ export function ExampleIndex() {
       <div style={headerStyle}>
         <h1 style={titleStyle}>Examples</h1>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', maxWidth: '500px' }}>
-          Start with the runtime examples to learn the command model and the familiar command forms. Then move
-          to the agent examples for adapters, MCP, and model-driven workflows.
+          Start with the runtime examples to learn the command model, familiar command forms, and longer
+          command chains. Then move to the agent examples for adapters, MCP, and model-driven workflows.
         </p>
       </div>
 
       <ExampleSection
         title="Runtime examples"
-        description="Core runtime behavior: familiar commands like ls, find, grep, head, and sort, plus traces, persistence, and custom commands."
+        description="Start here. Learn the runtime, familiar command forms, custom commands, traces, and browser persistence."
         examples={cliCapabilities}
       />
 
       <ExampleSection
         title="Agent examples"
-        description="Examples that use the same command patterns with adapters, MCP, and model-driven tasks."
+        description="Then move here. Apply the same command model to adapters, MCP, and model-driven tasks."
         examples={agentWorkflows}
         topMargin="2.5rem"
       />
@@ -47,17 +65,7 @@ export function ExampleIndex() {
   );
 }
 
-function ExampleSection({
-  title,
-  description,
-  examples,
-  topMargin,
-}: {
-  title: string;
-  description: string;
-  examples: ExampleDef[];
-  topMargin?: string;
-}) {
+function ExampleSection({ title, description, examples, topMargin }: ExampleSectionProps): React.ReactNode {
   return (
     <section style={{ marginTop: topMargin ?? '0' }}>
       <div style={{ marginBottom: '1.25rem' }}>
@@ -73,9 +81,10 @@ function ExampleSection({
   );
 }
 
-function ExampleCard({ example, animationDelay }: { example: ExampleDef; animationDelay: number }) {
+function ExampleCard({ example, animationDelay }: ExampleCardProps): React.ReactNode {
   const colors = getColors(example.id);
   const firstCommand = example.steps?.[0]?.command;
+  const highlightedCoverage = example.covers?.slice(0, 4) ?? [];
 
   return (
     <Link
@@ -136,11 +145,12 @@ function ExampleCard({ example, animationDelay }: { example: ExampleDef; animati
           color: 'var(--text-muted)',
           fontSize: '0.84rem',
           lineHeight: 1.55,
-          marginBottom: firstCommand ? '0.75rem' : 0,
+          marginBottom: firstCommand || highlightedCoverage.length > 0 ? '0.75rem' : 0,
         }}
       >
         {example.description}
       </p>
+      <CoverageChips items={highlightedCoverage} variant="card" />
       {firstCommand && (
         <div style={commandPreviewStyle}>
           <span style={{ color: 'var(--accent)', marginRight: '0.4rem' }}>$</span>

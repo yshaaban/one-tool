@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Link } from 'react-router-dom';
 import type { AgentCLI } from '@onetool/one-tool/browser';
+import { CoverageChips } from '../components/CoverageChips';
 import { sourceBaseUrl } from '../config';
 import type { ExampleDef } from '../examples/types';
 import { closeRuntime, createDemoRuntime } from '../runtime/create-runtime';
@@ -26,7 +27,11 @@ interface ActiveToolCall {
   command: string;
 }
 
-export default function AgentPage({ example }: { example: ExampleDef }) {
+interface AgentPageProps {
+  example: ExampleDef;
+}
+
+export default function AgentPage({ example }: AgentPageProps): React.ReactNode {
   const sourceUrl = new URL(example.sourceFile, sourceBaseUrl).href;
 
   const [runtime, setRuntime] = useState<AgentCLI | null>(null);
@@ -230,6 +235,7 @@ export default function AgentPage({ example }: { example: ExampleDef }) {
             This page shows a model using one <code style={headerInlineCodeStyle}>run(command)</code> tool
             over the demo workspace and the same command forms used in the other examples.
           </p>
+          <CoverageChips items={example.covers} />
         </div>
         <a href={sourceUrl} target="_blank" rel="noopener noreferrer" style={sourceLinkStyle}>
           Source &rarr;
