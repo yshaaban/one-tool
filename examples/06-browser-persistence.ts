@@ -29,7 +29,7 @@ export async function main(options: ExampleOptions = {}): Promise<void> {
       'BrowserVFS stores workspace state in IndexedDB. This Node example uses fake-indexeddb to show the same pattern.',
     );
 
-    for (const command of ['write /notes/summary.txt "key findings"', 'ls /notes']) {
+    for (const command of ['write /notes/summary.txt "key findings"', 'ls -a /notes']) {
       io.write(`\n$ ${command}`);
       io.write(await firstRuntime.run(command));
     }

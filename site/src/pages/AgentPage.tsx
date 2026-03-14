@@ -228,7 +228,7 @@ export default function AgentPage({ example }: { example: ExampleDef }) {
           <h1 style={titleStyle}>{example.title}</h1>
           <p style={headerSubtitleStyle}>
             This page shows a model using one <code style={headerInlineCodeStyle}>run(command)</code> tool
-            over the demo workspace.
+            over the demo workspace and the same command forms used in the other examples.
           </p>
         </div>
         <a href={sourceUrl} target="_blank" rel="noopener noreferrer" style={sourceLinkStyle}>

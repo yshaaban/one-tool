@@ -28,8 +28,8 @@ export async function main(options: ExampleOptions = {}): Promise<void> {
   io.write('Start from the safe readOnly preset when the model must inspect state but not mutate it.');
 
   for (const command of [
-    'ls /logs',
-    'cat /logs/app.log | grep ERROR',
+    'ls -a /logs',
+    'grep -c ERROR /logs/app.log',
     'write /logs/notes.txt "this should fail"',
     'rm /logs/app.log',
   ]) {

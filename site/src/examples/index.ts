@@ -4,7 +4,7 @@ export const examples: ExampleDef[] = [
   {
     id: '01-hello-world',
     title: 'Hello World',
-    description: 'Create a runtime and run basic commands.',
+    description: 'Create a runtime and run familiar commands like ls and cat.',
     group: 'cli-capabilities',
     browserRunnable: true,
     requiresApiKey: false,
@@ -15,7 +15,7 @@ export const examples: ExampleDef[] = [
     steps: [
       { explanation: 'Write a file:', command: 'write /hello.txt "Hello from one-tool"' },
       { explanation: 'Read it back:', command: 'cat /hello.txt' },
-      { explanation: 'List the root directory:', command: 'ls /' },
+      { explanation: 'List the root directory:', command: 'ls -a /' },
       { explanation: 'See all available commands:', command: 'help' },
     ],
   },
@@ -55,8 +55,8 @@ export const examples: ExampleDef[] = [
     stepDelayMs: 700,
     steps: [
       { explanation: 'Read commands work:', command: 'cat /logs/app.log' },
-      { explanation: 'List files:', command: 'ls /' },
-      { explanation: 'Search works:', command: 'grep ERROR /logs/app.log' },
+      { explanation: 'List files:', command: 'ls -a /' },
+      { explanation: 'Search works:', command: 'grep -c ERROR /logs/app.log' },
       {
         explanation: 'Mutating commands are unavailable in the preset:',
         command: 'write /test.txt "should fail"',
@@ -83,7 +83,7 @@ export const examples: ExampleDef[] = [
       },
       {
         explanation: 'Pipeline with multiple stages:',
-        command: 'cat /logs/app.log | grep timeout | tail -n 1',
+        command: 'cat /logs/app.log | grep -F timeout | tail -n 1',
       },
     ],
   },
@@ -129,7 +129,7 @@ export const examples: ExampleDef[] = [
         explanation: 'Read it back. Reload the page and rerun this step to confirm persistence.',
         command: 'cat /notes/persistent.txt',
       },
-      { explanation: 'List persistent files:', command: 'ls /notes' },
+      { explanation: 'List persistent files:', command: 'ls -a /notes' },
     ],
   },
   {
@@ -144,7 +144,8 @@ export const examples: ExampleDef[] = [
   {
     id: '08-llm-agent',
     title: 'LLM Agent',
-    description: 'Run the browser agent demo over the demo workspace with OpenRouter.',
+    description:
+      'Run the browser agent demo over the demo workspace with OpenRouter and the same command forms used in the other examples.',
     group: 'agent-workflows',
     browserRunnable: true,
     requiresApiKey: true,
@@ -154,6 +155,7 @@ export const examples: ExampleDef[] = [
       'Count the ERROR lines in /logs/app.log and tell me the total.',
       'Fetch order:123, tell me the customer email, and save it to /notes/email.txt.',
       'Search for refund timeout guidance and write a short summary to /reports/refund.txt.',
+      'Find JSON config files, count them, and tell me how many there are.',
       'If /config/prod.json is missing, fall back to the default config and tell me the region.',
     ],
   },

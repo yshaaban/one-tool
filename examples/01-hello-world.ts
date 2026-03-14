@@ -14,7 +14,7 @@ export async function main(options: ExampleOptions = {}): Promise<void> {
   io.write(`Tool name: ${tool.function.name}`);
   io.write(`Tool description: ${tool.function.description.split('\n')[0] ?? '(empty)'}`);
 
-  for (const command of ['write /hello.txt "Hello from one-tool"', 'cat /hello.txt', 'ls /']) {
+  for (const command of ['write /hello.txt "Hello from one-tool"', 'cat /hello.txt', 'ls -a /']) {
     io.write(`\n$ ${command}`);
     io.write(await runtime.run(command));
   }

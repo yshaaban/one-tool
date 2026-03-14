@@ -30,7 +30,7 @@ export async function main(options: ExampleOptions = {}): Promise<void> {
   io.write('04 · Detailed execution');
   io.write('Use runDetailed() when you need structured traces instead of presentation text only.');
 
-  for (const command of ['grep ERROR /logs/app.log | wc -l', 'cat /missing.txt']) {
+  for (const command of ['grep -c ERROR /logs/app.log', 'cat /missing.txt']) {
     const execution = await runtime.runDetailed(command);
     io.write(`\n$ ${command}`);
     io.write(execution.presentation.text);

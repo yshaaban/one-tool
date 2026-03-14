@@ -19,7 +19,8 @@ const features = [
   {
     tag: 'commands',
     title: 'Composable commands',
-    description: 'Compose file, text, retrieval, and memory operations with pipes, &&, ||, and ;.',
+    description:
+      'Use familiar command forms like ls -R, find -type f, grep -F, head -c, and sort -V in one run(command) call.',
     accent: 'var(--yellow)',
     dim: 'var(--yellow-dim)',
   },
@@ -60,9 +61,9 @@ const codeLines = [
   { text: '\'write /hello.txt "Hello"\'', accent: true },
   { text: ');', dim: true },
   { text: 'await cli.run(', dim: false },
-  { text: "'cat /hello.txt'", accent: true },
+  { text: "'ls -a /'", accent: true },
   { text: ');', dim: true },
-  { text: '// → Hello', comment: true },
+  { text: '// → .system/ hello.txt', comment: true },
 ];
 
 export function Landing() {
@@ -176,7 +177,8 @@ export function Landing() {
           <div>
             <h2 style={agentHeroTitleStyle}>Agent example</h2>
             <p style={agentHeroTextStyle}>
-              Follow the agent loop directly: prompt, tool call, tool output, and final answer.
+              Follow the agent loop directly while the model uses the same familiar command subset over the
+              demo workspace.
             </p>
           </div>
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>

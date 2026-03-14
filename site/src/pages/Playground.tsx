@@ -7,15 +7,16 @@ const WELCOME = [
   '\x1b[38;5;81mone-tool playground\x1b[0m',
   '',
   'The demo workspace starts with files, adapters, and memory already loaded.',
-  'Type \x1b[38;5;229mhelp\x1b[0m to inspect the command set.',
+  'Type \x1b[38;5;229mhelp\x1b[0m to inspect the command set and familiar forms like ls -l, find -type f, grep -F, and head -c.',
   'Use \x1b[38;5;229mTab\x1b[0m for autocomplete and \x1b[38;5;229m\u2191\u2193\x1b[0m for history.',
   'Use stderr, exit codes, and saved overflow files to choose the next command.',
   '',
   'Try:',
-  '  \x1b[38;5;114mls /\x1b[0m',
-  '  \x1b[38;5;114mgrep -c ERROR /logs/app.log\x1b[0m',
+  '  \x1b[38;5;114mls -a /\x1b[0m',
+  '  \x1b[38;5;114mls -l /logs\x1b[0m',
+  '  \x1b[38;5;114mfind /config -type f -name "*.json"\x1b[0m',
+  '  \x1b[38;5;114mgrep -F -o timeout /logs/app.log\x1b[0m',
   '  \x1b[38;5;114mfetch order:123 | json get customer.email\x1b[0m',
-  '  \x1b[38;5;114msearch refund timeout\x1b[0m',
 ].join('\r\n');
 
 function Playground() {
@@ -68,7 +69,8 @@ function Playground() {
         <h1 style={titleStyle}>Playground</h1>
         <p style={subtitleStyle}>
           The playground starts with demo files, adapters, and memory already loaded. Use help to inspect
-          commands, or start with one of the tasks in the terminal.
+          commands like ls -l, find -type f, grep -F, head -c, sort -V, uniq -c, and wc -l, or start with one
+          of the examples in the terminal.
         </p>
       </div>
       <div style={terminalWrapperStyle}>
