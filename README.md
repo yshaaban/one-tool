@@ -20,6 +20,8 @@ It is built for the common agent problem:
 
 > You want the power of CLI-style composition without exposing a real shell.
 
+Some built-in commands aim for a measured GNU-style subset. Others are Unix-inspired commands shaped by the rooted workspace model, or product-native commands such as `memory`, `json`, `search`, and `fetch`. The command reference and compatibility matrix make that boundary explicit.
+
 At a glance:
 
 - one model-facing tool: `run(command)`
@@ -42,6 +44,7 @@ At a glance:
 
 - Start here:
   - [Why this library exists](#why-this-library-exists)
+  - architecture principles in [`docs/architecture-principles.md`](docs/architecture-principles.md)
   - [Quick start](#quick-start)
   - [Five-minute integration](#five-minute-integration)
 - Command reference:
@@ -49,7 +52,7 @@ At a glance:
   - [Built-in command groups](#built-in-command-groups)
   - full command reference in [`docs/command-reference.md`](docs/command-reference.md)
   - GNU-style compatibility target in [`docs/parity/gnu-command-parity.md`](docs/parity/gnu-command-parity.md)
-  - command matrix in [`docs/parity/compatibility-matrix.md`](docs/parity/compatibility-matrix.md)
+  - compatibility intent and supported GNU-style subset in [`docs/parity/compatibility-matrix.md`](docs/parity/compatibility-matrix.md)
 - API and integration reference:
   - [`docs/api.md`](docs/api.md)
   - [`examples/README.md`](examples/README.md)
@@ -360,6 +363,9 @@ Operationally, think of the runtime as:
 3. one rooted workspace
 4. optional retrieval adapters and memory
 5. one formatter that turns results into model-friendly text or structured execution data
+
+For the architectural rules, layer boundaries, and contributor do/don'ts that keep this model coherent, see
+[`docs/architecture-principles.md`](docs/architecture-principles.md).
 
 The runtime intentionally makes discovery cheap:
 

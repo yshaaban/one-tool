@@ -2,6 +2,18 @@
 
 The command system is metadata-driven. A new built-in command should be easy to add and should pick up baseline coverage automatically.
 
+Before expanding built-ins, read [`docs/architecture-principles.md`](docs/architecture-principles.md). New
+commands and compatibility work should preserve the one-tool model, rooted workspace semantics, and
+measurable command contracts.
+
+Before changing a command, decide which category it belongs to:
+
+- GNU-style subset command
+- Unix-inspired, product-shaped command
+- product-native one-tool command
+
+The current classification lives in [`docs/parity/compatibility-matrix.md`](docs/parity/compatibility-matrix.md). Do not imply GNU/Linux compatibility for commands outside that subset.
+
 ## Quick Start
 
 1. Add the handler in `src/commands/groups/<group>.ts` or create a new group file.
@@ -13,10 +25,10 @@ The command system is metadata-driven. A new built-in command should be easy to 
 
 For consumers outside this repo, the public command-registration API lives in:
 
-- `one-tool/commands`
-- root exports from `one-tool`
-- stable authoring helpers live in `one-tool/extensions`
-- stable test helpers live in `one-tool/testing`
+- `@onetool/one-tool/commands`
+- root exports from `@onetool/one-tool`
+- stable authoring helpers live in `@onetool/one-tool/extensions`
+- stable test helpers live in `@onetool/one-tool/testing`
 
 Built-in group selection uses these string names:
 
@@ -31,25 +43,25 @@ These correspond to the exported arrays `systemCommands`, `fsCommands`, `textCom
 ## Minimal Example
 
 ```ts
-import { ok, type CommandContext, type CommandResult, type CommandSpec } from 'one-tool';
-import { stdinNotAcceptedError, usageError } from 'one-tool/extensions';
+import { ok, type CommandContext, type CommandResult, type CommandSpec } from '@onetool/one-tool';
+import { stdinNotAcceptedError, usageError } from '@onetool/one-tool/extensions';
 
-async function cmdEcho(_ctx: CommandContext, args: string[], stdin: Uint8Array): Promise<CommandResult> {
+async function cmdSay(_ctx: CommandContext, args: string[], stdin: Uint8Array): Promise<CommandResult> {
   if (stdin.length > 0) {
-    return stdinNotAcceptedError('echo');
+    return stdinNotAcceptedError('say');
   }
   if (args.length === 0) {
-    return usageError('echo', 'echo <text...>');
+    return usageError('say', 'say <text...>');
   }
   return ok(args.join(' '));
 }
 
-export const echo: CommandSpec = {
-  name: 'echo',
-  summary: 'Echo arguments back as output.',
-  usage: 'echo <text...>',
-  details: 'Examples:\n  echo hello world',
-  handler: cmdEcho,
+export const say: CommandSpec = {
+  name: 'say',
+  summary: 'Write arguments back as output.',
+  usage: 'say <text...>',
+  details: 'Examples:\n  say hello world',
+  handler: cmdSay,
   acceptsStdin: false,
   minArgs: 1,
   conformanceArgs: ['hello', 'world'],
@@ -59,7 +71,7 @@ export const echo: CommandSpec = {
 Then add it to the group array:
 
 ```ts
-export const textCommands: CommandSpec[] = [grep, head, tail, echo];
+export const textCommands: CommandSpec[] = [grep, head, tail, say];
 ```
 
 If you create a new group file, also wire it into `src/commands/register.ts`.
@@ -102,12 +114,12 @@ import {
   createCommandConformanceCases,
   createTestCommandContext,
   createTestCommandRegistry,
-} from 'one-tool/testing';
+} from '@onetool/one-tool/testing';
 
 const registry = createTestCommandRegistry({
   includeGroups: ['system'],
   excludeCommands: ['memory'],
-  commands: [echo],
+  commands: [say],
 });
 
 const cases = createCommandConformanceCases({
@@ -127,16 +139,16 @@ import {
   createTestCommandRegistry,
   runRegisteredCommand,
   stdoutText,
-} from 'one-tool/testing';
+} from '@onetool/one-tool/testing';
 
 const registry = createTestCommandRegistry({
   includeGroups: ['system'],
   excludeCommands: ['memory'],
-  commands: [echo],
+  commands: [say],
 });
 
 const ctx = createTestCommandContext({ registry });
-const { result } = await runRegisteredCommand('echo', ['hello', 'world'], { ctx });
+const { result } = await runRegisteredCommand('say', ['hello', 'world'], { ctx });
 assert.equal(stdoutText(result), 'hello world');
 ```
 
@@ -161,11 +173,11 @@ Use these rules consistently:
 - translate VFS error codes into plain language instead of leaking raw `ENOENT` or `EISDIR`
 - reserve fallback `errorMessage(...)` output for genuinely unexpected failures
 
-For many commands, the simplest path is to use the stable helpers from `one-tool/extensions` and avoid duplicating input parsing or VFS error translation:
+For many commands, the simplest path is to use the stable helpers from `@onetool/one-tool/extensions` and avoid duplicating input parsing or VFS error translation:
 
 ```ts
-import { okBytes, type CommandContext, type CommandResult } from 'one-tool';
-import { formatVfsError, stdinNotAcceptedError, usageError } from 'one-tool/extensions';
+import { okBytes, type CommandContext, type CommandResult } from '@onetool/one-tool';
+import { formatVfsError, stdinNotAcceptedError, usageError } from '@onetool/one-tool/extensions';
 
 async function cmdShow(ctx: CommandContext, args: string[], stdin: Uint8Array): Promise<CommandResult> {
   if (stdin.length > 0) {
@@ -191,8 +203,8 @@ async function cmdShow(ctx: CommandContext, args: string[], stdin: Uint8Array): 
 For text input that may come from stdin or a file, use the input helpers:
 
 ```ts
-import { ok, type CommandContext, type CommandResult } from 'one-tool';
-import { readTextInput, usageError } from 'one-tool/extensions';
+import { ok, type CommandContext, type CommandResult } from '@onetool/one-tool';
+import { readTextInput, usageError } from '@onetool/one-tool/extensions';
 
 async function cmdPreview(ctx: CommandContext, args: string[], stdin: Uint8Array): Promise<CommandResult> {
   if (args.length > 1) {
@@ -217,7 +229,7 @@ Good errors in this SDK usually follow one of these shapes:
 
 ## Useful Helpers
 
-- `one-tool/extensions`
+- `@onetool/one-tool/extensions`
   - `usageError(...)`
   - `stdinNotAcceptedError(...)`
   - `missingAdapterError(...)`
@@ -243,8 +255,8 @@ import test from 'node:test';
 
 import { runCommand, stdoutText } from './harness.js';
 
-test('echo writes arguments back out', async () => {
-  const { result } = await runCommand('echo', ['hello', 'world']);
+test('say writes arguments back out', async () => {
+  const { result } = await runCommand('say', ['hello', 'world']);
   assert.equal(result.exitCode, 0);
   assert.equal(stdoutText(result), 'hello world');
 });

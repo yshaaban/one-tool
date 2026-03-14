@@ -1,8 +1,25 @@
 # GNU-style compatibility matrix
 
-This matrix summarizes the supported GNU-style subset for the built-in commands that currently use oracle-backed parity tests.
+Not every built-in command aims for GNU/Linux compatibility.
+
+Use this page to answer two questions:
+
+- which commands intentionally target a GNU-style subset
+- which commands are defined by one-tool's own workspace model instead
 
 For the overall target and oracle approach, see [`gnu-command-parity.md`](./gnu-command-parity.md).
+
+## Compatibility intent
+
+| Category                      | Commands                                                                                | Intent                                                                                                                                                        |
+| ----------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GNU-style subset              | `echo`, `ls`, `find`, `grep`, `head`, `tail`, `sort`, `uniq`, `wc`, `sed`, `tr`, `diff` | These commands accept a measured subset of familiar GNU/Linux forms. Compatibility claims are backed by oracle tests.                                         |
+| Unix-inspired, product-shaped | `stat`, `cat`, `mkdir`, `cp`, `mv`, `rm`                                                | These commands use familiar CLI shapes, but their behavior is defined by one-tool's rooted workspace, safety rules, and VFS semantics rather than GNU parity. |
+| Product-native                | `help`, `memory`, `write`, `append`, `json`, `calc`, `search`, `fetch`                  | These commands exist to support the one-tool runtime model. They do not aim for GNU/Linux compatibility.                                                      |
+
+If a command is not in the GNU-style subset, treat its help text and the command reference as the source of truth.
+
+## Oracle-backed GNU-style subset
 
 | Command | Supported familiar forms                                                               | Oracle-backed | Notes                                                                                       |
 | ------- | -------------------------------------------------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------- |
