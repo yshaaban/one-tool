@@ -2,14 +2,18 @@ import {
   BrowserVFS,
   MemoryVFS,
   SimpleMemory,
+  cat,
   createAgentCLI,
   err,
+  head,
   help,
   json,
   ok,
+  write,
   type AgentCLI,
   type AgentCLIOptions,
   type CommandContext,
+  type CommandResult,
   type CommandSpec,
 } from '@onetool/one-tool/browser';
 import type { ExampleRuntimeKind } from '../examples/types';
@@ -94,44 +98,94 @@ const SITE_BROWSER_DB = 'one-tool-site-browser-example';
 
 const ticketCommand: CommandSpec = {
   name: 'ticket',
-  summary: 'Look up a support ticket and return structured details.',
-  usage: 'ticket lookup <ticket-id>',
-  details: 'Examples:\n  ticket lookup T-123\n  ticket lookup T-456 | json get owner.email',
+  summary: 'Inspect a small mock support queue.',
+  usage: 'ticket <lookup <ticket-id> | list [--open]>',
+  details:
+    'Examples:\n' +
+    '  ticket lookup TICKET-123\n' +
+    '  ticket lookup TICKET-123 | json get status\n' +
+    '  ticket list --open | head -n 2',
   acceptsStdin: false,
-  minArgs: 2,
+  minArgs: 1,
+  maxArgs: 2,
   handler: cmdTicket,
 };
 
-const tickets: Record<string, { id: string; status: string; owner: { email: string }; priority: string }> = {
-  'T-123': {
-    id: 'T-123',
-    status: 'open',
-    owner: { email: 'sara@example.com' },
-    priority: 'high',
-  },
-  'T-456': {
-    id: 'T-456',
-    status: 'closed',
-    owner: { email: 'ops@example.com' },
-    priority: 'low',
-  },
-};
+interface TicketRecord {
+  id: string;
+  status: 'open' | 'pending';
+  priority: 'high' | 'medium';
+  customer: {
+    email: string;
+  };
+  title: string;
+}
 
-async function cmdTicket(_ctx: CommandContext, args: string[], stdin: Uint8Array) {
+const tickets: readonly TicketRecord[] = Object.freeze([
+  {
+    id: 'TICKET-123',
+    status: 'open',
+    customer: { email: 'ops@acme.example' },
+    priority: 'high',
+    title: 'Refund timeout on enterprise checkout',
+  },
+  {
+    id: 'TICKET-124',
+    status: 'pending',
+    customer: { email: 'billing@northwind.example' },
+    priority: 'medium',
+    title: 'Invoice export missing VAT fields',
+  },
+]);
+
+function findTicket(id: string): TicketRecord | undefined {
+  return tickets.find(function (ticket) {
+    return ticket.id === id;
+  });
+}
+
+async function cmdTicket(_ctx: CommandContext, args: string[], stdin: Uint8Array): Promise<CommandResult> {
   if (stdin.length > 0) {
     return err('ticket: does not accept stdin');
   }
 
-  if (args.length !== 2 || args[0] !== 'lookup') {
-    return err('ticket: usage: ticket lookup <ticket-id>');
-  }
+  const action = args[0];
+  switch (action) {
+    case 'lookup': {
+      const ticketId = args[1];
+      if (ticketId === undefined || args.length !== 2) {
+        return err('ticket: usage: ticket lookup <ticket-id>');
+      }
 
-  const ticket = tickets[args[1]!];
-  if (!ticket) {
-    return err(`ticket: ticket not found: ${args[1]!}`);
-  }
+      const ticket = findTicket(ticketId);
+      if (!ticket) {
+        return err(`ticket: ticket not found: ${ticketId}`);
+      }
 
-  return ok(JSON.stringify(ticket, null, 2), { contentType: 'application/json' });
+      return ok(JSON.stringify(ticket, null, 2), { contentType: 'application/json' });
+    }
+    case 'list': {
+      const listMode = args[1];
+      if (args.length > 2 || (listMode !== undefined && listMode !== '--open')) {
+        return err('ticket: usage: ticket list [--open]');
+      }
+
+      const visibleTickets =
+        listMode === '--open'
+          ? tickets.filter(function (ticket) {
+              return ticket.status === 'open';
+            })
+          : tickets;
+      const rows = visibleTickets
+        .map(function (ticket) {
+          return `${ticket.id}\t${ticket.priority}\t${ticket.title}`;
+        })
+        .join('\n');
+      return ok(rows);
+    }
+    default:
+      return err('ticket: usage: ticket <lookup <ticket-id> | list [--open]>');
+  }
 }
 
 function createDemoMemory(): SimpleMemory {
@@ -186,7 +240,7 @@ export async function createCustomCommandRuntime(): Promise<AgentCLI> {
   return createAgentCLI({
     vfs: new MemoryVFS(),
     builtinCommands: false,
-    commands: [help, json, ticketCommand],
+    commands: [help, cat, write, head, json, ticketCommand],
   });
 }
 

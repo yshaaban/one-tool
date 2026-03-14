@@ -31,16 +31,21 @@ npm run agent
 
 ## Onboarding path
 
-| #   | File                        | What it shows                                                           |
-| --- | --------------------------- | ----------------------------------------------------------------------- |
-| 01  | `01-hello-world.ts`         | Create a runtime, run commands, and inspect the single tool definition  |
-| 02  | `02-custom-command.ts`      | Add one domain command and use it in pipelines with built-ins           |
-| 03  | `03-readonly-agent.ts`      | Restrict the runtime to a safe read-only preset                         |
-| 04  | `04-detailed-execution.ts`  | Inspect exit codes, traces, and `runDetailed()` metadata                |
-| 05  | `05-adapters.ts`            | Wire `search` and `fetch` adapters into the runtime                     |
-| 06  | `06-browser-persistence.ts` | Persist a BrowserVFS workspace with IndexedDB                           |
-| 07  | `07-mcp-server.ts`          | Expose the runtime as an MCP tool for Claude Code or another MCP client |
-| 08  | `08-llm-agent.ts`           | Connect the runtime to a real LLM provider                              |
+Recommended order:
+
+- Start with `01` through `04` to learn the runtime, familiar command forms, pipelines, and traces.
+- Then move to `05` through `08` for adapters, persistence, MCP, and model-driven workflows.
+
+| #   | File                        | What it covers                                                                     |
+| --- | --------------------------- | ---------------------------------------------------------------------------------- |
+| 01  | `01-hello-world.ts`         | `write`, `cat`, `stat`, `mkdir -p`, `ls`, and the base runtime surface             |
+| 02  | `02-custom-command.ts`      | A domain command plus `help ticket`, `ticket list --open`, `write`, and `json get` |
+| 03  | `03-readonly-agent.ts`      | The read-only preset with `cat`, `stat`, `find`, `sort`, and `grep`                |
+| 04  | `04-detailed-execution.ts`  | Longer composed commands, fallbacks, traces, and `runDetailed()` metadata          |
+| 05  | `05-adapters.ts`            | `search`, `fetch`, `json get`, `write`, and `memory search` in one flow            |
+| 06  | `06-browser-persistence.ts` | BrowserVFS persistence with `write`, `append`, `cat`, and `stat`                   |
+| 07  | `07-mcp-server.ts`          | `serveStdioMcpServer`, `NodeVFS`, and Claude Code setup                            |
+| 08  | `08-llm-agent.ts`           | A model using the same command surface through `run(command)`                      |
 
 Notes:
 

@@ -1,4 +1,4 @@
-import { err, ok, textEncoder, type CommandResult } from '../../types.js';
+import { err, ok, okBytes, textEncoder, type CommandResult } from '../../types.js';
 import { errorMessage } from '../../utils.js';
 import type { CommandContext, CommandSpec } from '../core.js';
 import { errorCode } from '../shared/errors.js';
@@ -66,17 +66,13 @@ async function cmdSearch(ctx: CommandContext, args: string[], stdin: Uint8Array)
     });
 
     const rendered = blocks.join('\n\n');
-    const limitError = materializedLimitError(
-      ctx,
-      'search',
-      'search results',
-      textEncoder.encode(rendered).length,
-    );
+    const renderedBytes = textEncoder.encode(rendered);
+    const limitError = materializedLimitError(ctx, 'search', 'search results', renderedBytes.length);
     if (limitError !== undefined) {
       return limitError;
     }
 
-    return ok(rendered);
+    return okBytes(renderedBytes, 'text/plain');
   } catch (caught) {
     return err(`search: adapter error: ${errorMessage(caught)}`);
   }

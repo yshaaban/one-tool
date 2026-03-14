@@ -29,7 +29,11 @@ export async function main(options: ExampleOptions = {}): Promise<void> {
       'BrowserVFS stores workspace state in IndexedDB. This Node example uses fake-indexeddb to show the same pattern.',
     );
 
-    for (const command of ['write /notes/summary.txt "key findings"', 'ls -a /notes']) {
+    for (const command of [
+      'write /notes/persistent.txt "This survives reloads"',
+      'append /notes/persistent.txt "\nAnd this survives too"',
+      'ls -a /notes',
+    ]) {
       io.write(`\n$ ${command}`);
       io.write(await firstRuntime.run(command));
     }
@@ -42,8 +46,10 @@ export async function main(options: ExampleOptions = {}): Promise<void> {
       builtinCommands: { preset: 'filesystem' },
     });
 
-    io.write('\n$ cat /notes/summary.txt');
-    io.write(await secondRuntime.run('cat /notes/summary.txt'));
+    for (const command of ['cat /notes/persistent.txt', 'stat /notes/persistent.txt']) {
+      io.write(`\n$ ${command}`);
+      io.write(await secondRuntime.run(command));
+    }
     secondVfs.close();
   } finally {
     await BrowserVFS.destroy(dbName);

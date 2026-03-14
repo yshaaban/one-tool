@@ -14,7 +14,7 @@ const DEMO_DOCS: readonly SearchHit[] = Object.freeze([
   {
     title: 'Refund timeout playbook',
     snippet: 'Refund timeout incidents require a payment trace, customer contact, and follow-up summary.',
-    source: 'kb://refund-timeout',
+    source: 'kb://incidents/refund-timeout',
   },
   {
     title: 'Billing escalation checklist',
@@ -24,6 +24,15 @@ const DEMO_DOCS: readonly SearchHit[] = Object.freeze([
 ]);
 
 const DEMO_RESOURCES: Readonly<Record<string, unknown>> = Object.freeze({
+  'kb://incidents/refund-timeout': {
+    title: 'Refund timeout playbook',
+    summary: 'Refund timeout incidents require a payment trace, customer contact, and follow-up summary.',
+    guidance: [
+      'Reduce aggressive retries against the order service.',
+      'Watch payment timeout rate during deploys.',
+      'Escalate to checkout on-call if timeout rate exceeds 2%.',
+    ],
+  },
   'order:123': {
     id: '123',
     amount: 1499,
@@ -85,11 +94,13 @@ export async function main(options: ExampleOptions = {}): Promise<void> {
   );
 
   for (const command of [
-    'search refund timeout',
+    'search "refund timeout" | head -n 1',
     'fetch order:123 | json get customer.email',
     'fetch order:123 | json get amount',
+    'fetch kb://incidents/refund-timeout | json get guidance[0]',
+    'search "refund timeout" | write /reports/refund.txt && cat /reports/refund.txt',
     'memory store "Refund timeout owner: buyer@acme.example"',
-    'memory search "refund timeout owner"',
+    'memory search refund',
   ]) {
     io.write(`\n$ ${command}`);
     io.write(await runtime.run(command));

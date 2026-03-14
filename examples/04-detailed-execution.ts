@@ -24,13 +24,30 @@ export async function main(options: ExampleOptions = {}): Promise<void> {
       ].join('\n'),
     ),
   );
+  await vfs.writeBytes(
+    '/config/default.json',
+    encoder.encode(
+      JSON.stringify(
+        {
+          region: 'us-east-1',
+          retries: 2,
+        },
+        null,
+        2,
+      ),
+    ),
+  );
 
   const runtime = await createAgentCLI({ vfs });
 
   io.write('04 · Detailed execution');
   io.write('Use runDetailed() when you need structured traces instead of presentation text only.');
 
-  for (const command of ['grep -c ERROR /logs/app.log', 'cat /missing.txt']) {
+  for (const command of [
+    'find /config -type f -name "*.json" | sort',
+    'cat /config/missing.json || cat /config/default.json',
+    "echo '--- latest timeout ---' && cat /logs/app.log | grep -F timeout | tail -n 1",
+  ]) {
     const execution = await runtime.runDetailed(command);
     io.write(`\n$ ${command}`);
     io.write(execution.presentation.text);

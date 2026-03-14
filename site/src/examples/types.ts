@@ -13,6 +13,7 @@ export interface ExampleDef {
   id: string;
   title: string;
   description: string;
+  covers?: string[];
   group: ExampleGroup;
   browserRunnable: boolean;
   requiresApiKey: boolean;
