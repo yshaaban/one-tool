@@ -6,6 +6,7 @@ import test from 'node:test';
 import 'fake-indexeddb/auto';
 
 import { buildDemoRuntime } from '@onetool/one-tool/testing';
+import { textEncoder } from '../src/types.js';
 import { BrowserVFS, MemoryVFS } from '../src/index.js';
 
 async function withNodeRuntime(
@@ -95,6 +96,39 @@ for (const backend of backends) {
     await backend.withRuntime(async (runtime) => {
       const output = await runtime.run('write /tmp/hello.txt hello && cat /tmp/hello.txt');
       assert.match(output, /hello/);
+    });
+  });
+
+  test(`${backend.name}: executes long chained built-in inspection commands`, async () => {
+    await backend.withRuntime(async (runtime) => {
+      await runtime.ctx.vfs.writeBytes('/docs/types.txt', textEncoder.encode('alpha\nbeta\ngamma\n'));
+      await runtime.ctx.vfs.writeBytes(
+        '/docs/tests.txt',
+        textEncoder.encode('cat: file not found\nmkdir: path already exists\nok\n'),
+      );
+
+      const output = await runtime.run(
+        "echo '--- types ---' && sed -n '1,2p' /docs/types.txt && echo '--- tests ---' && grep -E 'cat:|mkdir:' /docs/tests.txt",
+      );
+
+      assert.match(output, /--- types ---/);
+      assert.match(output, /alpha\nbeta/);
+      assert.match(output, /--- tests ---/);
+      assert.match(output, /cat: file not found/);
+      assert.match(output, /mkdir: path already exists/);
+      assert.match(output, /\[exit:0 \| /);
+    });
+  });
+
+  test(`${backend.name}: executes quoted pipelines and conditional follow-up commands`, async () => {
+    await backend.withRuntime(async (runtime) => {
+      const output = await runtime.run(
+        "echo 'ERROR timeout user=bob' | grep -E 'ERROR|WARN' | head -n 1 && echo 'matched'",
+      );
+
+      assert.match(output, /ERROR timeout user=bob/);
+      assert.match(output, /matched/);
+      assert.match(output, /\[exit:0 \| /);
     });
   });
 

@@ -20,7 +20,7 @@ const features = [
     tag: 'commands',
     title: 'Composable commands',
     description:
-      'Use familiar command forms like ls -R, find -type f, grep -F, head -c, and sort -V in one run(command) call.',
+      'Use familiar command forms like ls -R, find -type f, grep -F, sed -n, sort -V, and uniq -c in one run(command) call.',
     accent: 'var(--yellow)',
     dim: 'var(--yellow-dim)',
   },
@@ -58,12 +58,12 @@ const codeLines = [
   { text: 'const cli = await createAgentCLI({ vfs: new MemoryVFS() });', dim: false },
   { text: '', blank: true },
   { text: 'await cli.run(', dim: false },
-  { text: '\'write /hello.txt "Hello"\'', accent: true },
+  { text: '\'write /notes/preview.txt "alpha\\nbeta\\ngamma"\'', accent: true },
   { text: ');', dim: true },
   { text: 'await cli.run(', dim: false },
-  { text: "'ls -a /'", accent: true },
+  { text: `"echo '--- preview ---' && sed -n '1,2p' /notes/preview.txt"`, accent: true },
   { text: ');', dim: true },
-  { text: '// → ., .., .system, hello.txt', comment: true },
+  { text: '// → --- preview ---\\nalpha\\nbeta', comment: true },
 ];
 
 export function Landing() {

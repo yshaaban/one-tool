@@ -76,14 +76,17 @@ export const examples: ExampleDef[] = [
     autoPlay: true,
     stepDelayMs: 900,
     steps: [
-      { explanation: 'Count errors in the log:', command: 'grep -c ERROR /logs/app.log' },
+      {
+        explanation: 'Inspect discovered config files through a pipeline:',
+        command: 'find /config -type f -name "*.json" | sort',
+      },
       {
         explanation: 'Chain with fallback:',
         command: 'cat /config/missing.json || cat /config/default.json',
       },
       {
-        explanation: 'Pipeline with multiple stages:',
-        command: 'cat /logs/app.log | grep -F timeout | tail -n 1',
+        explanation: 'Mix quoted text, pipes, and filtering in one command line:',
+        command: "echo '--- latest timeout ---' && cat /logs/app.log | grep -F timeout | tail -n 1",
       },
     ],
   },
@@ -99,14 +102,16 @@ export const examples: ExampleDef[] = [
     autoPlay: true,
     stepDelayMs: 850,
     steps: [
-      { explanation: 'Search the knowledge base:', command: 'search refund timeout' },
+      {
+        explanation: 'Search and narrow the results before reading more:',
+        command: 'search refund timeout | head -n 1',
+      },
       { explanation: 'Fetch structured data:', command: 'fetch order:123' },
       { explanation: 'Extract a nested field:', command: 'fetch order:123 | json get customer.email' },
       {
-        explanation: 'Save search results to a file:',
-        command: 'search refund timeout | write /reports/refund.txt',
+        explanation: 'Search, persist, and verify the saved report in one flow:',
+        command: 'search refund timeout | write /reports/refund.txt && cat /reports/refund.txt',
       },
-      { explanation: 'Verify the saved file:', command: 'cat /reports/refund.txt' },
     ],
   },
   {

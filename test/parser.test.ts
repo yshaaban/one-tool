@@ -105,6 +105,32 @@ test('parseCommandLine parses chain operators and mixed command structure', func
   ]);
 });
 
+test('parseCommandLine preserves long built-in inspection commands', function (): void {
+  assert.deepEqual(
+    parseCommandLine(
+      "echo '--- types ---' && sed -n '1,2p' /docs/types.txt && echo \"--- tests ---\" && grep -E 'cat:|mkdir:|rm:' /docs/tests.txt",
+    ),
+    [
+      {
+        relationFromPrevious: null,
+        pipeline: { commands: [{ argv: ['echo', '--- types ---'] }] },
+      },
+      {
+        relationFromPrevious: '&&',
+        pipeline: { commands: [{ argv: ['sed', '-n', '1,2p', '/docs/types.txt'] }] },
+      },
+      {
+        relationFromPrevious: '&&',
+        pipeline: { commands: [{ argv: ['echo', '--- tests ---'] }] },
+      },
+      {
+        relationFromPrevious: '&&',
+        pipeline: { commands: [{ argv: ['grep', '-E', 'cat:|mkdir:|rm:', '/docs/tests.txt'] }] },
+      },
+    ],
+  );
+});
+
 test('parseCommandLine rejects trailing operators and empty commands in pipelines', function (): void {
   const invalidInputs = ['a |', 'a &&', 'a | | b'];
 

@@ -16,6 +16,8 @@ const WELCOME = [
   '  \x1b[38;5;114mls -l /logs\x1b[0m',
   '  \x1b[38;5;114mfind /config -type f -name "*.json"\x1b[0m',
   '  \x1b[38;5;114mgrep -F -o timeout /logs/app.log\x1b[0m',
+  "  \x1b[38;5;114mecho '--- recent timeouts ---' && cat /logs/app.log | grep -F timeout | tail -n 2\x1b[0m",
+  '  \x1b[38;5;114msearch "refund timeout" | head -n 1 | write /reports/refund.txt && cat /reports/refund.txt\x1b[0m',
   '  \x1b[38;5;114mfetch order:123 | json get customer.email\x1b[0m',
 ].join('\r\n');
 
@@ -69,8 +71,8 @@ function Playground() {
         <h1 style={titleStyle}>Playground</h1>
         <p style={subtitleStyle}>
           The playground starts with demo files, adapters, and memory already loaded. Use help to inspect
-          commands like ls -l, find -type f, grep -F, head -c, sort -V, uniq -c, and wc -l, or start with one
-          of the examples in the terminal.
+          commands like ls -l, find -type f, grep -F, sed -n, sort -V, uniq -c, and wc -l. Try a longer chain
+          if you want to see how much work fits inside one run(command) call.
         </p>
       </div>
       <div style={terminalWrapperStyle}>
