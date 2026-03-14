@@ -164,4 +164,19 @@ test('adapters: fetch maps not-found and generic adapter errors', async () => {
   const codedNotFound = await runCommand('fetch', ['order:404'], { ctx: codedNotFoundCtx });
   assert.equal(codedNotFound.result.exitCode, 1);
   assert.match(codedNotFound.result.stderr, /fetch: resource not found: order:404/);
+
+  const statusNotFoundCtx = makeCtx({
+    adapters: {
+      fetch: {
+        async fetch() {
+          const error = new Error('missing order') as Error & { status?: number };
+          error.status = 404;
+          throw error;
+        },
+      },
+    },
+  });
+  const statusNotFound = await runCommand('fetch', ['order:404'], { ctx: statusNotFoundCtx });
+  assert.equal(statusNotFound.result.exitCode, 1);
+  assert.match(statusNotFound.result.stderr, /fetch: resource not found: order:404/);
 });

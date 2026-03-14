@@ -96,10 +96,10 @@ async function cmdMemory(ctx: CommandContext, args: string[], stdin: Uint8Array)
 
 export const memory: CommandSpec = {
   name: 'memory',
-  summary: 'Search, store, or inspect lightweight working memory.',
+  summary: 'Search, store, or inspect lightweight runtime-scoped working memory.',
   usage: 'memory search <query> | memory recent [N] | memory store <text>',
   details:
-    'Examples:\n  memory store "Acme prefers Monday follow-ups"\n  memory search "Acme follow-up"\n  memory recent 5',
+    'This is lightweight runtime memory for the current agent session. It is not file storage or semantic retrieval infrastructure.\nExamples:\n  memory store "Acme prefers Monday follow-ups"\n  memory search "Acme follow-up"\n  memory recent 5',
   handler: cmdMemory,
   acceptsStdin: true,
   minArgs: 1,

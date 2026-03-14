@@ -66,6 +66,48 @@ test('fs: cat reads text files', async () => {
   assert.equal(stdoutText(result), 'line one');
 });
 
+test('fs: cat supports multiple files and piped stdin', async () => {
+  const ctx = makeCtx();
+  await ctx.vfs.writeBytes('/notes/a.txt', textEncoder.encode('alpha\n'));
+  await ctx.vfs.writeBytes('/notes/b.txt', textEncoder.encode('beta\n'));
+
+  const multiple = await runCommand('cat', ['/notes/a.txt', '/notes/b.txt'], { ctx });
+  assert.equal(multiple.result.exitCode, 0);
+  assert.equal(stdoutText(multiple.result), 'alpha\nbeta\n');
+
+  const piped = await runCommand('cat', [], {
+    ctx,
+    stdin: textEncoder.encode('from stdin'),
+  });
+  assert.equal(piped.result.exitCode, 0);
+  assert.equal(stdoutText(piped.result), 'from stdin');
+});
+
+test('fs: cat supports stdin markers in mixed file streams', async () => {
+  const ctx = makeCtx();
+  await ctx.vfs.writeBytes('/notes/header.txt', textEncoder.encode('header\n'));
+  await ctx.vfs.writeBytes('/notes/footer.txt', textEncoder.encode('footer\n'));
+
+  const { result } = await runCommand('cat', ['/notes/header.txt', '-', '/notes/footer.txt'], {
+    ctx,
+    stdin: textEncoder.encode('body\n'),
+  });
+  assert.equal(result.exitCode, 0);
+  assert.equal(stdoutText(result), 'header\nbody\nfooter\n');
+});
+
+test('fs: cat rejects piped stdin with file paths unless stdin is referenced explicitly', async () => {
+  const ctx = makeCtx();
+  await ctx.vfs.writeBytes('/notes/todo.txt', textEncoder.encode('line one'));
+
+  const { result } = await runCommand('cat', ['/notes/todo.txt'], {
+    ctx,
+    stdin: textEncoder.encode('ignored'),
+  });
+  assert.equal(result.exitCode, 1);
+  assert.match(result.stderr, /cat: stdin is only read when no file paths are given or when '-' is present/);
+});
+
 test('fs: cat rejects directories', async () => {
   const ctx = makeCtx();
   await ctx.vfs.mkdir('/notes', true);
@@ -157,6 +199,14 @@ test('fs: mkdir creates nested directories', async () => {
   assert.equal(info.isDir, true);
 });
 
+test('fs: mkdir accepts -p as a compatibility alias', async () => {
+  const ctx = makeCtx();
+
+  const { result } = await runCommand('mkdir', ['-p', '/reports/2026/q2'], { ctx });
+  assert.equal(result.exitCode, 0);
+  assert.match(stdoutText(result), /created \/reports\/2026\/q2/);
+});
+
 test('fs: cp copies files and blocks subtree copies', async () => {
   const ctx = makeCtx();
   await ctx.vfs.writeBytes('/src.txt', textEncoder.encode('copy me'));
@@ -213,6 +263,18 @@ test('fs: rm removes files and protects root', async () => {
   const root = await runCommand('rm', ['/'], { ctx });
   assert.equal(root.result.exitCode, 1);
   assert.match(root.result.stderr, /rm: cannot delete root: \//);
+});
+
+test('fs: rm accepts recursive compatibility aliases', async () => {
+  const ctx = makeCtx();
+  await ctx.vfs.writeBytes('/scratch/out.txt', textEncoder.encode('bye'));
+
+  const removed = await runCommand('rm', ['-r', '/scratch'], { ctx });
+  assert.equal(removed.result.exitCode, 0);
+  assert.match(stdoutText(removed.result), /removed \/scratch/);
+
+  const missing = await ctx.vfs.stat('/scratch');
+  assert.equal(missing.exists, false);
 });
 
 test('fs: find walks recursively and supports filters', async () => {

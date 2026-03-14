@@ -9,6 +9,16 @@ For the GNU-style subset we support and the oracle-backed compatibility target, 
 - [`parity/gnu-command-parity.md`](parity/gnu-command-parity.md)
 - [`parity/compatibility-matrix.md`](parity/compatibility-matrix.md)
 
+## Compatibility intent
+
+Built-in commands fall into three groups:
+
+- **GNU-style subset** — `echo`, `ls`, `find`, `grep`, `head`, `tail`, `sort`, `uniq`, `wc`, `sed`, `tr`, and `diff` aim for a measured subset of familiar GNU/Linux behavior.
+- **Unix-inspired, product-shaped** — `stat`, `cat`, `mkdir`, `cp`, `mv`, and `rm` use familiar CLI shapes, but their behavior is defined by one-tool's rooted workspace and safety rules.
+- **Product-native** — `help`, `memory`, `write`, `append`, `json`, `calc`, `search`, and `fetch` are part of the one-tool runtime model and do not aim for GNU/Linux compatibility.
+
+If a command is in the GNU-style subset, the parity docs define the supported forms. Otherwise, this reference and `help <command>` are the authoritative contract.
+
 ---
 
 ## Command language
@@ -101,10 +111,10 @@ The runtime ships with 26 built-in commands.
 
 ### System commands
 
-| Command  | Usage                                                                                                                | Stdin | Purpose                                     |
-| -------- | -------------------------------------------------------------------------------------------------------------------- | ----: | ------------------------------------------- |
-| `help`   | `help [command]`                                                                                                     |    no | List commands or show detailed help         |
-| `memory` | <code>memory search &lt;query&gt;</code><br><code>memory recent [N]</code><br><code>memory store &lt;text&gt;</code> |   yes | Store and search lightweight working memory |
+| Command  | Usage                                                                                                                | Stdin | Purpose                                                    |
+| -------- | -------------------------------------------------------------------------------------------------------------------- | ----: | ---------------------------------------------------------- |
+| `help`   | `help [command]`                                                                                                     |    no | List commands or show detailed help                        |
+| `memory` | <code>memory search &lt;query&gt;</code><br><code>memory recent [N]</code><br><code>memory store &lt;text&gt;</code> |   yes | Store and search lightweight runtime-scoped working memory |
 
 Examples:
 
@@ -117,19 +127,19 @@ memory recent 5
 
 ### Filesystem commands
 
-| Command  | Usage                                                                                                                                          | Stdin | Purpose                                   |
-| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ----: | ----------------------------------------- |
-| `ls`     | `ls [-1aRl] [path]`                                                                                                                            |    no | List files or directories                 |
-| `stat`   | `stat <path>`                                                                                                                                  |    no | Show file metadata                        |
-| `cat`    | `cat <path>`                                                                                                                                   |    no | Read a text file                          |
-| `write`  | `write <path> [content]`                                                                                                                       |   yes | Write a file from inline content or stdin |
-| `append` | `append <path> [content]`                                                                                                                      |   yes | Append to a file                          |
-| `mkdir`  | `mkdir <path>`                                                                                                                                 |    no | Create a directory and missing parents    |
-| `cp`     | `cp <src> <dst>`                                                                                                                               |    no | Copy a file or directory                  |
-| `diff`   | `diff [-u\|-U N\|-c\|-C N] [-r] [-a] [-b] [-i] <left> <right>`                                                                                 |   yes | Compare files or directories              |
-| `mv`     | `mv <src> <dst>`                                                                                                                               |    no | Move or rename a file or directory        |
-| `rm`     | `rm <path>`                                                                                                                                    |    no | Delete a file or directory recursively    |
-| `find`   | <code>find [path] [--type file&#124;dir&#124;-type f&#124;-type d] [--name pattern&#124;-name pattern] [--max-depth N&#124;-maxdepth N]</code> |    no | Recursively list files and directories    |
+| Command  | Usage                                                                                                                                          | Stdin | Purpose                                                        |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ----: | -------------------------------------------------------------- |
+| `ls`     | `ls [-1aRl] [path]`                                                                                                                            |    no | List files or directories                                      |
+| `stat`   | `stat <path>`                                                                                                                                  |    no | Show one-tool workspace metadata for a path                    |
+| `cat`    | `cat [path ...\|-]`                                                                                                                            |   yes | Read text from rooted files, or splice piped stdin with `-`    |
+| `write`  | `write <path> [content]`                                                                                                                       |   yes | Write a file from inline content or stdin                      |
+| `append` | `append <path> [content]`                                                                                                                      |   yes | Append to a file                                               |
+| `mkdir`  | `mkdir [-p] <path>`                                                                                                                            |    no | Create a directory and missing parents                         |
+| `cp`     | `cp <src> <dst>`                                                                                                                               |    no | Copy a file or directory to a new rooted destination           |
+| `diff`   | `diff [-u\|-U N\|-c\|-C N] [-r] [-a] [-b] [-i] <left> <right>`                                                                                 |   yes | Compare files or directories                                   |
+| `mv`     | `mv <src> <dst>`                                                                                                                               |    no | Move or rename a file or directory to a new rooted destination |
+| `rm`     | `rm [-r\|-R] <path>`                                                                                                                           |    no | Delete a file or directory recursively                         |
+| `find`   | <code>find [path] [--type file&#124;dir&#124;-type f&#124;-type d] [--name pattern&#124;-name pattern] [--max-depth N&#124;-maxdepth N]</code> |    no | Recursively list files and directories                         |
 
 Examples:
 
@@ -139,14 +149,19 @@ ls -a /
 ls -R /logs
 stat /logs/app.log
 cat /notes/todo.txt
+cat /notes/a.txt /notes/b.txt
+grep ERROR /logs/app.log | cat
+grep ERROR /logs/app.log | cat /notes/header.txt -
 write /reports/summary.txt "ready"
 cat /logs/app.log | grep ERROR | write /reports/errors.txt
 append /reports/summary.txt "next line"
 mkdir /reports/daily/2026-03-13
+mkdir -p /reports/daily/2026-03-13
 cp /drafts/qbr.md /reports/qbr-v1.md
 diff -u /drafts/qbr.md /reports/qbr-v2.md
 mv /reports/qbr-v1.md /archive/qbr.md
 rm /scratch
+rm -r /scratch
 find /config -type f -name "*.json"
 ```
 
@@ -194,10 +209,10 @@ fetch text:runbook | wc -w
 
 ### Data commands
 
-| Command | Usage                                                                                                               | Stdin | Purpose                  |
-| ------- | ------------------------------------------------------------------------------------------------------------------- | ----: | ------------------------ |
-| `json`  | <code>json pretty [path]</code><br><code>json keys [path]</code><br><code>json get &lt;field.path&gt; [path]</code> |   yes | Inspect JSON             |
-| `calc`  | `calc <expression>`                                                                                                 |    no | Evaluate safe arithmetic |
+| Command | Usage                                                                                                               | Stdin | Purpose                                             |
+| ------- | ------------------------------------------------------------------------------------------------------------------- | ----: | --------------------------------------------------- |
+| `json`  | <code>json pretty [path]</code><br><code>json keys [path]</code><br><code>json get &lt;field.path&gt; [path]</code> |   yes | Inspect JSON with a small dot-and-index path syntax |
+| `calc`  | `calc <expression>`                                                                                                 |    no | Evaluate safe arithmetic only                       |
 
 Examples:
 
@@ -210,10 +225,10 @@ calc (1499 * 1.2) / 100
 
 ### Adapter-backed commands
 
-| Command  | Usage              | Stdin | Purpose                             |
-| -------- | ------------------ | ----: | ----------------------------------- |
-| `search` | `search <query>`   |    no | Query the configured search adapter |
-| `fetch`  | `fetch <resource>` |    no | Query the configured fetch adapter  |
+| Command  | Usage              | Stdin | Purpose                                                            |
+| -------- | ------------------ | ----: | ------------------------------------------------------------------ |
+| `search` | `search <query>`   |    no | Query the configured search adapter and format the top results     |
+| `fetch`  | `fetch <resource>` |    no | Query the configured fetch adapter and render the returned payload |
 
 Examples:
 

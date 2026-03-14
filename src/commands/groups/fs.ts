@@ -10,6 +10,9 @@ import { parseDiffArgs, runDiffCommand } from '../shared/diff.js';
 import { contentFromArgsOrStdin, materializedLimitError } from '../shared/io.js';
 
 const LS_USAGE = 'ls [-1aRl] [path]';
+const CAT_USAGE = 'cat [path ...|-]';
+const MKDIR_USAGE = 'mkdir [-p] <path>';
+const RM_USAGE = 'rm [-r|-R] <path>';
 const FIND_USAGE =
   'find [path] [--type file|dir|-type f|-type d] [--name pattern|-name pattern] [--max-depth N|-maxdepth N]';
 
@@ -24,6 +27,58 @@ interface LsEntry {
   displayName: string;
   isSynthetic: boolean;
   info: VFileInfo;
+}
+
+type ParsedSinglePathArgs = { ok: true; path: string } | { ok: false; error: string };
+
+function concatByteChunks(chunks: Uint8Array[]): Uint8Array {
+  const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  const merged = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return merged;
+}
+
+function parseSinglePathArgs(
+  commandName: string,
+  args: string[],
+  usage: string,
+  compatibilityFlags: string[] = [],
+): ParsedSinglePathArgs {
+  if (args.length === 1) {
+    return { ok: true, path: args[0]! };
+  }
+  if (args.length === 2 && compatibilityFlags.includes(args[0]!)) {
+    return { ok: true, path: args[1]! };
+  }
+  if (args.length > 0 && args[0]?.startsWith('-') && !compatibilityFlags.includes(args[0]!)) {
+    return { ok: false, error: `${commandName}: unknown option: ${args[0]}. Usage: ${usage}` };
+  }
+  return { ok: false, error: `${commandName}: usage: ${usage}` };
+}
+
+function readCatStdin(
+  ctx: CommandContext,
+  stdin: Uint8Array,
+  totalBytes: number,
+): { ok: true; nextTotalBytes: number } | { ok: false; result: CommandResult } {
+  const nextTotalBytes = totalBytes + stdin.length;
+  const limitError = materializedLimitError(ctx, 'cat', 'stdin', nextTotalBytes);
+  if (limitError !== undefined) {
+    return { ok: false, result: limitError };
+  }
+  if (looksBinary(stdin)) {
+    return {
+      ok: false,
+      result: err(
+        `cat: stdin is binary (${formatSize(stdin.length)}). Pipe text only, or save binary data to a file and inspect with stat.`,
+      ),
+    };
+  }
+  return { ok: true, nextTotalBytes };
 }
 
 function resourceLimitMessage(commandName: string, caught: unknown): string | null {
@@ -101,7 +156,7 @@ export const ls: CommandSpec = {
   conformanceArgs: ['/'],
 };
 
-async function cmdStat(ctx: CommandContext, args: string[], stdin: Uint8Array) {
+async function cmdStat(ctx: CommandContext, args: string[], stdin: Uint8Array): Promise<CommandResult> {
   if (stdin.length > 0) {
     return err('stat: does not accept stdin');
   }
@@ -135,9 +190,10 @@ async function cmdStat(ctx: CommandContext, args: string[], stdin: Uint8Array) {
 
 export const stat: CommandSpec = {
   name: 'stat',
-  summary: 'Show file metadata such as size, type, and modified time.',
+  summary: 'Show one-tool file metadata such as size, type, and modified time.',
   usage: 'stat <path>',
-  details: 'Examples:\n  stat /logs/app.log\n  stat notes/todo.txt',
+  details:
+    'Returns one-tool metadata fields for the rooted workspace. It does not aim for POSIX stat output parity.\nExamples:\n  stat /logs/app.log\n  stat notes/todo.txt',
   handler: cmdStat,
   acceptsStdin: false,
   minArgs: 1,
@@ -145,57 +201,84 @@ export const stat: CommandSpec = {
   conformanceArgs: ['/missing'],
 };
 
-async function cmdCat(ctx: CommandContext, args: string[], stdin: Uint8Array) {
-  if (stdin.length > 0) {
+async function cmdCat(ctx: CommandContext, args: string[], stdin: Uint8Array): Promise<CommandResult> {
+  if (args.length === 0) {
+    if (stdin.length === 0) {
+      return err(`cat: usage: ${CAT_USAGE}`);
+    }
+
+    const stdinResult = readCatStdin(ctx, stdin, 0);
+    if (!stdinResult.ok) {
+      return stdinResult.result;
+    }
+    return okBytes(stdin, 'text/plain');
+  }
+
+  if (stdin.length > 0 && !args.includes('-')) {
     return err(
-      'cat: does not accept stdin in this implementation. Use pipe targets like grep/head/tail/write.',
+      `cat: stdin is only read when no file paths are given or when '-' is present. Usage: ${CAT_USAGE}`,
     );
   }
-  if (args.length !== 1) {
-    return err('cat: usage: cat <path>');
+
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  for (const target of args) {
+    if (target === '-') {
+      const stdinResult = readCatStdin(ctx, stdin, totalBytes);
+      if (!stdinResult.ok) {
+        return stdinResult.result;
+      }
+      totalBytes = stdinResult.nextTotalBytes;
+      chunks.push(stdin);
+      continue;
+    }
+
+    const normalized = ctx.vfs.normalize(target);
+
+    try {
+      const info = await ctx.vfs.stat(target);
+
+      if (!info.exists) {
+        return err(`cat: file not found: ${normalized}. Use: ls ${parentPath(target)}`);
+      }
+      if (info.isDir) {
+        return err(`cat: path is a directory: ${normalized}. Use: ls ${normalized}`);
+      }
+
+      totalBytes += info.size;
+      const limitError = materializedLimitError(ctx, 'cat', normalized, totalBytes);
+      if (limitError !== undefined) {
+        return limitError;
+      }
+
+      const raw = await ctx.vfs.readBytes(target);
+      if (looksBinary(raw)) {
+        return err(`cat: binary file (${formatSize(raw.length)}): ${normalized}. Use: stat ${normalized}`);
+      }
+
+      chunks.push(raw);
+    } catch (caught) {
+      const escapeResult = escapePathResult('cat', caught, normalized);
+      if (escapeResult !== null) {
+        return escapeResult;
+      }
+      return err(`cat: ${errorMessage(caught)}`);
+    }
   }
 
-  const target = args[0]!;
-  const normalized = ctx.vfs.normalize(target);
-
-  try {
-    const info = await ctx.vfs.stat(target);
-
-    if (!info.exists) {
-      return err(`cat: file not found: ${normalized}. Use: ls ${parentPath(target)}`);
-    }
-    if (info.isDir) {
-      return err(`cat: path is a directory: ${normalized}. Use: ls ${normalized}`);
-    }
-    const limitError = materializedLimitError(ctx, 'cat', normalized, info.size);
-    if (limitError !== undefined) {
-      return limitError;
-    }
-
-    const raw = await ctx.vfs.readBytes(target);
-    if (looksBinary(raw)) {
-      return err(`cat: binary file (${formatSize(raw.length)}): ${normalized}. Use: stat ${normalized}`);
-    }
-
-    return okBytes(raw, 'text/plain');
-  } catch (caught) {
-    const escapeResult = escapePathResult('cat', caught, normalized);
-    if (escapeResult !== null) {
-      return escapeResult;
-    }
-    return err(`cat: ${errorMessage(caught)}`);
-  }
+  return okBytes(concatByteChunks(chunks), 'text/plain');
 }
 
 export const cat: CommandSpec = {
   name: 'cat',
-  summary: 'Read a text file. For directories use ls. For binary use stat.',
-  usage: 'cat <path>',
-  details: 'Examples:\n  cat /notes/todo.txt\n  cat logs/app.log',
+  summary: 'Read text from one or more files, or splice piped stdin with `-`.',
+  usage: CAT_USAGE,
+  details:
+    'Reads rooted text files or piped text. Use `-` to splice piped stdin into the file list. For directories use ls. For binary content use stat.\nExamples:\n  cat /notes/todo.txt\n  cat /notes/a.txt /notes/b.txt\n  grep ERROR /logs/app.log | cat\n  grep ERROR /logs/app.log | cat /notes/header.txt -',
   handler: cmdCat,
-  acceptsStdin: false,
-  minArgs: 1,
-  maxArgs: 1,
+  acceptsStdin: true,
+  minArgs: 0,
   conformanceArgs: ['/missing'],
 };
 
@@ -310,15 +393,16 @@ export const append: CommandSpec = {
   conformanceArgs: ['/t.txt', 'x'],
 };
 
-async function cmdMkdir(ctx: CommandContext, args: string[], stdin: Uint8Array) {
+async function cmdMkdir(ctx: CommandContext, args: string[], stdin: Uint8Array): Promise<CommandResult> {
   if (stdin.length > 0) {
     return err('mkdir: does not accept stdin');
   }
-  if (args.length !== 1) {
-    return err('mkdir: usage: mkdir <path>');
+  const parsed = parseSinglePathArgs('mkdir', args, MKDIR_USAGE, ['-p']);
+  if (!parsed.ok) {
+    return err(parsed.error);
   }
   try {
-    const created = await ctx.vfs.mkdir(args[0]!, true);
+    const created = await ctx.vfs.mkdir(parsed.path, true);
     return ok(`created ${created}`);
   } catch (caught) {
     const code = errorCode(caught);
@@ -326,15 +410,15 @@ async function cmdMkdir(ctx: CommandContext, args: string[], stdin: Uint8Array) 
     if (limitMessage) {
       return err(limitMessage);
     }
-    const escapeResult = escapePathResult('mkdir', caught, ctx.vfs.normalize(args[0]!));
+    const escapeResult = escapePathResult('mkdir', caught, ctx.vfs.normalize(parsed.path));
     if (escapeResult !== null) {
       return escapeResult;
     }
     if (code === 'EEXIST') {
-      return err(`mkdir: path already exists: ${ctx.vfs.normalize(args[0]!)}`);
+      return err(`mkdir: path already exists: ${ctx.vfs.normalize(parsed.path)}`);
     }
     if (code === 'ENOTDIR') {
-      return err(`mkdir: parent is not a directory: ${await blockingParentPath(ctx, args[0]!)}`);
+      return err(`mkdir: parent is not a directory: ${await blockingParentPath(ctx, parsed.path)}`);
     }
     if (code === 'ENOENT') {
       return err(`mkdir: parent path not found: ${errorPath(caught)}`);
@@ -346,12 +430,13 @@ async function cmdMkdir(ctx: CommandContext, args: string[], stdin: Uint8Array) 
 export const mkdir: CommandSpec = {
   name: 'mkdir',
   summary: 'Create a directory and any missing parents.',
-  usage: 'mkdir <path>',
-  details: 'Examples:\n  mkdir /reports\n  mkdir notes/archive/2026',
+  usage: MKDIR_USAGE,
+  details:
+    'Creates missing parents by default. `-p` is accepted as a compatibility alias.\nExamples:\n  mkdir /reports\n  mkdir -p notes/archive/2026',
   handler: cmdMkdir,
   acceptsStdin: false,
   minArgs: 1,
-  maxArgs: 1,
+  maxArgs: 2,
   conformanceArgs: ['/tmp'],
 };
 
@@ -404,7 +489,8 @@ export const cp: CommandSpec = {
   name: 'cp',
   summary: 'Copy a file or directory inside the rooted virtual file system.',
   usage: 'cp <src> <dst>',
-  details: 'Examples:\n  cp /drafts/qbr.md /reports/qbr-v1.md',
+  details:
+    'Copies files or directories to a new rooted destination path. The destination must not already exist.\nExamples:\n  cp /drafts/qbr.md /reports/qbr-v1.md',
   handler: cmdCp,
   acceptsStdin: false,
   minArgs: 2,
@@ -461,7 +547,8 @@ export const mv: CommandSpec = {
   name: 'mv',
   summary: 'Move or rename a file or directory.',
   usage: 'mv <src> <dst>',
-  details: 'Examples:\n  mv /drafts/qbr.md /archive/qbr.md',
+  details:
+    'Moves files or directories to a new rooted destination path. The destination must not already exist.\nExamples:\n  mv /drafts/qbr.md /archive/qbr.md',
   handler: cmdMv,
   acceptsStdin: false,
   minArgs: 2,
@@ -469,23 +556,24 @@ export const mv: CommandSpec = {
   conformanceArgs: ['/a', '/b'],
 };
 
-async function cmdRm(ctx: CommandContext, args: string[], stdin: Uint8Array) {
+async function cmdRm(ctx: CommandContext, args: string[], stdin: Uint8Array): Promise<CommandResult> {
   if (stdin.length > 0) {
     return err('rm: does not accept stdin');
   }
-  if (args.length !== 1) {
-    return err('rm: usage: rm <path>');
+  const parsed = parseSinglePathArgs('rm', args, RM_USAGE, ['-r', '-R']);
+  if (!parsed.ok) {
+    return err(parsed.error);
   }
 
   try {
-    const removed = await ctx.vfs.delete(args[0]!);
+    const removed = await ctx.vfs.delete(parsed.path);
     return ok(`removed ${removed}`);
   } catch (caught) {
     const code = errorCode(caught);
     if (code === 'ENOENT') {
-      return err(`rm: path not found: ${ctx.vfs.normalize(args[0]!)}`);
+      return err(`rm: path not found: ${ctx.vfs.normalize(parsed.path)}`);
     }
-    const escapeResult = escapePathResult('rm', caught, ctx.vfs.normalize(args[0]!));
+    const escapeResult = escapePathResult('rm', caught, ctx.vfs.normalize(parsed.path));
     if (escapeResult !== null) {
       return escapeResult;
     }
@@ -499,12 +587,13 @@ async function cmdRm(ctx: CommandContext, args: string[], stdin: Uint8Array) {
 export const rm: CommandSpec = {
   name: 'rm',
   summary: 'Delete a file or directory recursively.',
-  usage: 'rm <path>',
-  details: 'Examples:\n  rm /tmp/out.txt\n  rm /scratch',
+  usage: RM_USAGE,
+  details:
+    'Removes files and directories recursively by default. `-r` and `-R` are accepted as compatibility aliases.\nExamples:\n  rm /tmp/out.txt\n  rm -r /scratch',
   handler: cmdRm,
   acceptsStdin: false,
   minArgs: 1,
-  maxArgs: 1,
+  maxArgs: 2,
   conformanceArgs: ['/missing'],
 };
 

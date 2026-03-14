@@ -70,7 +70,7 @@ export const json: CommandSpec = {
   summary: 'Inspect JSON from stdin or a file: pretty, keys, get.',
   usage: 'json pretty [path] | json keys [path] | json get <field.path> [path]',
   details:
-    'Examples:\n  fetch order:123 | json pretty\n  fetch order:123 | json get customer.email\n  json keys /config/default.json',
+    'Uses a small dot-and-index path syntax such as customer.email or items[0].id. It is not jq.\nExamples:\n  fetch order:123 | json pretty\n  fetch order:123 | json get customer.email\n  json keys /config/default.json',
   handler: cmdJson,
   acceptsStdin: true,
   minArgs: 1,
@@ -97,7 +97,8 @@ export const calc: CommandSpec = {
   name: 'calc',
   summary: 'Evaluate a safe arithmetic expression.',
   usage: 'calc <expression>',
-  details: 'Examples:\n  calc 41 + 1\n  calc (12 * 8) / 3',
+  details:
+    'Supports numbers, parentheses, and the operators +, -, *, /, and %.\nExamples:\n  calc 41 + 1\n  calc (12 * 8) / 3',
   handler: cmdCalc,
   acceptsStdin: false,
   minArgs: 1,
