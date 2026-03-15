@@ -8,6 +8,7 @@ from .errors import (
     vfs_error,
 )
 from .interface import VFS, VFileInfo, guess_media_type
+from .local_vfs import LocalVFS
 from .memory_vfs import MemoryVFS
 from .path_utils import base_name, is_strict_descendant_path, parent_of, posix_normalize
 from .policy import (
@@ -21,6 +22,7 @@ from .policy import (
 )
 
 __all__ = [
+    "LocalVFS",
     "MemoryVFS",
     "ResolvedVfsResourcePolicy",
     "VFS",

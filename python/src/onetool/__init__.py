@@ -1,3 +1,4 @@
+from .commands import CommandContext, CommandRegistry, CommandSpec, create_command_registry
 from .execution_policy import (
     AgentCLIExecutionPolicy,
     MaterializedByteLimit,
@@ -7,6 +8,35 @@ from .execution_policy import (
 )
 from .memory import SimpleMemory
 from .parser import ChainNode, ParseError, PipelineNode, SimpleCommandNode, parse_command_line, tokenize_command_line
+from .runtime import (
+    AgentCLI,
+    AgentCLIOutputLimits,
+    CommandExecutionTrace,
+    PipelineExecutionTrace,
+    PipelineSkippedReason,
+    PresentationStdoutMode,
+    RunExecution,
+    RunPresentation,
+    ToolDescriptionVariant,
+    create_agent_cli,
+)
+from .testing import (
+    NO_STDIN,
+    DemoFetch,
+    DemoSearch,
+    DemoSearchDocument,
+    assert_scenario,
+    build_world,
+    create_command_conformance_cases,
+    create_test_command_context,
+    create_test_command_registry,
+    get_registered_command,
+    run_oracle,
+    run_registered_command,
+    stdin_text,
+    stdout_text,
+)
+from .tool_schema import BuildToolDefinitionOptions, ToolDefinition, build_tool_definition
 from .types import (
     CommandResult,
     FetchAdapter,
@@ -30,25 +60,44 @@ from .utils import (
     split_lines,
     tokenize_for_search,
 )
-from .vfs import MemoryVFS, VFS, VFileInfo, VfsError, VfsResourcePolicy, guess_media_type
+from .vfs import LocalVFS, MemoryVFS, VFS, VFileInfo, VfsError, VfsResourcePolicy, guess_media_type
 from .vfs.errors import VfsErrorCode, VfsErrorOptions, is_vfs_error, to_vfs_error
 from .vfs.policy import ResolvedVfsResourcePolicy
 
 __all__ = [
+    "AgentCLI",
     "AgentCLIExecutionPolicy",
+    "AgentCLIOutputLimits",
     "ChainNode",
+    "CommandContext",
+    "CommandExecutionTrace",
+    "CommandRegistry",
     "CommandResult",
+    "CommandSpec",
     "FetchAdapter",
     "FetchResponse",
+    "BuildToolDefinitionOptions",
     "MaterializedByteLimit",
     "MemoryItem",
+    "NO_STDIN",
+    "DemoFetch",
+    "DemoSearch",
+    "DemoSearchDocument",
+    "LocalVFS",
     "MemoryVFS",
     "ParseError",
+    "PipelineExecutionTrace",
     "PipelineNode",
+    "PipelineSkippedReason",
+    "PresentationStdoutMode",
+    "RunExecution",
+    "RunPresentation",
     "SearchAdapter",
     "SearchHit",
     "SimpleCommandNode",
     "SimpleMemory",
+    "ToolDefinition",
+    "ToolDescriptionVariant",
     "ToolAdapters",
     "VFS",
     "VFileInfo",
@@ -57,7 +106,15 @@ __all__ = [
     "VfsErrorOptions",
     "ResolvedVfsResourcePolicy",
     "VfsResourcePolicy",
+    "assert_scenario",
+    "build_tool_definition",
+    "build_world",
     "check_materialized_byte_limit",
+    "create_agent_cli",
+    "create_command_conformance_cases",
+    "create_command_registry",
+    "create_test_command_context",
+    "create_test_command_registry",
     "err",
     "error_message",
     "format_duration",
@@ -70,10 +127,15 @@ __all__ = [
     "ok_bytes",
     "parent_path",
     "parse_command_line",
+    "get_registered_command",
     "is_vfs_error",
     "resolve_execution_policy",
+    "run_oracle",
+    "run_registered_command",
     "safe_eval_arithmetic",
+    "stdin_text",
     "split_lines",
+    "stdout_text",
     "to_vfs_error",
     "tokenize_command_line",
     "tokenize_for_search",

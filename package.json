@@ -54,7 +54,7 @@
   "scripts": {
     "build": "rm -rf dist && tsc -p tsconfig.json",
     "snapshots": "npm run build && node dist/scripts/snapshot.js",
-    "snapshots:check": "npm run snapshots && git diff --exit-code snapshots/",
+    "snapshots:check": "npm run snapshots && git diff --exit-code -- snapshots/ && test -z \"$(git ls-files --others --exclude-standard -- snapshots/)\"",
     "demo": "npm run build && node --enable-source-maps dist/examples/01-hello-world.js",
     "example:hello-world": "npm run build && node --enable-source-maps dist/examples/01-hello-world.js",
     "example:custom-command": "npm run build && node --enable-source-maps dist/examples/02-custom-command.js",

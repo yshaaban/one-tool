@@ -143,6 +143,20 @@ npm run demo
 
 For the rest of the walkthrough, open [`examples/README.md`](examples/README.md).
 
+### Python parity workspace
+
+The Python port lives under [`python/`](python) and is maintained against TypeScript-generated golden snapshots.
+
+Run the Python suite with:
+
+```bash
+cd python
+python3 -m pip install -e ".[dev]"
+pytest -q
+```
+
+The Python package currently includes the parity runtime, command layer, testing helpers, `MemoryVFS`, and `LocalVFS`.
+
 Start with:
 
 ```bash
@@ -167,6 +181,25 @@ cp .env.example .env
 Then fill in the Groq, OpenAI, or Anthropic section described in [`docs/providers.md`](docs/providers.md).
 
 For the example walkthrough, see [`examples/README.md`](examples/README.md).
+
+### Snapshot and parity workflow
+
+TypeScript is the source of truth for command, runtime, and scenario behavior. The parity loop is:
+
+```bash
+npm run snapshots
+npm run snapshots:check
+pytest -q python/tests
+```
+
+When TypeScript behavior changes:
+
+1. Update the TypeScript source.
+2. Regenerate snapshots with `npm run snapshots`.
+3. Commit the snapshot diffs.
+4. Port the same behavior to Python until `pytest -q python/tests` is green again.
+
+The generated corpus now covers parser, VFS, utils, commands, runtime executions/tool descriptions, and oracle scenarios under [`snapshots/`](snapshots).
 
 ---
 
