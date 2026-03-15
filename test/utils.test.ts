@@ -65,6 +65,7 @@ test('safeEvalArithmetic handles supported operators and precedence', function (
   assert.equal(safeEvalArithmetic('2 ** 3 ** 2'), 512);
   assert.equal(safeEvalArithmetic('7 // 2'), 3);
   assert.equal(safeEvalArithmetic('7 % 4'), 3);
+  assert.equal(safeEvalArithmetic('(-7) % 3'), -1);
   assert.equal(safeEvalArithmetic('-3 + 5'), 2);
 });
 

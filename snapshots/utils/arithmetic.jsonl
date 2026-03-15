@@ -3,6 +3,7 @@
 {"expression":"2 ** 3 ** 2","result":512}
 {"expression":"7 // 2","result":3}
 {"expression":"7 % 4","result":3}
+{"expression":"(-7) % 3","result":-1}
 {"expression":"-3 + 5","result":2}
 {"expression":"2 ** 0.5","result":1.4142135623730951}
 {"expression":".5 + .25","result":0.75}

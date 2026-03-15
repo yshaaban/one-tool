@@ -28,6 +28,10 @@ def test_safe_eval_arithmetic_matches_golden_snapshots() -> None:
             assert safe_eval_arithmetic(record["expression"]) == record["result"]
 
 
+def test_safe_eval_arithmetic_matches_javascript_remainder_semantics() -> None:
+    assert safe_eval_arithmetic("(-7) % 3") == -1
+
+
 def test_format_helpers_match_golden_snapshots() -> None:
     for record in load_jsonl("utils/format.jsonl"):
         if record["kind"] == "duration":

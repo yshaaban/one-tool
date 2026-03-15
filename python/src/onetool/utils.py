@@ -148,7 +148,7 @@ class _ArithmeticParser:
                 elif operator == "//":
                     value = math.floor(value / right)
                 else:
-                    value %= right
+                    value = math.fmod(value, right)
             except ZeroDivisionError as caught:
                 raise ValueError("result is not finite") from caught
             if not math.isfinite(value):
