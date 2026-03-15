@@ -346,7 +346,7 @@ def _parse_sed_command(raw: str, extended_regex: bool) -> tuple[SedCommand | Non
         }[kind]
         return (SedCommand(address1, address2, mapped_kind), None)
     if kind in {"a", "i", "c"}:
-        text = payload[1:] if payload.startswith("\\") else payload
+        text = _parse_sed_text_argument(payload)
         mapped_kind = {
             "a": "append",
             "i": "insert",
@@ -389,9 +389,8 @@ def _parse_sed_address(
         if end >= len(raw) or raw[end] != "/":
             return (None, index, "unterminated regex address")
         pattern = raw[index + 1 : end]
-        flags = re.MULTILINE
         try:
-            regex = re.compile(pattern, flags)
+            regex = _compile_sed_regex(pattern, extended_regex, False)
         except re.error as caught:
             return (None, index, f"invalid address regex: {error_message(caught)}")
         return (SedAddress("regex", pattern, regex=regex), end + 1, None)
@@ -434,16 +433,15 @@ def _parse_sed_substitute(source: str, extended_regex: bool) -> tuple[SedSubstit
 
     occurrence_text = "".join(char for char in flags_text if char.isdigit())
     occurrence = int(occurrence_text, 10) if occurrence_text else None
-    regex_flags = re.MULTILINE | (re.IGNORECASE if ignore_case else 0)
     try:
-        regex = re.compile(pattern, regex_flags)
+        regex = _compile_sed_regex(pattern, extended_regex, ignore_case)
     except re.error as caught:
         return (None, f"invalid regex: {error_message(caught)}")
 
     return (
         SedSubstitute(
             source=pattern,
-            replacement=_decode_sed_replacement(replacement),
+            replacement=replacement,
             global_flag=global_flag,
             print_on_success=print_on_success,
             occurrence=occurrence,
@@ -454,8 +452,147 @@ def _parse_sed_substitute(source: str, extended_regex: bool) -> tuple[SedSubstit
     )
 
 
-def _decode_sed_replacement(value: str) -> str:
-    return value.replace(r"\n", "\n").replace(r"\/", "/")
+def _parse_sed_text_argument(source: str) -> str:
+    text = source[1:] if source.startswith("\\") else source
+    return _decode_sed_text_escapes(text)
+
+
+def _decode_sed_text_escapes(text: str) -> str:
+    pieces: list[str] = []
+    index = 0
+    while index < len(text):
+        char = text[index]
+        if char != "\\" or index == len(text) - 1:
+            pieces.append(char)
+            index += 1
+            continue
+
+        next_char = text[index + 1]
+        if next_char == "n":
+            pieces.append("\n")
+        elif next_char == "t":
+            pieces.append("\t")
+        else:
+            pieces.append(next_char)
+        index += 2
+
+    return "".join(pieces)
+
+
+def _compile_sed_regex(pattern: str, extended_regex: bool, ignore_case: bool) -> re.Pattern[str]:
+    source = _translate_sed_extended_regex(pattern) if extended_regex else _translate_sed_basic_regex(pattern)
+    flags = re.MULTILINE | (re.IGNORECASE if ignore_case else 0)
+    return re.compile(source, flags)
+
+
+def _translate_sed_extended_regex(pattern: str) -> str:
+    return pattern
+
+
+def _translate_sed_basic_regex(pattern: str) -> str:
+    pieces: list[str] = []
+    index = 0
+
+    while index < len(pattern):
+        char = pattern[index]
+        if char == "\\":
+            if index == len(pattern) - 1:
+                pieces.append(r"\\")
+                break
+
+            next_char = pattern[index + 1]
+            if next_char in {"(", ")", "{", "}", "+", "?", "|"}:
+                pieces.append(next_char)
+            elif next_char.isdigit():
+                pieces.append(f"\\{next_char}")
+            else:
+                pieces.append(_escape_sed_regex_literal(next_char))
+            index += 2
+            continue
+
+        if char == "[":
+            character_class, index = _read_sed_character_class(pattern, index)
+            pieces.append(character_class)
+            continue
+
+        if char in {"(", ")", "{", "}", "+", "?", "|"}:
+            pieces.append(f"\\{char}")
+            index += 1
+            continue
+
+        pieces.append(char)
+        index += 1
+
+    return "".join(pieces)
+
+
+def _read_sed_character_class(pattern: str, start_index: int) -> tuple[str, int]:
+    index = start_index + 1
+
+    while index < len(pattern):
+        char = pattern[index]
+        if char == "\\":
+            index += 2
+            continue
+        if char == "]" and index > start_index + 1:
+            return (pattern[start_index : index + 1], index + 1)
+        index += 1
+
+    return (pattern[start_index:], len(pattern))
+
+
+def _escape_sed_regex_literal(char: str) -> str:
+    if char in {"\\", "^", "$", ".", "*", "+", "?", "(", ")", "[", "]", "{", "}", "|"}:
+        return f"\\{char}"
+    return char
+
+
+def _render_sed_replacement(replacement: str, match: re.Match[str]) -> str:
+    pieces: list[str] = []
+    index = 0
+
+    while index < len(replacement):
+        char = replacement[index]
+        if char == "&":
+            pieces.append(match.group(0))
+            index += 1
+            continue
+        if char != "\\":
+            pieces.append(char)
+            index += 1
+            continue
+
+        if index == len(replacement) - 1:
+            pieces.append("\\")
+            index += 1
+            continue
+
+        next_char = replacement[index + 1]
+        if next_char.isdigit():
+            group_index = int(next_char, 10)
+            pieces.append(_match_group_text(match, group_index))
+            index += 2
+            continue
+        if next_char == "n":
+            pieces.append("\n")
+            index += 2
+            continue
+        if next_char == "t":
+            pieces.append("\t")
+            index += 2
+            continue
+
+        pieces.append(next_char)
+        index += 2
+
+    return "".join(pieces)
+
+
+def _match_group_text(match: re.Match[str], group_index: int) -> str:
+    if group_index > match.re.groups:
+        return ""
+    value = match.group(group_index)
+    return value or ""
 
 
 async def _load_sed_inputs(
@@ -645,7 +782,7 @@ def _apply_sed_substitute(text: str, substitute: SedSubstitute) -> tuple[str, bo
         if index not in target_indexes:
             continue
         pieces.append(text[last_end : match.start()])
-        pieces.append(match.expand(substitute.replacement))
+        pieces.append(_render_sed_replacement(substitute.replacement, match))
         last_end = match.end()
         changed = True
     if not changed:

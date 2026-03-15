@@ -786,14 +786,40 @@ function parseSedSubstituteFlags(
 }
 
 function parseSedTextArgument(source: string, startIndex: number): string {
-  let index = startIndex;
-  while (source[index] === ' ' || source[index] === '\t') {
-    index += 1;
-  }
+  let index = skipSedHorizontalWhitespace(source, startIndex);
   if (source[index] === '\\') {
     index += 1;
   }
-  return source.slice(index, findSedLineEnd(source, index));
+  return decodeSedTextEscapes(source.slice(index, findSedLineEnd(source, index)));
+}
+
+function decodeSedTextEscapes(text: string): string {
+  let output = '';
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index]!;
+    if (char !== '\\' || index === text.length - 1) {
+      output += char;
+      continue;
+    }
+
+    const next = text[index + 1]!;
+    if (next === 'n') {
+      output += '\n';
+      index += 1;
+      continue;
+    }
+    if (next === 't') {
+      output += '\t';
+      index += 1;
+      continue;
+    }
+
+    output += next;
+    index += 1;
+  }
+
+  return output;
 }
 
 function createSedCommand(
@@ -1321,6 +1347,16 @@ function renderSedReplacement(replacement: string, match: RegExpMatchArray): str
 
     if (isAsciiDigit(next)) {
       output += match[Number.parseInt(next, 10)] ?? '';
+      index += 1;
+      continue;
+    }
+    if (next === 'n') {
+      output += '\n';
+      index += 1;
+      continue;
+    }
+    if (next === 't') {
+      output += '\t';
       index += 1;
       continue;
     }

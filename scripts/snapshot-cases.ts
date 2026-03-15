@@ -293,6 +293,48 @@ export const COMMAND_EXTRA_CASES: CommandSnapshotCase[] = [
     stdin: encodeText('foo\nfoo\n'),
   },
   {
+    id: 'sed-multiline-append-stdin',
+    commandName: 'sed',
+    args: ['2a\\line A\\n\\tline B'],
+    stdin: encodeText('alpha\nbeta\n'),
+  },
+  {
+    id: 'sed-multiline-change-stdin',
+    commandName: 'sed',
+    args: ['2,3c\\line 1\\nline 2'],
+    stdin: encodeText('a\nb\nc\nd\n'),
+  },
+  {
+    id: 'sed-multiline-insert-stdin',
+    commandName: 'sed',
+    args: ['2i\\line 0\\n\\tline 0.5'],
+    stdin: encodeText('alpha\nbeta\n'),
+  },
+  {
+    id: 'sed-multiline-replacement-stdin',
+    commandName: 'sed',
+    args: ['s/foo/bar\\n\\tbaz/'],
+    stdin: encodeText('foo\n'),
+  },
+  {
+    id: 'sed-whole-match-replacement-stdin',
+    commandName: 'sed',
+    args: ['s/foo/[&]/'],
+    stdin: encodeText('foo\n'),
+  },
+  {
+    id: 'sed-basic-backreference-stdin',
+    commandName: 'sed',
+    args: ['s/\\(foo\\)/[\\1]/'],
+    stdin: encodeText('foo\n'),
+  },
+  {
+    id: 'sed-extended-regex-backreference-stdin',
+    commandName: 'sed',
+    args: ['-E', 's/x=([0-9]+),y=([0-9]+)/\\2,\\1/'],
+    stdin: encodeText('x=10,y=20\n'),
+  },
+  {
     id: 'sort-versioned-file',
     commandName: 'sort',
     args: ['-V', '/versions.txt'],

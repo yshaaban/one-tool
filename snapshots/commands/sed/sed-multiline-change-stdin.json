@@ -1,0 +1,19 @@
+{
+  "id": "sed-multiline-change-stdin",
+  "command": "sed",
+  "args": [
+    "2,3c\\line 1\\nline 2"
+  ],
+  "stdin_b64": "YQpiCmMKZAo=",
+  "result": {
+    "stdout_b64": "YQpsaW5lIDEKbGluZSAyCmQK",
+    "stdout_text": "a\nline 1\nline 2\nd\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

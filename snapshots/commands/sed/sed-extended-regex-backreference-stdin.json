@@ -1,0 +1,20 @@
+{
+  "id": "sed-extended-regex-backreference-stdin",
+  "command": "sed",
+  "args": [
+    "-E",
+    "s/x=([0-9]+),y=([0-9]+)/\\2,\\1/"
+  ],
+  "stdin_b64": "eD0xMCx5PTIwCg==",
+  "result": {
+    "stdout_b64": "MjAsMTAK",
+    "stdout_text": "20,10\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

@@ -55,11 +55,50 @@ const SED_PARITY_CASES: SedParityCase[] = [
     args: ['-e', '1i\\TOP', '-e', '2a\\BOTTOM', 'notes.txt'],
   },
   {
+    name: 'append decodes escaped newline and tab text',
+    files: {
+      'notes.txt': 'alpha\nbeta\n',
+    },
+    args: ['2a\\line A\\n\\tline B', 'notes.txt'],
+  },
+  {
     name: 'range change',
     files: {
       'notes.txt': 'a\nb\nc\nd\n',
     },
     args: ['2,3c\\X', 'notes.txt'],
+  },
+  {
+    name: 'range change decodes escaped newline text',
+    files: {
+      'notes.txt': 'a\nb\nc\nd\n',
+    },
+    args: ['2,3c\\line 1\\nline 2', 'notes.txt'],
+  },
+  {
+    name: 'insert decodes escaped newline and tab text',
+    files: {
+      'notes.txt': 'alpha\nbeta\n',
+    },
+    args: ['2i\\line 0\\n\\tline 0.5', 'notes.txt'],
+  },
+  {
+    name: 'replacement decodes escaped newline and tab',
+    files: {},
+    args: ['s/foo/bar\\n\\tbaz/'],
+    stdin: textEncoder.encode('foo\n'),
+  },
+  {
+    name: 'replacement supports whole-match references',
+    files: {},
+    args: ['s/foo/[&]/'],
+    stdin: textEncoder.encode('foo\n'),
+  },
+  {
+    name: 'replacement supports basic-regex backreferences',
+    files: {},
+    args: ['s/\\(foo\\)/[\\1]/'],
+    stdin: textEncoder.encode('foo\n'),
   },
   {
     name: 'next command with explicit print',

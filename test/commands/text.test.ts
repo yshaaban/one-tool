@@ -294,6 +294,54 @@ test('text: sed supports insert, append, change, and script files', async () => 
   assert.equal(stdoutText(groupedScriptFlag.result), 'bar\n');
 });
 
+test('text: sed decodes escaped newlines and tabs in text arguments and replacements', async () => {
+  const cases = [
+    {
+      args: ['2a\\line A\\n\\tline B'],
+      stdin: 'alpha\nbeta\n',
+      stdout: 'alpha\nbeta\nline A\n\tline B\n',
+    },
+    {
+      args: ['2,3c\\line 1\\nline 2'],
+      stdin: 'a\nb\nc\nd\n',
+      stdout: 'a\nline 1\nline 2\nd\n',
+    },
+    {
+      args: ['2i\\line 0\\n\\tline 0.5'],
+      stdin: 'alpha\nbeta\n',
+      stdout: 'alpha\nline 0\n\tline 0.5\nbeta\n',
+    },
+    {
+      args: ['s/foo/bar\\n\\tbaz/'],
+      stdin: 'foo\n',
+      stdout: 'bar\n\tbaz\n',
+    },
+    {
+      args: ['s/foo/[&]/'],
+      stdin: 'foo\n',
+      stdout: '[foo]\n',
+    },
+    {
+      args: ['s/\\(foo\\)/[\\1]/'],
+      stdin: 'foo\n',
+      stdout: '[foo]\n',
+    },
+    {
+      args: ['-E', 's/x=([0-9]+),y=([0-9]+)/\\2,\\1/'],
+      stdin: 'x=10,y=20\n',
+      stdout: '20,10\n',
+    },
+  ];
+
+  for (const testCase of cases) {
+    const result = await runCommand('sed', testCase.args, {
+      stdin: stdinText(testCase.stdin),
+    });
+    assert.equal(result.result.exitCode, 0);
+    assert.equal(stdoutText(result.result), testCase.stdout);
+  }
+});
+
 test('text: sed supports in-place editing and backup suffixes', async () => {
   const ctx = makeCtx();
   await ctx.vfs.writeBytes('/notes.txt', textEncoder.encode('alpha\nbeta\n'));

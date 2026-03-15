@@ -1,0 +1,19 @@
+{
+  "id": "sed-multiline-insert-stdin",
+  "command": "sed",
+  "args": [
+    "2i\\line 0\\n\\tline 0.5"
+  ],
+  "stdin_b64": "YWxwaGEKYmV0YQo=",
+  "result": {
+    "stdout_b64": "YWxwaGEKbGluZSAwCglsaW5lIDAuNQpiZXRhCg==",
+    "stdout_text": "alpha\nline 0\n\tline 0.5\nbeta\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

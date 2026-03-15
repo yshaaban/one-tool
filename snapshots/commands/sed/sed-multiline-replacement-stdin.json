@@ -1,0 +1,19 @@
+{
+  "id": "sed-multiline-replacement-stdin",
+  "command": "sed",
+  "args": [
+    "s/foo/bar\\n\\tbaz/"
+  ],
+  "stdin_b64": "Zm9vCg==",
+  "result": {
+    "stdout_b64": "YmFyCgliYXoK",
+    "stdout_text": "bar\n\tbaz\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}
