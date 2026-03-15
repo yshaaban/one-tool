@@ -936,9 +936,13 @@ async function loadSedInputFile(
   }
 
   if (!info.exists) {
+    const blockedPath = await firstFileInPath(ctx, normalized);
+    if (blockedPath !== null) {
+      return { ok: false, error: err(`sed: parent is not a directory: ${blockedPath}`) };
+    }
     return {
       ok: false,
-      error: await formatMissingSedPathError(ctx, 'sed', normalized, inputFile, 'file not found'),
+      error: err(`sed: file not found: ${normalized}. Use: ls ${parentPath(inputFile)}`),
     };
   }
   if (info.isDir) {
@@ -1510,8 +1514,13 @@ async function formatSedPathError(
 ): Promise<CommandResult> {
   const normalized = ctx.vfs.normalize(filePath);
   const code = errorCode(caught);
+
   if (code === 'ENOENT') {
-    return formatMissingSedPathError(ctx, commandName, normalized, filePath, notFoundLabel);
+    const blockedPath = await firstFileInPath(ctx, normalized);
+    if (blockedPath !== null) {
+      return err(`${commandName}: parent is not a directory: ${blockedPath}`);
+    }
+    return err(`${commandName}: ${notFoundLabel}: ${normalized}. Use: ls ${parentPath(filePath)}`);
   }
   if (code === 'EISDIR') {
     return err(`${commandName}: path is a directory: ${normalized}. Use: ls ${normalized}`);
@@ -1531,20 +1540,6 @@ async function formatSedPathError(
         `${commandName}: resource limit exceeded (resource limit) at ${normalized}`,
     );
   }
+
   return err(`${commandName}: ${errorMessage(caught)}`);
-}
-
-async function formatMissingSedPathError(
-  ctx: CommandContext,
-  commandName: string,
-  normalizedPath: string,
-  originalPath: string,
-  notFoundLabel: string,
-): Promise<CommandResult> {
-  const blockedPath = await firstFileInPath(ctx, normalizedPath);
-  if (blockedPath !== null) {
-    return err(`${commandName}: parent is not a directory: ${blockedPath}`);
-  }
-
-  return err(`${commandName}: ${notFoundLabel}: ${normalizedPath}. Use: ls ${parentPath(originalPath)}`);
 }

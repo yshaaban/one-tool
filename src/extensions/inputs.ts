@@ -19,7 +19,7 @@ export async function readTextInput(
     if (error !== undefined) {
       return helperFailure(error);
     }
-    return helperSuccess(text ?? '');
+    return helperSuccess(text);
   });
 }
 

@@ -5,18 +5,22 @@ import { errorMessage } from '../../utils.js';
 import type { CommandContext } from '../core.js';
 import { readTextFromFileOrStdin } from './io.js';
 
+export type JsonInputResult =
+  | { value: unknown; error?: never }
+  | { value?: never; error: CommandResult };
+
 export async function loadJson(
   ctx: CommandContext,
   filePath: string | undefined,
   stdin: Uint8Array,
   commandName: string,
-): Promise<{ value?: unknown; error?: CommandResult }> {
+): Promise<JsonInputResult> {
   const { text, error } = await readTextFromFileOrStdin(ctx, filePath, stdin, commandName);
   if (error) {
     return { error };
   }
   try {
-    return { value: JSON.parse(text ?? '') };
+    return { value: JSON.parse(text) };
   } catch (caught) {
     return { error: err(`${commandName}: invalid JSON: ${errorMessage(caught)}`) };
   }

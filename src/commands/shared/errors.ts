@@ -1,11 +1,19 @@
 import { parentPath } from '../../utils.js';
-import { toVfsError } from '../../vfs/errors.js';
+import { toVfsError, type VfsErrorCode } from '../../vfs/errors.js';
 import type { CommandContext } from '../core.js';
 
-export function errorCode(caught: unknown): string | null {
+export function errorCode(caught: unknown): VfsErrorCode | null {
   const vfsError = toVfsError(caught);
   if (vfsError) {
     return vfsError.code;
+  }
+  return null;
+}
+
+export function errorCodeRaw(caught: unknown): string | null {
+  const typed = errorCode(caught);
+  if (typed !== null) {
+    return typed;
   }
 
   if (caught && typeof caught === 'object' && 'code' in caught) {

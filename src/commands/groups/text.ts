@@ -148,7 +148,7 @@ async function cmdGrep(ctx: CommandContext, args: string[], stdin: Uint8Array): 
     return err(builtMatcher.error);
   }
 
-  const matches = collectGrepMatches(splitLines(text ?? ''), builtMatcher.value, options);
+  const matches = collectGrepMatches(splitLines(text), builtMatcher.value, options);
   if (options.quiet) {
     return createSuccessfulGrepResult('', matches.length > 0);
   }
@@ -440,7 +440,7 @@ async function cmdHead(ctx: CommandContext, args: string[], stdin: Uint8Array): 
   }
 
   return ok(
-    splitLineChunks(text ?? '')
+    splitLineChunks(text)
       .slice(0, parsed.value.count)
       .join(''),
   );
@@ -479,7 +479,7 @@ async function cmdTail(ctx: CommandContext, args: string[], stdin: Uint8Array): 
     return error;
   }
 
-  const lines = splitLineChunks(text ?? '');
+  const lines = splitLineChunks(text);
   return ok(lines.slice(Math.max(lines.length - parsed.value.count, 0)).join(''));
 }
 
@@ -506,7 +506,7 @@ async function cmdSort(ctx: CommandContext, args: string[], stdin: Uint8Array): 
     return error;
   }
 
-  const lines = splitLines(text ?? '');
+  const lines = splitLines(text);
   const decorated: SortEntry[] = lines.map(function (line, index) {
     return { line, index };
   });
@@ -597,7 +597,7 @@ async function cmdUniq(ctx: CommandContext, args: string[], stdin: Uint8Array): 
     return error;
   }
 
-  const lines = splitLines(text ?? '');
+  const lines = splitLines(text);
   if (lines.length === 0) {
     return ok('');
   }
@@ -651,11 +651,10 @@ async function cmdWc(ctx: CommandContext, args: string[], stdin: Uint8Array): Pr
     return error;
   }
 
-  const content = text ?? '';
   const counts = {
-    byteCount: textEncoder.encode(content).length,
-    lineCount: countLineBreaks(content),
-    wordCount: countWords(content),
+    byteCount: textEncoder.encode(text).length,
+    lineCount: countLineBreaks(text),
+    wordCount: countWords(text),
   };
 
   return ok(renderWcOutput(parsed.value, counts, ctx));

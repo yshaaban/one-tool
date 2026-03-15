@@ -1098,6 +1098,10 @@ function renderDiffBody(
         parsed.contextLines,
         directoryDiffPrefix,
       );
+    default: {
+      const _exhaustive: never = parsed.format;
+      return _exhaustive;
+    }
   }
 }
 

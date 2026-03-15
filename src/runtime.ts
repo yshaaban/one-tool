@@ -135,6 +135,10 @@ export class AgentCLI {
         return buildTerseToolDescription(commands, hasHelp);
       case 'full-tool-description':
         return buildFullToolDescription(commands, hasHelp);
+      default: {
+        const _exhaustive: never = variant;
+        return _exhaustive;
+      }
     }
   }
 

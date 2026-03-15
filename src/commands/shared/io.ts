@@ -8,12 +8,16 @@ export function renderHelp(spec: CommandSpec): string {
   return `${spec.name}: ${spec.summary}\nUsage: ${spec.usage}\n\n${spec.details}`;
 }
 
+export type TextInputResult =
+  | { text: string; error?: never }
+  | { text?: never; error: CommandResult };
+
 export async function readTextFromFileOrStdin(
   ctx: CommandContext,
   filePath: string | undefined,
   stdin: Uint8Array,
   commandName: string,
-): Promise<{ text?: string; error?: CommandResult }> {
+): Promise<TextInputResult> {
   if (filePath) {
     const info = await ctx.vfs.stat(filePath);
     const normalized = ctx.vfs.normalize(filePath);
@@ -63,14 +67,16 @@ export async function readTextFromFileOrStdin(
   };
 }
 
-export type ContentInput = { ok: true; content: Uint8Array } | { ok: false; error: CommandResult };
-
-export function contentFromArgsOrStdin(args: string[], stdin: Uint8Array, commandName: string): ContentInput {
+export function contentFromArgsOrStdin(
+  args: string[],
+  stdin: Uint8Array,
+  commandName: string,
+): { ok: true; value: Uint8Array } | { ok: false; error: CommandResult } {
   if (args.length > 1) {
-    return { ok: true, content: textEncoder.encode(args.slice(1).join(' ')) };
+    return { ok: true, value: textEncoder.encode(args.slice(1).join(' ')) };
   }
   if (stdin.length > 0) {
-    return { ok: true, content: stdin };
+    return { ok: true, value: stdin };
   }
   return {
     ok: false,
@@ -91,7 +97,7 @@ export function parseNFlag(
   if (args.length < 2) {
     return { value: defaultValue, remaining: args, error: err('missing value for -n') };
   }
-  const parsed = Number.parseInt(args[1] ?? '', 10);
+  const parsed = Number.parseInt(args[1]!, 10);
   if (!Number.isFinite(parsed)) {
     return {
       value: defaultValue,

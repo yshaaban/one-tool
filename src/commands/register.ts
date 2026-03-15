@@ -138,15 +138,20 @@ export function registerCommands(
       continue;
     }
 
-    if (onConflict === 'skip') {
-      continue;
+    switch (onConflict) {
+      case 'skip':
+        continue;
+      case 'replace':
+        registry.replace(spec);
+        continue;
+      case 'error':
+        registry.register(spec); // throws — name is already registered
+        break;
+      default: {
+        const _exhaustive: never = onConflict;
+        throw new Error(`unknown conflict mode: ${_exhaustive}`);
+      }
     }
-    if (onConflict === 'replace') {
-      registry.replace(spec);
-      continue;
-    }
-
-    registry.register(spec);
   }
 }
 

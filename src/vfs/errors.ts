@@ -1,3 +1,5 @@
+import { isPlainObject } from '../utils.js';
+
 export type VfsErrorCode =
   | 'ENOENT'
   | 'EISDIR'
@@ -70,15 +72,13 @@ export function toVfsError(value: unknown): VfsError | null {
       if (typeof record.targetPath === 'string') {
         options.targetPath = record.targetPath;
       }
-      if (isPlainRecord(record.details)) {
+      if (isPlainObject(record.details)) {
         options.details = record.details;
       }
       if (typeof record.message === 'string') {
         options.message = record.message;
       }
-      return new VfsError(record.code, {
-        ...options,
-      });
+      return new VfsError(record.code, options);
     }
   }
 
@@ -159,6 +159,3 @@ function isVfsErrorCode(value: unknown): value is VfsErrorCode {
   return typeof value === 'string' && VFS_ERROR_CODES.has(value as VfsErrorCode);
 }
 
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}

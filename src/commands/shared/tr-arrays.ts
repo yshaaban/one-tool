@@ -751,6 +751,10 @@ function classBytes(className: TrCharacterClassName): number[] {
       return [...UPPER_BYTES];
     case 'xdigit':
       return [...DIGIT_BYTES, ...rangeBytes(65, 70), ...rangeBytes(97, 102)];
+    default: {
+      const _exhaustive: never = className;
+      return _exhaustive;
+    }
   }
 }
 

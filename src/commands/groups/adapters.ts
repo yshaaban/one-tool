@@ -1,7 +1,7 @@
 import { err, ok, okBytes, textEncoder, type CommandResult } from '../../types.js';
 import { errorMessage } from '../../utils.js';
 import type { CommandContext, CommandSpec } from '../core.js';
-import { errorCode } from '../shared/errors.js';
+import { errorCodeRaw } from '../shared/errors.js';
 import { renderFetchPayload } from '../shared/json.js';
 import { materializedLimitError } from '../shared/io.js';
 
@@ -25,7 +25,7 @@ function errorStatusCode(caught: unknown): number | null {
 }
 
 function isFetchNotFoundError(caught: unknown): boolean {
-  const code = errorCode(caught);
+  const code = errorCodeRaw(caught);
   if (code === 'ENOENT' || code === 'NOT_FOUND') {
     return true;
   }

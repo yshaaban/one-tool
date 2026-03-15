@@ -293,8 +293,8 @@ async function cmdWrite(ctx: CommandContext, args: string[], stdin: Uint8Array) 
   }
 
   try {
-    const saved = await ctx.vfs.writeBytes(args[0]!, input.content);
-    return ok(`wrote ${formatSize(input.content.length)} to ${saved}`);
+    const saved = await ctx.vfs.writeBytes(args[0]!, input.value);
+    return ok(`wrote ${formatSize(input.value.length)} to ${saved}`);
   } catch (caught) {
     const code = errorCode(caught);
     const limitMessage = resourceLimitMessage('write', caught);
@@ -349,8 +349,8 @@ async function cmdAppend(ctx: CommandContext, args: string[], stdin: Uint8Array)
   }
 
   try {
-    const saved = await ctx.vfs.appendBytes(args[0]!, input.content);
-    return ok(`appended ${formatSize(input.content.length)} to ${saved}`);
+    const saved = await ctx.vfs.appendBytes(args[0]!, input.value);
+    return ok(`appended ${formatSize(input.value.length)} to ${saved}`);
   } catch (caught) {
     const code = errorCode(caught);
     const limitMessage = resourceLimitMessage('append', caught);
