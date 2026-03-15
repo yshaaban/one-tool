@@ -1,0 +1,18 @@
+{
+  "id": "conformance-stdin-rejection",
+  "command": "stat",
+  "args": [
+    "/missing"
+  ],
+  "stdin_b64": "dW53YW50ZWQgc3RkaW4=",
+  "result": {
+    "stdout_b64": "",
+    "stderr": "stat: does not accept stdin",
+    "exitCode": 1,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

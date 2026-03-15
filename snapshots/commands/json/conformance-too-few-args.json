@@ -1,0 +1,16 @@
+{
+  "id": "conformance-too-few-args",
+  "command": "json",
+  "args": [],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "",
+    "stderr": "json: usage: json pretty [path] | json keys [path] | json get <field.path> [path]",
+    "exitCode": 1,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

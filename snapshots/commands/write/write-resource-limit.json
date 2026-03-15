@@ -1,0 +1,22 @@
+{
+  "id": "write-resource-limit",
+  "command": "write",
+  "args": [
+    "/notes/large.txt",
+    "hello"
+  ],
+  "stdin_b64": "",
+  "vfsResourcePolicy": {
+    "maxFileBytes": 3
+  },
+  "result": {
+    "stdout_b64": "",
+    "stderr": "write: resource limit exceeded (maxFileBytes: 5 > 3) at /notes/large.txt",
+    "exitCode": 1,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

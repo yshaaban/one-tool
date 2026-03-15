@@ -1,0 +1,43 @@
+{
+  "id": "search-demo-docs",
+  "command": "search",
+  "args": [
+    "refund timeout"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "searchDocs": [
+      {
+        "title": "Refund timeout incident retro",
+        "body": "Payment timeouts spiked during a deploy. Root cause was a retry storm against the order service.",
+        "source": "kb://incidents/refund-timeout"
+      },
+      {
+        "title": "Acme renewal risk notes",
+        "body": "Acme wants a tighter weekly status update and is blocked on invoice mapping.",
+        "source": "kb://accounts/acme-renewal"
+      },
+      {
+        "title": "EU VAT invoice checklist",
+        "body": "Collect legal entity name, billing address, VAT ID, and invoice delivery contact before issuing invoices.",
+        "source": "kb://finance/eu-vat-checklist"
+      },
+      {
+        "title": "Login failure playbook",
+        "body": "Repeated failed login errors can indicate bot traffic or a stale SSO configuration.",
+        "source": "kb://security/login-failure-playbook"
+      }
+    ]
+  },
+  "result": {
+    "stdout_b64": "MS4gUmVmdW5kIHRpbWVvdXQgaW5jaWRlbnQgcmV0cm8KICAgc291cmNlOiBrYjovL2luY2lkZW50cy9yZWZ1bmQtdGltZW91dAogICBQYXltZW50IHRpbWVvdXRzIHNwaWtlZCBkdXJpbmcgYSBkZXBsb3kuIFJvb3QgY2F1c2Ugd2FzIGEgcmV0cnkgc3Rvcm0gYWdhaW5zdCB0aGUgb3JkZXIgc2VydmljZS4=",
+    "stdout_text": "1. Refund timeout incident retro\n   source: kb://incidents/refund-timeout\n   Payment timeouts spiked during a deploy. Root cause was a retry storm against the order service.",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

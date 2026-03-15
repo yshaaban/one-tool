@@ -1,0 +1,26 @@
+{
+  "id": "fetch-binary-payload",
+  "command": "fetch",
+  "args": [
+    "binary:logo"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "fetchResources": {
+      "binary:logo": {
+        "kind": "bytes",
+        "data_b64": "AAECAw=="
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "AAECAw==",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "application/octet-stream"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

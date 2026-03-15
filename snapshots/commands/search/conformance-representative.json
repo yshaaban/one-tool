@@ -1,0 +1,34 @@
+{
+  "id": "conformance-representative",
+  "command": "search",
+  "args": [
+    "query"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "searchDocs": [
+      {
+        "title": "Query document",
+        "body": "query result appears in this document body.",
+        "source": "kb://query"
+      }
+    ],
+    "fetchResources": {
+      "res:1": {
+        "ok": true,
+        "count": 1
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "MS4gUXVlcnkgZG9jdW1lbnQKICAgc291cmNlOiBrYjovL3F1ZXJ5CiAgIHF1ZXJ5IHJlc3VsdCBhcHBlYXJzIGluIHRoaXMgZG9jdW1lbnQgYm9keS4=",
+    "stdout_text": "1. Query document\n   source: kb://query\n   query result appears in this document body.",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

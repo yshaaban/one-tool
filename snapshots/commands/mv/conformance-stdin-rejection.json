@@ -1,0 +1,19 @@
+{
+  "id": "conformance-stdin-rejection",
+  "command": "mv",
+  "args": [
+    "/a",
+    "/b"
+  ],
+  "stdin_b64": "dW53YW50ZWQgc3RkaW4=",
+  "result": {
+    "stdout_b64": "",
+    "stderr": "mv: does not accept stdin",
+    "exitCode": 1,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

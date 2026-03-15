@@ -1,0 +1,6 @@
+{
+  "id": "empty-registry",
+  "variant": "full-tool-description",
+  "builtinCommands": false,
+  "description": "Run CLI-style commands over registered tools and a rooted virtual file system.\nThis is not a real shell. Only registered commands are allowed.\nSupported operators: |  &&  ||  ;\nNo env expansion, no globbing, no command substitution, no redirection.\nPaths are rooted to '/'. Relative paths also resolve under '/'.\n\nAvailable commands:\n  (no commands registered)\n\nRegister built-in or custom commands before exposing the run tool."
+}

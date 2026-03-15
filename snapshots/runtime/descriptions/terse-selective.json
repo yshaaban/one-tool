@@ -1,0 +1,14 @@
+{
+  "id": "terse-selective",
+  "variant": "terse",
+  "builtinCommands": {
+    "includeGroups": [
+      "system",
+      "text"
+    ],
+    "excludeCommands": [
+      "memory"
+    ]
+  },
+  "description": "Run CLI-style commands over registered tools and a rooted virtual file system.\nThis is not a real shell. Only registered commands are allowed.\nSupported operators: |  &&  ||  ;\nNo env expansion, no globbing, no command substitution, no redirection.\nPaths are rooted to '/'. Relative paths also resolve under '/'.\n\nAvailable commands:\n  echo\n  grep\n  head\n  help\n  sed\n  sort\n  tail\n  tr\n  uniq\n  wc\n\nDiscovery pattern:\n  - run 'help' to list commands\n  - run '<command>' with no args for usage\n  - use pipes for composition"
+}

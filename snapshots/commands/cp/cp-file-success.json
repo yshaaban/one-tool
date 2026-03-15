@@ -1,0 +1,39 @@
+{
+  "id": "cp-file-success",
+  "command": "cp",
+  "args": [
+    "/src.txt",
+    "/dst.txt"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/src.txt": {
+        "kind": "text",
+        "text": "copy me"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "Y29waWVkIC9zcmMudHh0IC0+IC9kc3QudHh0",
+    "stdout_text": "copied /src.txt -> /dst.txt",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/dst.txt",
+        "kind": "text",
+        "text": "copy me"
+      },
+      {
+        "path": "/src.txt",
+        "kind": "text",
+        "text": "copy me"
+      }
+    ],
+    "memory": []
+  }
+}

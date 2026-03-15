@@ -1,0 +1,33 @@
+{
+  "id": "wc-counts-file",
+  "command": "wc",
+  "args": [
+    "/notes.txt"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/notes.txt": {
+        "kind": "text",
+        "text": "one two\nthree\n"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "IDIgIDMgMTQgL25vdGVzLnR4dA==",
+    "stdout_text": " 2  3 14 /notes.txt",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/notes.txt",
+        "kind": "text",
+        "text": "one two\nthree\n"
+      }
+    ],
+    "memory": []
+  }
+}

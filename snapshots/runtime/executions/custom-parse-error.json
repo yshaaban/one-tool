@@ -1,0 +1,33 @@
+{
+  "id": "custom-parse-error",
+  "commandLine": "echo \"unterminated",
+  "builtinCommands": false,
+  "customCommands": [
+    "echo"
+  ],
+  "execution": {
+    "exitCode": 2,
+    "stdout_b64": "",
+    "stderr": "unterminated \" quote",
+    "contentType": "text/plain",
+    "trace": [],
+    "presentation": {
+      "text": "[error] unterminated \" quote\n\n[exit:2 | 0ms]",
+      "body": "[error] unterminated \" quote",
+      "stdoutMode": "plain"
+    }
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/.system",
+        "kind": "dir"
+      },
+      {
+        "path": "/.system/cmd-output",
+        "kind": "dir"
+      }
+    ],
+    "memory": []
+  }
+}

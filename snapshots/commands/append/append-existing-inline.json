@@ -1,0 +1,38 @@
+{
+  "id": "append-existing-inline",
+  "command": "append",
+  "args": [
+    "/notes/log.txt",
+    " next"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/notes/log.txt": {
+        "kind": "text",
+        "text": "start"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "YXBwZW5kZWQgNUIgdG8gL25vdGVzL2xvZy50eHQ=",
+    "stdout_text": "appended 5B to /notes/log.txt",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/notes",
+        "kind": "dir"
+      },
+      {
+        "path": "/notes/log.txt",
+        "kind": "text",
+        "text": "start next"
+      }
+    ],
+    "memory": []
+  }
+}

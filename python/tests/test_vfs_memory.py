@@ -11,9 +11,8 @@ from onetool.vfs.policy import VfsResourcePolicy
 
 
 def test_memory_vfs_matches_golden_snapshots() -> None:
-    now_ms = _mock_now_ms()
     for record in load_jsonl("vfs/memory-vfs.jsonl"):
-        asyncio.run(_assert_memory_vfs_case(record, now_ms))
+        asyncio.run(_assert_memory_vfs_case(record, _mock_now_ms()))
 
 
 async def _assert_memory_vfs_case(

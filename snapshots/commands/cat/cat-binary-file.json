@@ -1,0 +1,36 @@
+{
+  "id": "cat-binary-file",
+  "command": "cat",
+  "args": [
+    "/images/logo.bin"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/images/logo.bin": {
+        "kind": "bytes",
+        "data_b64": "AAECAw=="
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "",
+    "stderr": "cat: binary file (4B): /images/logo.bin. Use: stat /images/logo.bin",
+    "exitCode": 1,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/images",
+        "kind": "dir"
+      },
+      {
+        "path": "/images/logo.bin",
+        "kind": "bytes",
+        "data_b64": "AAECAw=="
+      }
+    ],
+    "memory": []
+  }
+}

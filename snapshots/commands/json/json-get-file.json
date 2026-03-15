@@ -1,0 +1,35 @@
+{
+  "id": "json-get-file",
+  "command": "json",
+  "args": [
+    "get",
+    "user.email",
+    "/payload.json"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/payload.json": {
+        "kind": "text",
+        "text": "{\"user\":{\"email\":\"buyer@acme.example\"}}"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "YnV5ZXJAYWNtZS5leGFtcGxl",
+    "stdout_text": "buyer@acme.example",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/payload.json",
+        "kind": "text",
+        "text": "{\"user\":{\"email\":\"buyer@acme.example\"}}"
+      }
+    ],
+    "memory": []
+  }
+}

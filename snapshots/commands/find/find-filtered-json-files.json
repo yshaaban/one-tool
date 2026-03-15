@@ -1,0 +1,59 @@
+{
+  "id": "find-filtered-json-files",
+  "command": "find",
+  "args": [
+    "/config",
+    "--type",
+    "file",
+    "--name",
+    "*.json"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/config/default.json": {
+        "kind": "text",
+        "text": "{}\n"
+      },
+      "/config/prod.json": {
+        "kind": "text",
+        "text": "{}\n"
+      },
+      "/config/readme.txt": {
+        "kind": "text",
+        "text": "ignore\n"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "L2NvbmZpZy9kZWZhdWx0Lmpzb24KL2NvbmZpZy9wcm9kLmpzb24=",
+    "stdout_text": "/config/default.json\n/config/prod.json",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/config",
+        "kind": "dir"
+      },
+      {
+        "path": "/config/default.json",
+        "kind": "text",
+        "text": "{}\n"
+      },
+      {
+        "path": "/config/prod.json",
+        "kind": "text",
+        "text": "{}\n"
+      },
+      {
+        "path": "/config/readme.txt",
+        "kind": "text",
+        "text": "ignore\n"
+      }
+    ],
+    "memory": []
+  }
+}

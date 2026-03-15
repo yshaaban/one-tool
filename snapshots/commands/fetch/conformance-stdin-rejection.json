@@ -1,0 +1,33 @@
+{
+  "id": "conformance-stdin-rejection",
+  "command": "fetch",
+  "args": [
+    "res:1"
+  ],
+  "stdin_b64": "dW53YW50ZWQgc3RkaW4=",
+  "world": {
+    "searchDocs": [
+      {
+        "title": "Query document",
+        "body": "query result appears in this document body.",
+        "source": "kb://query"
+      }
+    ],
+    "fetchResources": {
+      "res:1": {
+        "ok": true,
+        "count": 1
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "",
+    "stderr": "fetch: does not accept stdin",
+    "exitCode": 1,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

@@ -1,0 +1,299 @@
+{
+  "id": "help-discovery-tail",
+  "scenario": {
+    "id": "help-discovery-tail",
+    "category": "discovery",
+    "description": "Discover the tail command and use it to inspect the end of the app log.",
+    "prompt": "Use the runtime to find the right command and show the last three lines of /logs/app.log.",
+    "maxTurns": 2,
+    "maxToolCalls": 2,
+    "world": {
+      "files": {
+        "/accounts/acme.md": {
+          "kind": "text",
+          "text": "Customer: Acme Corp\nStatus: renewal at risk\nOwner: sara@example.com\nNotes: prefers Monday check-ins and a concise status summary.\n"
+        },
+        "/config/default.json": {
+          "kind": "text",
+          "text": "{\n  \"env\": \"default\",\n  \"retries\": 3,\n  \"region\": \"us-east-1\"\n}\n"
+        },
+        "/config/prod.json": {
+          "kind": "text",
+          "text": "{\n  \"env\": \"prod\",\n  \"retries\": 5,\n  \"region\": \"eu-west-1\",\n  \"owner\": {\n    \"email\": \"ops@example.com\"\n  }\n}\n"
+        },
+        "/drafts/qbr.md": {
+          "kind": "text",
+          "text": "# QBR draft\n\nOpen items:\n- Revenue variance\n- Renewal risk\n"
+        },
+        "/images/logo.png": {
+          "kind": "bytes",
+          "data_b64": "iVBORw0KGgoAAQID"
+        },
+        "/logs/app.log": {
+          "kind": "text",
+          "text": "2026-03-12T10:00:01Z INFO startup complete\n2026-03-12T10:01:10Z ERROR payment timeout order=123\n2026-03-12T10:01:11Z ERROR payment timeout order=124\n2026-03-12T10:01:12Z WARN retry scheduled order=124\n2026-03-12T10:02:10Z ERROR failed login user=alice\n2026-03-12T10:03:55Z INFO healthcheck ok\n"
+        },
+        "/notes/todo.txt": {
+          "kind": "text",
+          "text": "1. Review refund incident timeline\n2. Confirm Acme renewal owner\n3. Draft follow-up email\n"
+        }
+      },
+      "searchDocs": [
+        {
+          "title": "Refund timeout incident retro",
+          "body": "Payment timeouts spiked during a deploy. Root cause was a retry storm against the order service.",
+          "source": "kb://incidents/refund-timeout"
+        },
+        {
+          "title": "Acme renewal risk notes",
+          "body": "Acme wants a tighter weekly status update and is blocked on invoice mapping.",
+          "source": "kb://accounts/acme-renewal"
+        },
+        {
+          "title": "EU VAT invoice checklist",
+          "body": "Collect legal entity name, billing address, VAT ID, and invoice delivery contact before issuing invoices.",
+          "source": "kb://finance/eu-vat-checklist"
+        },
+        {
+          "title": "Login failure playbook",
+          "body": "Repeated failed login errors can indicate bot traffic or a stale SSO configuration.",
+          "source": "kb://security/login-failure-playbook"
+        }
+      ],
+      "fetchResources": {
+        "crm/customer/acme": {
+          "id": "cust_acme",
+          "owner": {
+            "name": "Sara",
+            "email": "sara@example.com"
+          },
+          "tier": "enterprise",
+          "renewal_month": "2026-04"
+        },
+        "order:123": {
+          "id": "123",
+          "status": "timed_out",
+          "customer": {
+            "name": "Acme Corp",
+            "email": "buyer@acme.example"
+          },
+          "amount": 1499
+        },
+        "text:runbook": "Escalate payment timeouts to the checkout on-call if the error rate exceeds 2%."
+      },
+      "memory": [
+        "Acme prefers Monday follow-ups.",
+        "Refund incident touched payments, billing, and checkout.",
+        "Ops owner for production config is ops@example.com."
+      ]
+    },
+    "oracle": [
+      "help tail",
+      "tail -n 3 /logs/app.log"
+    ],
+    "assertions": {
+      "finalAnswer": {
+        "exact": "2026-03-12T10:01:12Z WARN retry scheduled order=124\n2026-03-12T10:02:10Z ERROR failed login user=alice\n2026-03-12T10:03:55Z INFO healthcheck ok"
+      },
+      "trace": {
+        "mustInclude": [
+          "help tail",
+          "tail -n 3 /logs/app.log"
+        ],
+        "steps": [
+          {
+            "index": 0,
+            "exitCode": 0,
+            "contains": [
+              "Usage: tail [-n N|-c N|-N] [path]"
+            ]
+          }
+        ],
+        "maxCalls": 2
+      }
+    }
+  },
+  "trace": {
+    "scenarioId": "help-discovery-tail",
+    "steps": [
+      {
+        "command": "help tail",
+        "output": "tail: Show the last N lines or bytes from stdin or a file.\nUsage: tail [-n N|-c N|-N] [path]\n\nExamples:\n  tail -n 20 /logs/app.log\n  tail -c 16 /notes/todo.txt\n  cat /logs/app.log | tail -n 50\n\n[exit:0 | 0ms]",
+        "body": "tail: Show the last N lines or bytes from stdin or a file.\nUsage: tail [-n N|-c N|-N] [path]\n\nExamples:\n  tail -n 20 /logs/app.log\n  tail -c 16 /notes/todo.txt\n  cat /logs/app.log | tail -n 50",
+        "exitCode": 0,
+        "expectedExitCode": 0,
+        "execution": {
+          "exitCode": 0,
+          "stdout_b64": "dGFpbDogU2hvdyB0aGUgbGFzdCBOIGxpbmVzIG9yIGJ5dGVzIGZyb20gc3RkaW4gb3IgYSBmaWxlLgpVc2FnZTogdGFpbCBbLW4gTnwtYyBOfC1OXSBbcGF0aF0KCkV4YW1wbGVzOgogIHRhaWwgLW4gMjAgL2xvZ3MvYXBwLmxvZwogIHRhaWwgLWMgMTYgL25vdGVzL3RvZG8udHh0CiAgY2F0IC9sb2dzL2FwcC5sb2cgfCB0YWlsIC1uIDUw",
+          "stdout_text": "tail: Show the last N lines or bytes from stdin or a file.\nUsage: tail [-n N|-c N|-N] [path]\n\nExamples:\n  tail -n 20 /logs/app.log\n  tail -c 16 /notes/todo.txt\n  cat /logs/app.log | tail -n 50",
+          "stderr": "",
+          "contentType": "text/plain",
+          "trace": [
+            {
+              "relationFromPrevious": null,
+              "executed": true,
+              "exitCode": 0,
+              "commands": [
+                {
+                  "argv": [
+                    "help",
+                    "tail"
+                  ],
+                  "stdinBytes": 0,
+                  "stdoutBytes": 192,
+                  "stderr": "",
+                  "exitCode": 0,
+                  "contentType": "text/plain"
+                }
+              ]
+            }
+          ],
+          "presentation": {
+            "text": "tail: Show the last N lines or bytes from stdin or a file.\nUsage: tail [-n N|-c N|-N] [path]\n\nExamples:\n  tail -n 20 /logs/app.log\n  tail -c 16 /notes/todo.txt\n  cat /logs/app.log | tail -n 50\n\n[exit:0 | 0ms]",
+            "body": "tail: Show the last N lines or bytes from stdin or a file.\nUsage: tail [-n N|-c N|-N] [path]\n\nExamples:\n  tail -n 20 /logs/app.log\n  tail -c 16 /notes/todo.txt\n  cat /logs/app.log | tail -n 50",
+            "stdoutMode": "plain"
+          }
+        }
+      },
+      {
+        "command": "tail -n 3 /logs/app.log",
+        "output": "2026-03-12T10:01:12Z WARN retry scheduled order=124\n2026-03-12T10:02:10Z ERROR failed login user=alice\n2026-03-12T10:03:55Z INFO healthcheck ok\n\n[exit:0 | 0ms]",
+        "body": "2026-03-12T10:01:12Z WARN retry scheduled order=124\n2026-03-12T10:02:10Z ERROR failed login user=alice\n2026-03-12T10:03:55Z INFO healthcheck ok",
+        "exitCode": 0,
+        "expectedExitCode": 0,
+        "execution": {
+          "exitCode": 0,
+          "stdout_b64": "MjAyNi0wMy0xMlQxMDowMToxMlogV0FSTiByZXRyeSBzY2hlZHVsZWQgb3JkZXI9MTI0CjIwMjYtMDMtMTJUMTA6MDI6MTBaIEVSUk9SIGZhaWxlZCBsb2dpbiB1c2VyPWFsaWNlCjIwMjYtMDMtMTJUMTA6MDM6NTVaIElORk8gaGVhbHRoY2hlY2sgb2sK",
+          "stdout_text": "2026-03-12T10:01:12Z WARN retry scheduled order=124\n2026-03-12T10:02:10Z ERROR failed login user=alice\n2026-03-12T10:03:55Z INFO healthcheck ok\n",
+          "stderr": "",
+          "contentType": "text/plain",
+          "trace": [
+            {
+              "relationFromPrevious": null,
+              "executed": true,
+              "exitCode": 0,
+              "commands": [
+                {
+                  "argv": [
+                    "tail",
+                    "-n",
+                    "3",
+                    "/logs/app.log"
+                  ],
+                  "stdinBytes": 0,
+                  "stdoutBytes": 144,
+                  "stderr": "",
+                  "exitCode": 0,
+                  "contentType": "text/plain"
+                }
+              ]
+            }
+          ],
+          "presentation": {
+            "text": "2026-03-12T10:01:12Z WARN retry scheduled order=124\n2026-03-12T10:02:10Z ERROR failed login user=alice\n2026-03-12T10:03:55Z INFO healthcheck ok\n\n[exit:0 | 0ms]",
+            "body": "2026-03-12T10:01:12Z WARN retry scheduled order=124\n2026-03-12T10:02:10Z ERROR failed login user=alice\n2026-03-12T10:03:55Z INFO healthcheck ok",
+            "stdoutMode": "plain"
+          }
+        }
+      }
+    ],
+    "finalOutput": "2026-03-12T10:01:12Z WARN retry scheduled order=124\n2026-03-12T10:02:10Z ERROR failed login user=alice\n2026-03-12T10:03:55Z INFO healthcheck ok\n\n[exit:0 | 0ms]",
+    "finalBody": "2026-03-12T10:01:12Z WARN retry scheduled order=124\n2026-03-12T10:02:10Z ERROR failed login user=alice\n2026-03-12T10:03:55Z INFO healthcheck ok",
+    "finalExitCode": 0
+  },
+  "assertionResult": {
+    "passed": true,
+    "failures": []
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/.system",
+        "kind": "dir"
+      },
+      {
+        "path": "/.system/cmd-output",
+        "kind": "dir"
+      },
+      {
+        "path": "/accounts",
+        "kind": "dir"
+      },
+      {
+        "path": "/accounts/acme.md",
+        "kind": "text",
+        "text": "Customer: Acme Corp\nStatus: renewal at risk\nOwner: sara@example.com\nNotes: prefers Monday check-ins and a concise status summary.\n"
+      },
+      {
+        "path": "/config",
+        "kind": "dir"
+      },
+      {
+        "path": "/config/default.json",
+        "kind": "text",
+        "text": "{\n  \"env\": \"default\",\n  \"retries\": 3,\n  \"region\": \"us-east-1\"\n}\n"
+      },
+      {
+        "path": "/config/prod.json",
+        "kind": "text",
+        "text": "{\n  \"env\": \"prod\",\n  \"retries\": 5,\n  \"region\": \"eu-west-1\",\n  \"owner\": {\n    \"email\": \"ops@example.com\"\n  }\n}\n"
+      },
+      {
+        "path": "/drafts",
+        "kind": "dir"
+      },
+      {
+        "path": "/drafts/qbr.md",
+        "kind": "text",
+        "text": "# QBR draft\n\nOpen items:\n- Revenue variance\n- Renewal risk\n"
+      },
+      {
+        "path": "/images",
+        "kind": "dir"
+      },
+      {
+        "path": "/images/logo.png",
+        "kind": "bytes",
+        "data_b64": "iVBORw0KGgoAAQID"
+      },
+      {
+        "path": "/logs",
+        "kind": "dir"
+      },
+      {
+        "path": "/logs/app.log",
+        "kind": "text",
+        "text": "2026-03-12T10:00:01Z INFO startup complete\n2026-03-12T10:01:10Z ERROR payment timeout order=123\n2026-03-12T10:01:11Z ERROR payment timeout order=124\n2026-03-12T10:01:12Z WARN retry scheduled order=124\n2026-03-12T10:02:10Z ERROR failed login user=alice\n2026-03-12T10:03:55Z INFO healthcheck ok\n"
+      },
+      {
+        "path": "/notes",
+        "kind": "dir"
+      },
+      {
+        "path": "/notes/todo.txt",
+        "kind": "text",
+        "text": "1. Review refund incident timeline\n2. Confirm Acme renewal owner\n3. Draft follow-up email\n"
+      }
+    ],
+    "memory": [
+      {
+        "id": 1,
+        "text": "Acme prefers Monday follow-ups.",
+        "createdEpochMs": 1700000000015,
+        "metadata": {}
+      },
+      {
+        "id": 2,
+        "text": "Refund incident touched payments, billing, and checkout.",
+        "createdEpochMs": 1700000000016,
+        "metadata": {}
+      },
+      {
+        "id": 3,
+        "text": "Ops owner for production config is ops@example.com.",
+        "createdEpochMs": 1700000000017,
+        "metadata": {}
+      }
+    ]
+  }
+}

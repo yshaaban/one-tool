@@ -12,7 +12,11 @@ export async function buildWorld(world: WorldSpec): Promise<AgentCLI> {
   const memory = new SimpleMemory();
 
   if (world.files !== undefined) {
-    for (const [filePath, content] of Object.entries(world.files)) {
+    const fileEntries = Object.entries(world.files).sort(function ([left], [right]) {
+      return left.localeCompare(right);
+    });
+
+    for (const [filePath, content] of fileEntries) {
       await vfs.mkdir(parentPath(filePath), true);
       const bytes = content instanceof Uint8Array ? new Uint8Array(content) : textEncoder.encode(content);
       await vfs.writeBytes(filePath, bytes, false);

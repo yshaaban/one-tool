@@ -1,0 +1,39 @@
+{
+  "id": "memory-search-existing",
+  "command": "memory",
+  "args": [
+    "search",
+    "payment timeout"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "memory": [
+      "Acme follow-up next Monday",
+      "Escalate payment timeout issue"
+    ]
+  },
+  "result": {
+    "stdout_b64": "IzIgIEVzY2FsYXRlIHBheW1lbnQgdGltZW91dCBpc3N1ZQ==",
+    "stdout_text": "#2  Escalate payment timeout issue",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": [
+      {
+        "id": 1,
+        "text": "Acme follow-up next Monday",
+        "createdEpochMs": 1700000000002,
+        "metadata": {}
+      },
+      {
+        "id": 2,
+        "text": "Escalate payment timeout issue",
+        "createdEpochMs": 1700000000003,
+        "metadata": {}
+      }
+    ]
+  }
+}

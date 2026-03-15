@@ -1,11 +1,42 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import { createCommandRegistry, type BuiltinCommandSelection, type CommandSpec } from '../src/commands/index.js';
+import { resolveExecutionPolicy, type AgentCLIExecutionPolicy } from '../src/execution-policy.js';
+import { SimpleMemory } from '../src/memory.js';
 import { parseCommandLine, ParseError, tokenizeCommandLine } from '../src/parser.js';
-import { looksBinary, formatDuration, formatSize, safeEvalArithmetic } from '../src/utils.js';
-import { posixNormalize, parentOf, baseName, isStrictDescendantPath } from '../src/vfs/path-utils.js';
-import { MemoryVFS } from '../src/vfs/memory-vfs.js';
+import { AgentCLI, type AgentCLIOutputLimits, type PipelineExecutionTrace, type RunExecution } from '../src/runtime.js';
+import { DemoFetch, DemoSearch } from '../src/testing/adapters.js';
+import {
+  assertScenario,
+  buildWorld,
+  createTestCommandContext,
+  runOracle,
+  runRegisteredCommand,
+  type DemoSearchDocument,
+  type ScenarioSpec,
+} from '../src/testing/index.js';
+import { err, ok, okBytes, type CommandResult } from '../src/types.js';
+import { errorMessage, formatDuration, formatSize, looksBinary, safeEvalArithmetic } from '../src/utils.js';
 import { toVfsError, type VfsErrorCode } from '../src/vfs/errors.js';
+import type { VFS } from '../src/vfs/interface.js';
+import { MemoryVFS } from '../src/vfs/memory-vfs.js';
+import { baseName, isStrictDescendantPath, parentOf, posixNormalize } from '../src/vfs/path-utils.js';
+import type { VfsResourcePolicy } from '../src/vfs/policy.js';
+import {
+  COMMAND_EXTRA_CASES,
+  DEFAULT_ADAPTER_WORLD,
+  RUNTIME_DESCRIPTION_CASES,
+  RUNTIME_EXECUTION_CASES,
+  SCENARIO_CASES,
+  type CommandSnapshotCase,
+  type RuntimeCustomCommandId,
+  type RuntimeDescriptionCase,
+  type RuntimeSnapshotCase,
+  type SnapshotDirectoryEntry,
+  type SnapshotFileEntry,
+  type SnapshotWorld,
+} from './snapshot-cases.js';
 
 interface TokenizerCase {
   input: string;
@@ -98,7 +129,44 @@ interface MemoryVfsStepSnapshot {
   };
 }
 
+interface SerializedTextFileEntry {
+  kind: 'text';
+  text: string;
+}
+
+interface SerializedBinaryFileEntry {
+  kind: 'bytes';
+  data_b64: string;
+}
+
+type SerializedRawFileEntry = SnapshotDirectoryEntry | SerializedTextFileEntry | SerializedBinaryFileEntry;
+
+interface SerializedWorldStateFileEntry {
+  path: string;
+  kind: 'dir' | 'text' | 'bytes';
+  text?: string;
+  data_b64?: string;
+}
+
+interface SerializedMemoryItem {
+  id: number;
+  text: string;
+  createdEpochMs: number;
+  metadata: Record<string, unknown>;
+}
+
+interface SerializedCommandResult {
+  stdout_b64: string;
+  stdout_text?: string;
+  stderr: string;
+  exitCode: number;
+  contentType: string;
+}
+
 const SNAPSHOT_ROOT = path.resolve('snapshots');
+const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder('utf-8');
+const EMPTY_STDIN = new Uint8Array();
 
 const TOKENIZER_CASES: TokenizerCase[] = [
   { input: 'ls /foo' },
@@ -173,7 +241,7 @@ const FORMAT_CASES: FormatCase[] = [
 const BINARY_CASES: BinaryCase[] = [
   { data: new Uint8Array() },
   { data: Uint8Array.from([65, 0, 66]) },
-  { data: new TextEncoder().encode('hello\nworld') },
+  { data: textEncoder.encode('hello\nworld') },
   { data: Uint8Array.from([0xff, 0xfe, 0xfd]) },
   { data: Uint8Array.from([1, 2, 3, 65, 66, 67, 68, 69, 70]) },
 ];
@@ -289,13 +357,30 @@ const MEMORY_VFS_CASES: MemoryVfsCase[] = [
 ];
 
 async function main(): Promise<void> {
+  await rm(SNAPSHOT_ROOT, { recursive: true, force: true });
   await mkdir(SNAPSHOT_ROOT, { recursive: true });
-  await writeParserSnapshots();
-  await writeVfsSnapshots();
-  await writeUtilsSnapshots();
+
+  const parserCount = await writeParserSnapshots();
+  const vfsCount = await writeVfsSnapshots();
+  const utilsCount = await writeUtilsSnapshots();
+  const commandCount = await writeCommandSnapshots();
+  const runtimeCount = await writeRuntimeSnapshots();
+  const scenarioCount = await writeScenarioSnapshots();
+
+  await writeJson(path.join(SNAPSHOT_ROOT, 'manifest.json'), {
+    version: 2,
+    domains: {
+      parser: parserCount,
+      vfs: vfsCount,
+      utils: utilsCount,
+      commands: commandCount,
+      runtime: runtimeCount,
+      scenarios: scenarioCount,
+    },
+  });
 }
 
-async function writeParserSnapshots(): Promise<void> {
+async function writeParserSnapshots(): Promise<number> {
   await writeJsonl(
     path.join(SNAPSHOT_ROOT, 'parser', 'tokenizer.jsonl'),
     TOKENIZER_CASES.map(function (testCase) {
@@ -326,9 +411,11 @@ async function writeParserSnapshots(): Promise<void> {
       };
     }),
   );
+
+  return TOKENIZER_CASES.length + PARSER_CASES.length + PARSER_ERROR_CASES.length;
 }
 
-async function writeVfsSnapshots(): Promise<void> {
+async function writeVfsSnapshots(): Promise<number> {
   await writeJsonl(
     path.join(SNAPSHOT_ROOT, 'vfs', 'path-utils.jsonl'),
     PATH_UTILS_CASES.map(function (testCase) {
@@ -336,18 +423,18 @@ async function writeVfsSnapshots(): Promise<void> {
     }),
   );
 
-  const rows = await withMockedNow(async function (): Promise<unknown[]> {
-    const rowsInternal: unknown[] = [];
-    for (const testCase of MEMORY_VFS_CASES) {
-      rowsInternal.push(await snapshotMemoryVfsCase(testCase));
-    }
-    return rowsInternal;
-  });
+  const memoryRows: unknown[] = [];
+  for (const testCase of MEMORY_VFS_CASES) {
+    memoryRows.push(await withMockedNow(async function (): Promise<unknown> {
+      return snapshotMemoryVfsCase(testCase);
+    }));
+  }
 
-  await writeJsonl(path.join(SNAPSHOT_ROOT, 'vfs', 'memory-vfs.jsonl'), rows);
+  await writeJsonl(path.join(SNAPSHOT_ROOT, 'vfs', 'memory-vfs.jsonl'), memoryRows);
+  return PATH_UTILS_CASES.length + MEMORY_VFS_CASES.length;
 }
 
-async function writeUtilsSnapshots(): Promise<void> {
+async function writeUtilsSnapshots(): Promise<number> {
   await writeJsonl(
     path.join(SNAPSHOT_ROOT, 'utils', 'arithmetic.jsonl'),
     ARITHMETIC_CASES.map(function (testCase) {
@@ -375,6 +462,621 @@ async function writeUtilsSnapshots(): Promise<void> {
       };
     }),
   );
+
+  return ARITHMETIC_CASES.length + FORMAT_CASES.length + BINARY_CASES.length;
+}
+
+async function writeCommandSnapshots(): Promise<number> {
+  const cases = [...buildConformanceCommandCases(), ...COMMAND_EXTRA_CASES];
+  validateUniqueCaseIds(cases);
+
+  for (const testCase of cases) {
+    const payload = await snapshotCommandCase(testCase);
+    await writeJson(path.join(SNAPSHOT_ROOT, 'commands', testCase.commandName, `${testCase.id}.json`), payload);
+  }
+
+  return cases.length;
+}
+
+async function writeRuntimeSnapshots(): Promise<number> {
+  for (const testCase of RUNTIME_EXECUTION_CASES) {
+    const payload = await snapshotRuntimeCase(testCase);
+    await writeJson(path.join(SNAPSHOT_ROOT, 'runtime', 'executions', `${testCase.id}.json`), payload);
+  }
+
+  for (const testCase of RUNTIME_DESCRIPTION_CASES) {
+    const payload = await snapshotRuntimeDescriptionCase(testCase);
+    await writeJson(path.join(SNAPSHOT_ROOT, 'runtime', 'descriptions', `${testCase.id}.json`), payload);
+  }
+
+  return RUNTIME_EXECUTION_CASES.length + RUNTIME_DESCRIPTION_CASES.length;
+}
+
+async function writeScenarioSnapshots(): Promise<number> {
+  for (const scenario of SCENARIO_CASES) {
+    const payload = await snapshotScenarioCase(scenario);
+    await writeJson(path.join(SNAPSHOT_ROOT, 'scenarios', `${scenario.id}.json`), payload);
+  }
+
+  return SCENARIO_CASES.length;
+}
+
+function buildConformanceCommandCases(): CommandSnapshotCase[] {
+  const registry = createCommandRegistry();
+  const cases: CommandSnapshotCase[] = [];
+
+  for (const spec of registry.all()) {
+    const representativeWorld = representativeWorldFor(spec);
+
+    cases.push({
+      id: 'conformance-representative',
+      commandName: spec.name,
+      args: [...(spec.conformanceArgs ?? [])],
+      ...(representativeWorld === undefined ? {} : { world: representativeWorld }),
+    });
+
+    if (spec.acceptsStdin === false) {
+      cases.push({
+        id: 'conformance-stdin-rejection',
+        commandName: spec.name,
+        args: [...(spec.conformanceArgs ?? [])],
+        stdin: encodeText('unwanted stdin'),
+        ...(representativeWorld === undefined ? {} : { world: representativeWorld }),
+      });
+    }
+
+    if ((spec.minArgs ?? 0) > 0) {
+      cases.push({
+        id: 'conformance-too-few-args',
+        commandName: spec.name,
+        args: tooFewArgsFor(spec),
+      });
+    }
+
+    if (spec.maxArgs !== undefined) {
+      cases.push({
+        id: 'conformance-too-many-args',
+        commandName: spec.name,
+        args: tooManyArgsFor(spec),
+      });
+    }
+
+    if (spec.requiresAdapter !== undefined) {
+      cases.push({
+        id: `conformance-missing-${spec.requiresAdapter}-adapter`,
+        commandName: spec.name,
+        args: adapterArgsFor(spec),
+      });
+    }
+  }
+
+  return cases;
+}
+
+function representativeWorldFor(spec: CommandSpec): SnapshotWorld | undefined {
+  if (spec.requiresAdapter === undefined) {
+    return undefined;
+  }
+  return DEFAULT_ADAPTER_WORLD;
+}
+
+function adapterArgsFor(spec: CommandSpec): string[] {
+  if ((spec.conformanceArgs ?? []).length > 0) {
+    return [...spec.conformanceArgs!];
+  }
+
+  const count = Math.max(spec.minArgs ?? 0, 1);
+  return Array.from({ length: count }, function (_, index) {
+    return `arg${index}`;
+  });
+}
+
+function tooFewArgsFor(spec: CommandSpec): string[] {
+  const count = Math.max((spec.minArgs ?? 0) - 1, 0);
+  return Array.from({ length: count }, function (_, index) {
+    return `arg${index}`;
+  });
+}
+
+function tooManyArgsFor(spec: CommandSpec): string[] {
+  const count = (spec.maxArgs ?? 0) + 1;
+  return Array.from({ length: count }, function (_, index) {
+    return `arg${index}`;
+  });
+}
+
+function validateUniqueCaseIds(cases: CommandSnapshotCase[]): void {
+  const seen = new Set<string>();
+
+  for (const testCase of cases) {
+    const key = `${testCase.commandName}:${testCase.id}`;
+    if (seen.has(key)) {
+      throw new Error(`duplicate command snapshot case: ${key}`);
+    }
+    seen.add(key);
+  }
+}
+
+async function snapshotCommandCase(testCase: CommandSnapshotCase): Promise<Record<string, unknown>> {
+  return withMockedNow(async function (): Promise<Record<string, unknown>> {
+    const ctx = createTestCommandContext({
+      registry: createCommandRegistry(),
+      vfs: new MemoryVFS(
+        testCase.vfsResourcePolicy === undefined ? {} : { resourcePolicy: testCase.vfsResourcePolicy },
+      ),
+      adapters: buildAdapters(testCase.world),
+      memory: new SimpleMemory(),
+      executionPolicy: resolveExecutionPolicy(testCase.executionPolicy),
+      outputDir: '/.system/cmd-output',
+      outputCounter: 0,
+    });
+
+    await seedSnapshotWorld(ctx.vfs, ctx.memory, testCase.world);
+    const stdin = testCase.stdin ?? EMPTY_STDIN;
+    const { result } = await runRegisteredCommand(testCase.commandName, testCase.args, {
+      ctx,
+      stdin,
+    });
+
+    return {
+      id: testCase.id,
+      command: testCase.commandName,
+      args: [...testCase.args],
+      stdin_b64: toBase64(stdin),
+      ...(testCase.world === undefined ? {} : { world: serializeSnapshotWorld(testCase.world) }),
+      ...(testCase.executionPolicy === undefined
+        ? {}
+        : { executionPolicy: serializeExecutionPolicy(testCase.executionPolicy) }),
+      ...(testCase.vfsResourcePolicy === undefined
+        ? {}
+        : { vfsResourcePolicy: serializeVfsResourcePolicy(testCase.vfsResourcePolicy) }),
+      result: serializeCommandResult(result),
+      worldAfter: await snapshotWorldState(ctx.vfs, ctx.memory),
+    };
+  });
+}
+
+async function snapshotRuntimeCase(testCase: RuntimeSnapshotCase): Promise<Record<string, unknown>> {
+  return withMockedNow(async function (): Promise<Record<string, unknown>> {
+    const runtime = await createSnapshotRuntime(testCase);
+    const execution = await runtime.runDetailed(testCase.commandLine);
+
+    return {
+      id: testCase.id,
+      commandLine: testCase.commandLine,
+      ...(testCase.world === undefined ? {} : { world: serializeSnapshotWorld(testCase.world) }),
+      ...(testCase.builtinCommands === undefined ? {} : { builtinCommands: testCase.builtinCommands }),
+      ...(testCase.customCommands === undefined ? {} : { customCommands: testCase.customCommands }),
+      ...(testCase.outputLimits === undefined ? {} : { outputLimits: testCase.outputLimits }),
+      ...(testCase.executionPolicy === undefined
+        ? {}
+        : { executionPolicy: serializeExecutionPolicy(testCase.executionPolicy) }),
+      ...(testCase.vfsResourcePolicy === undefined
+        ? {}
+        : { vfsResourcePolicy: serializeVfsResourcePolicy(testCase.vfsResourcePolicy) }),
+      execution: serializeRunExecution(execution),
+      worldAfter: await snapshotWorldState(runtime.ctx.vfs, runtime.ctx.memory),
+    };
+  });
+}
+
+async function snapshotRuntimeDescriptionCase(testCase: RuntimeDescriptionCase): Promise<Record<string, unknown>> {
+  const runtime = await createSnapshotRuntime({
+    ...(testCase.builtinCommands === undefined ? {} : { builtinCommands: testCase.builtinCommands }),
+    ...(testCase.customCommands === undefined ? {} : { customCommands: testCase.customCommands }),
+  });
+
+  return {
+    id: testCase.id,
+    variant: testCase.variant,
+    ...(testCase.builtinCommands === undefined ? {} : { builtinCommands: testCase.builtinCommands }),
+    ...(testCase.customCommands === undefined ? {} : { customCommands: testCase.customCommands }),
+    description: runtime.buildToolDescription(testCase.variant),
+  };
+}
+
+async function snapshotScenarioCase(scenario: ScenarioSpec): Promise<Record<string, unknown>> {
+  return withMockedNow(async function (): Promise<Record<string, unknown>> {
+    const runtime = await buildWorld(scenario.world);
+    const trace = await runOracle(runtime, scenario);
+    const assertionResult = await assertScenario(scenario, trace, runtime);
+
+    return {
+      id: scenario.id,
+      scenario: serializeScenarioSpec(scenario),
+      trace: serializeOracleTrace(trace),
+      assertionResult,
+      worldAfter: await snapshotWorldState(runtime.ctx.vfs, runtime.ctx.memory),
+    };
+  });
+}
+
+async function createSnapshotRuntime(testCase: {
+  world?: SnapshotWorld;
+  builtinCommands?: BuiltinCommandSelection | false;
+  customCommands?: RuntimeCustomCommandId[];
+  outputLimits?: AgentCLIOutputLimits;
+  executionPolicy?: AgentCLIExecutionPolicy;
+  vfsResourcePolicy?: VfsResourcePolicy;
+}): Promise<AgentCLI> {
+  const vfs = new MemoryVFS(
+    testCase.vfsResourcePolicy === undefined ? {} : { resourcePolicy: testCase.vfsResourcePolicy },
+  );
+  const memory = new SimpleMemory();
+
+  await seedSnapshotWorld(vfs, memory, testCase.world);
+
+  const runtime = new AgentCLI({
+    vfs,
+    adapters: buildAdapters(testCase.world),
+    memory,
+    ...(testCase.builtinCommands === undefined ? {} : { builtinCommands: testCase.builtinCommands }),
+    ...(testCase.customCommands === undefined ? {} : { commands: runtimeFixtureCommands(testCase.customCommands) }),
+    ...(testCase.outputLimits === undefined ? {} : { outputLimits: testCase.outputLimits }),
+    ...(testCase.executionPolicy === undefined ? {} : { executionPolicy: testCase.executionPolicy }),
+  });
+
+  await runtime.initialize();
+  return runtime;
+}
+
+function runtimeFixtureCommands(ids: RuntimeCustomCommandId[]): CommandSpec[] {
+  return ids.map(function (id) {
+    switch (id) {
+      case 'echo':
+        return {
+          name: 'echo',
+          summary: 'Echo text.',
+          usage: 'echo <text...>',
+          details: 'Examples:\n  echo hello',
+          async handler(_ctx, args): Promise<CommandResult> {
+            return ok(args.join(' '));
+          },
+        };
+      case 'fail':
+        return {
+          name: 'fail',
+          summary: 'Fail immediately.',
+          usage: 'fail',
+          details: 'Examples:\n  fail',
+          async handler(): Promise<CommandResult> {
+            return err('fail: forced failure');
+          },
+        };
+      case 'burst':
+        return {
+          name: 'burst',
+          summary: 'Emit three lines.',
+          usage: 'burst',
+          details: 'Examples:\n  burst',
+          async handler(): Promise<CommandResult> {
+            return ok('first line\nsecond line\nthird line');
+          },
+        };
+      case 'binary':
+        return {
+          name: 'binary',
+          summary: 'Emit binary bytes.',
+          usage: 'binary',
+          details: 'Examples:\n  binary',
+          async handler(): Promise<CommandResult> {
+            return okBytes(Uint8Array.of(0, 1, 2, 3), 'application/octet-stream');
+          },
+        };
+      case 'longline':
+        return {
+          name: 'longline',
+          summary: 'Emit one long line.',
+          usage: 'longline',
+          details: 'Examples:\n  longline',
+          async handler(): Promise<CommandResult> {
+            return ok('abcdefghijklmnopqrstuvwxyz');
+          },
+        };
+      case 'help-override':
+        return {
+          name: 'help',
+          summary: 'Overridden help.',
+          usage: 'help',
+          details: 'Examples:\n  help',
+          async handler(): Promise<CommandResult> {
+            return ok('override help');
+          },
+        };
+      default: {
+        const _never: never = id;
+        return _never;
+      }
+    }
+  });
+}
+
+async function seedSnapshotWorld(vfs: VFS, memory: SimpleMemory, world: SnapshotWorld | undefined): Promise<void> {
+  if (world?.files !== undefined) {
+    const entries = Object.entries(world.files).sort(function ([left], [right]) {
+      return left.localeCompare(right);
+    });
+
+    for (const [filePath, entry] of entries) {
+      if (isSnapshotDirectoryEntry(entry)) {
+        await vfs.mkdir(filePath, true);
+        continue;
+      }
+
+      const bytes = typeof entry === 'string' ? encodeText(entry) : entry;
+      await vfs.writeBytes(filePath, bytes, true);
+    }
+  }
+
+  if (world?.memory !== undefined) {
+    for (const item of world.memory) {
+      memory.store(item);
+    }
+  }
+}
+
+function buildAdapters(world: SnapshotWorld | undefined): {
+  search?: DemoSearch;
+  fetch?: DemoFetch;
+} {
+  const adapters: {
+    search?: DemoSearch;
+    fetch?: DemoFetch;
+  } = {};
+
+  if (world?.searchDocs !== undefined) {
+    adapters.search = new DemoSearch(world.searchDocs);
+  }
+
+  if (world?.fetchResources !== undefined) {
+    adapters.fetch = new DemoFetch(world.fetchResources);
+  }
+
+  return adapters;
+}
+
+function serializeSnapshotWorld(world: SnapshotWorld): Record<string, unknown> {
+  return {
+    ...(world.files === undefined ? {} : { files: serializeRawFileEntries(world.files) }),
+    ...(world.searchDocs === undefined ? {} : { searchDocs: world.searchDocs }),
+    ...(world.fetchResources === undefined ? {} : { fetchResources: serializeFetchResources(world.fetchResources) }),
+    ...(world.memory === undefined ? {} : { memory: [...world.memory] }),
+    ...(world.outputLimits === undefined ? {} : { outputLimits: world.outputLimits }),
+  };
+}
+
+function serializeRawFileEntries(entries: Record<string, SnapshotFileEntry>): Record<string, SerializedRawFileEntry> {
+  const serialized: Record<string, SerializedRawFileEntry> = {};
+
+  for (const filePath of Object.keys(entries).sort(function (left, right) {
+    return left.localeCompare(right);
+  })) {
+    const entry = entries[filePath]!;
+    if (isSnapshotDirectoryEntry(entry)) {
+      serialized[filePath] = { kind: 'dir' };
+      continue;
+    }
+
+    if (typeof entry === 'string') {
+      serialized[filePath] = {
+        kind: 'text',
+        text: entry,
+      };
+      continue;
+    }
+
+    serialized[filePath] = {
+      kind: 'bytes',
+      data_b64: toBase64(entry),
+    };
+  }
+
+  return serialized;
+}
+
+function serializeFetchResources(resources: Record<string, unknown>): Record<string, unknown> {
+  const serialized: Record<string, unknown> = {};
+
+  for (const resource of Object.keys(resources).sort(function (left, right) {
+    return left.localeCompare(right);
+  })) {
+    serialized[resource] = serializeFetchPayload(resources[resource]);
+  }
+
+  return serialized;
+}
+
+function serializeFetchPayload(payload: unknown): unknown {
+  if (payload instanceof Uint8Array) {
+    return {
+      kind: 'bytes',
+      data_b64: toBase64(payload),
+    };
+  }
+
+  if (payload === undefined) {
+    return {
+      kind: 'undefined',
+    };
+  }
+
+  return payload;
+}
+
+async function snapshotWorldState(
+  vfs: VFS,
+  memory: SimpleMemory,
+): Promise<{ files: SerializedWorldStateFileEntry[]; memory: SerializedMemoryItem[] }> {
+  return {
+    files: await snapshotVfsEntries(vfs),
+    memory: snapshotMemoryItems(memory),
+  };
+}
+
+async function snapshotVfsEntries(vfs: VFS): Promise<SerializedWorldStateFileEntry[]> {
+  const entries: SerializedWorldStateFileEntry[] = [];
+
+  async function walk(dirPath: string): Promise<void> {
+    const children = await vfs.listdir(dirPath);
+    for (const child of children) {
+      const isDir = child.endsWith('/');
+      const name = isDir ? child.slice(0, -1) : child;
+      const fullPath = dirPath === '/' ? `/${name}` : `${dirPath}/${name}`;
+
+      if (isDir) {
+        entries.push({
+          path: fullPath,
+          kind: 'dir',
+        });
+        await walk(fullPath);
+        continue;
+      }
+
+      const data = await vfs.readBytes(fullPath);
+      if (looksBinary(data)) {
+        entries.push({
+          path: fullPath,
+          kind: 'bytes',
+          data_b64: toBase64(data),
+        });
+      } else {
+        entries.push({
+          path: fullPath,
+          kind: 'text',
+          text: textDecoder.decode(data),
+        });
+      }
+    }
+  }
+
+  await walk('/');
+  return entries;
+}
+
+function snapshotMemoryItems(memory: SimpleMemory): SerializedMemoryItem[] {
+  return memory
+    .recent(Number.MAX_SAFE_INTEGER)
+    .slice()
+    .reverse()
+    .map(function (item) {
+      return {
+        id: item.id,
+        text: item.text,
+        createdEpochMs: item.createdEpochMs,
+        metadata: item.metadata,
+      };
+    });
+}
+
+function serializeCommandResult(result: CommandResult): SerializedCommandResult {
+  return {
+    stdout_b64: toBase64(result.stdout),
+    ...(looksBinary(result.stdout) || result.stdout.length === 0
+      ? {}
+      : { stdout_text: textDecoder.decode(result.stdout) }),
+    stderr: result.stderr,
+    exitCode: result.exitCode,
+    contentType: result.contentType,
+  };
+}
+
+function serializeRunExecution(execution: RunExecution): Record<string, unknown> {
+  return {
+    exitCode: execution.exitCode,
+    stdout_b64: toBase64(execution.stdout),
+    ...(looksBinary(execution.stdout) || execution.stdout.length === 0
+      ? {}
+      : { stdout_text: textDecoder.decode(execution.stdout) }),
+    stderr: execution.stderr,
+    contentType: execution.contentType,
+    trace: execution.trace.map(serializePipelineExecutionTrace),
+    presentation: {
+      text: normalizePresentationText(execution.presentation.text),
+      body: execution.presentation.body,
+      stdoutMode: execution.presentation.stdoutMode,
+      ...(execution.presentation.savedPath === undefined ? {} : { savedPath: execution.presentation.savedPath }),
+      ...(execution.presentation.totalBytes === undefined ? {} : { totalBytes: execution.presentation.totalBytes }),
+      ...(execution.presentation.totalLines === undefined ? {} : { totalLines: execution.presentation.totalLines }),
+    },
+  };
+}
+
+function serializePipelineExecutionTrace(trace: PipelineExecutionTrace): Record<string, unknown> {
+  return {
+    relationFromPrevious: trace.relationFromPrevious,
+    executed: trace.executed,
+    ...(trace.skippedReason === undefined ? {} : { skippedReason: trace.skippedReason }),
+    ...(trace.exitCode === undefined ? {} : { exitCode: trace.exitCode }),
+    commands: trace.commands.map(function (commandTrace) {
+      return {
+        argv: [...commandTrace.argv],
+        stdinBytes: commandTrace.stdinBytes,
+        stdoutBytes: commandTrace.stdoutBytes,
+        stderr: commandTrace.stderr,
+        exitCode: commandTrace.exitCode,
+        contentType: commandTrace.contentType,
+      };
+    }),
+  };
+}
+
+function serializeScenarioSpec(scenario: ScenarioSpec): Record<string, unknown> {
+  return {
+    id: scenario.id,
+    category: scenario.category,
+    description: scenario.description,
+    prompt: scenario.prompt,
+    ...(scenario.promptVariant === undefined ? {} : { promptVariant: scenario.promptVariant }),
+    maxTurns: scenario.maxTurns,
+    maxToolCalls: scenario.maxToolCalls,
+    ...(scenario.repeats === undefined ? {} : { repeats: scenario.repeats }),
+    world: serializeSnapshotWorld(scenario.world as SnapshotWorld),
+    ...(scenario.oracle === undefined ? {} : { oracle: scenario.oracle }),
+    assertions: scenario.assertions,
+  };
+}
+
+function serializeOracleTrace(trace: Awaited<ReturnType<typeof runOracle>>): Record<string, unknown> {
+  return {
+    scenarioId: trace.scenarioId,
+    steps: trace.steps.map(function (step) {
+      return {
+        command: step.command,
+        output: normalizePresentationText(step.output),
+        body: step.body,
+        exitCode: step.exitCode,
+        expectedExitCode: step.expectedExitCode,
+        execution: serializeRunExecution(step.execution),
+      };
+    }),
+    finalOutput: normalizePresentationText(trace.finalOutput),
+    finalBody: trace.finalBody,
+    finalExitCode: trace.finalExitCode,
+  };
+}
+
+function serializeExecutionPolicy(policy: AgentCLIExecutionPolicy): Record<string, unknown> {
+  return {
+    ...(policy.maxMaterializedBytes === undefined ? {} : { maxMaterializedBytes: policy.maxMaterializedBytes }),
+  };
+}
+
+function serializeVfsResourcePolicy(policy: VfsResourcePolicy): Record<string, unknown> {
+  return {
+    ...(policy.maxFileBytes === undefined ? {} : { maxFileBytes: policy.maxFileBytes }),
+    ...(policy.maxTotalBytes === undefined ? {} : { maxTotalBytes: policy.maxTotalBytes }),
+    ...(policy.maxDirectoryDepth === undefined ? {} : { maxDirectoryDepth: policy.maxDirectoryDepth }),
+    ...(policy.maxEntriesPerDirectory === undefined
+      ? {}
+      : { maxEntriesPerDirectory: policy.maxEntriesPerDirectory }),
+    ...(policy.maxOutputArtifactBytes === undefined
+      ? {}
+      : { maxOutputArtifactBytes: policy.maxOutputArtifactBytes }),
+  };
+}
+
+function isSnapshotDirectoryEntry(value: SnapshotFileEntry): value is SnapshotDirectoryEntry {
+  return typeof value === 'object' && !(value instanceof Uint8Array) && value.kind === 'dir';
 }
 
 function captureParserError(testCase: ParserErrorCase): string {
@@ -424,6 +1126,10 @@ function snapshotPathUtilsCase(testCase: PathUtilsCase): Record<string, unknown>
         candidate: testCase.candidate,
         output: isStrictDescendantPath(testCase.ancestor!, testCase.candidate!),
       };
+    default: {
+      const _never: never = testCase.kind;
+      return _never;
+    }
   }
 }
 
@@ -553,6 +1259,11 @@ function snapshotArithmeticCase(testCase: ArithmeticCase): Record<string, unknow
   }
 }
 
+async function writeJson(filePath: string, value: unknown): Promise<void> {
+  await mkdir(path.dirname(filePath), { recursive: true });
+  await writeFile(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+}
+
 async function writeJsonl(filePath: string, rows: unknown[]): Promise<void> {
   await mkdir(path.dirname(filePath), { recursive: true });
   const contents =
@@ -568,8 +1279,12 @@ function toBase64(data: Uint8Array): string {
   return Buffer.from(data).toString('base64');
 }
 
+function normalizePresentationText(text: string): string {
+  return text.replace(/\[exit:(-?\d+) \| [^\]]+\]$/, '[exit:$1 | 0ms]');
+}
+
 function encodeText(value: string): Uint8Array {
-  return new TextEncoder().encode(value);
+  return textEncoder.encode(value);
 }
 
 async function withMockedNow<T>(run: () => Promise<T>): Promise<T> {
@@ -589,6 +1304,6 @@ async function withMockedNow<T>(run: () => Promise<T>): Promise<T> {
 }
 
 main().catch(function (caught) {
-  console.error(caught);
+  console.error(errorMessage(caught));
   process.exitCode = 1;
 });

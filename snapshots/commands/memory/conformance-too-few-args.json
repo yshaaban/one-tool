@@ -1,0 +1,16 @@
+{
+  "id": "conformance-too-few-args",
+  "command": "memory",
+  "args": [],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "",
+    "stderr": "memory: usage: memory search <query> | memory recent [N] | memory store <text>",
+    "exitCode": 1,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

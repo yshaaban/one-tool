@@ -1,0 +1,37 @@
+{
+  "id": "stat-existing-file",
+  "command": "stat",
+  "args": [
+    "/notes/todo.txt"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/notes/todo.txt": {
+        "kind": "text",
+        "text": "line one"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "cGF0aDogL25vdGVzL3RvZG8udHh0CnR5cGU6IGZpbGUKc2l6ZTogOCBieXRlcwptZWRpYV90eXBlOiB0ZXh0L3BsYWluCm1vZGlmaWVkX2Vwb2NoX21zOiAxNzAwMDAwMDAwMDAz",
+    "stdout_text": "path: /notes/todo.txt\ntype: file\nsize: 8 bytes\nmedia_type: text/plain\nmodified_epoch_ms: 1700000000003",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/notes",
+        "kind": "dir"
+      },
+      {
+        "path": "/notes/todo.txt",
+        "kind": "text",
+        "text": "line one"
+      }
+    ],
+    "memory": []
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "id": "cat-stdin-marker",
+  "command": "cat",
+  "args": [
+    "/notes/header.txt",
+    "-",
+    "/notes/footer.txt"
+  ],
+  "stdin_b64": "Ym9keQo=",
+  "world": {
+    "files": {
+      "/notes/footer.txt": {
+        "kind": "text",
+        "text": "footer\n"
+      },
+      "/notes/header.txt": {
+        "kind": "text",
+        "text": "header\n"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "aGVhZGVyCmJvZHkKZm9vdGVyCg==",
+    "stdout_text": "header\nbody\nfooter\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/notes",
+        "kind": "dir"
+      },
+      {
+        "path": "/notes/footer.txt",
+        "kind": "text",
+        "text": "footer\n"
+      },
+      {
+        "path": "/notes/header.txt",
+        "kind": "text",
+        "text": "header\n"
+      }
+    ],
+    "memory": []
+  }
+}

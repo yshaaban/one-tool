@@ -1,0 +1,37 @@
+{
+  "id": "cat-text-file",
+  "command": "cat",
+  "args": [
+    "/notes/todo.txt"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/notes/todo.txt": {
+        "kind": "text",
+        "text": "line one"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "bGluZSBvbmU=",
+    "stdout_text": "line one",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/notes",
+        "kind": "dir"
+      },
+      {
+        "path": "/notes/todo.txt",
+        "kind": "text",
+        "text": "line one"
+      }
+    ],
+    "memory": []
+  }
+}

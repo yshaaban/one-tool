@@ -1,0 +1,64 @@
+{
+  "id": "custom-truncated-burst",
+  "commandLine": "burst",
+  "builtinCommands": false,
+  "customCommands": [
+    "burst"
+  ],
+  "outputLimits": {
+    "maxLines": 1,
+    "maxBytes": 1024
+  },
+  "execution": {
+    "exitCode": 0,
+    "stdout_b64": "Zmlyc3QgbGluZQpzZWNvbmQgbGluZQp0aGlyZCBsaW5l",
+    "stdout_text": "first line\nsecond line\nthird line",
+    "stderr": "",
+    "contentType": "text/plain",
+    "trace": [
+      {
+        "relationFromPrevious": null,
+        "executed": true,
+        "exitCode": 0,
+        "commands": [
+          {
+            "argv": [
+              "burst"
+            ],
+            "stdinBytes": 0,
+            "stdoutBytes": 33,
+            "stderr": "",
+            "exitCode": 0,
+            "contentType": "text/plain"
+          }
+        ]
+      }
+    ],
+    "presentation": {
+      "text": "first line\n\n--- output truncated (3 lines, 33B) ---\nFull output: /.system/cmd-output/cmd-0001.txt\nExplore: cat /.system/cmd-output/cmd-0001.txt | grep <pattern>\n         cat /.system/cmd-output/cmd-0001.txt | tail -n 100\n\n[exit:0 | 0ms]",
+      "body": "first line\n\n--- output truncated (3 lines, 33B) ---\nFull output: /.system/cmd-output/cmd-0001.txt\nExplore: cat /.system/cmd-output/cmd-0001.txt | grep <pattern>\n         cat /.system/cmd-output/cmd-0001.txt | tail -n 100",
+      "stdoutMode": "truncated",
+      "savedPath": "/.system/cmd-output/cmd-0001.txt",
+      "totalBytes": 33,
+      "totalLines": 3
+    }
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/.system",
+        "kind": "dir"
+      },
+      {
+        "path": "/.system/cmd-output",
+        "kind": "dir"
+      },
+      {
+        "path": "/.system/cmd-output/cmd-0001.txt",
+        "kind": "text",
+        "text": "first line\nsecond line\nthird line"
+      }
+    ],
+    "memory": []
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "minimal-selective",
+  "variant": "minimal-tool-description",
+  "builtinCommands": {
+    "includeGroups": [
+      "system",
+      "text"
+    ],
+    "excludeCommands": [
+      "memory"
+    ]
+  },
+  "description": "Run CLI-style commands over registered tools and a rooted virtual file system.\nThis is not a real shell. Only registered commands are allowed.\nSupported operators: |  &&  ||  ;\nNo env expansion, no globbing, no command substitution, no redirection.\nPaths are rooted to '/'. Relative paths also resolve under '/'.\n\nCommand discovery:\n  - run 'help' to list commands\n  - run '<command>' with no args for usage\n  - use pipes for composition\n  - detailed command catalog omitted in this variant"
+}

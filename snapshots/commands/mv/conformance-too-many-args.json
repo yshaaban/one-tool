@@ -1,0 +1,20 @@
+{
+  "id": "conformance-too-many-args",
+  "command": "mv",
+  "args": [
+    "arg0",
+    "arg1",
+    "arg2"
+  ],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "",
+    "stderr": "mv: usage: mv <src> <dst>",
+    "exitCode": 1,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

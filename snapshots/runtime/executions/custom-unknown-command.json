@@ -1,0 +1,49 @@
+{
+  "id": "custom-unknown-command",
+  "commandLine": "missingcmd arg",
+  "builtinCommands": false,
+  "execution": {
+    "exitCode": 127,
+    "stdout_b64": "",
+    "stderr": "unknown command: missingcmd\nAvailable: (none)",
+    "contentType": "text/plain",
+    "trace": [
+      {
+        "relationFromPrevious": null,
+        "executed": true,
+        "exitCode": 127,
+        "commands": [
+          {
+            "argv": [
+              "missingcmd",
+              "arg"
+            ],
+            "stdinBytes": 0,
+            "stdoutBytes": 0,
+            "stderr": "unknown command: missingcmd\nAvailable: (none)",
+            "exitCode": 127,
+            "contentType": "text/plain"
+          }
+        ]
+      }
+    ],
+    "presentation": {
+      "text": "[error] unknown command: missingcmd\nAvailable: (none)\n\n[exit:127 | 0ms]",
+      "body": "[error] unknown command: missingcmd\nAvailable: (none)",
+      "stdoutMode": "plain"
+    }
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/.system",
+        "kind": "dir"
+      },
+      {
+        "path": "/.system/cmd-output",
+        "kind": "dir"
+      }
+    ],
+    "memory": []
+  }
+}

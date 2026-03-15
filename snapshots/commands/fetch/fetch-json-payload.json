@@ -1,0 +1,42 @@
+{
+  "id": "fetch-json-payload",
+  "command": "fetch",
+  "args": [
+    "order:123"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "fetchResources": {
+      "crm/customer/acme": {
+        "id": "cust_acme",
+        "owner": {
+          "name": "Sara",
+          "email": "sara@example.com"
+        },
+        "tier": "enterprise",
+        "renewal_month": "2026-04"
+      },
+      "order:123": {
+        "id": "123",
+        "status": "timed_out",
+        "customer": {
+          "name": "Acme Corp",
+          "email": "buyer@acme.example"
+        },
+        "amount": 1499
+      },
+      "text:runbook": "Escalate payment timeouts to the checkout on-call if the error rate exceeds 2%."
+    }
+  },
+  "result": {
+    "stdout_b64": "ewogICJpZCI6ICIxMjMiLAogICJzdGF0dXMiOiAidGltZWRfb3V0IiwKICAiY3VzdG9tZXIiOiB7CiAgICAibmFtZSI6ICJBY21lIENvcnAiLAogICAgImVtYWlsIjogImJ1eWVyQGFjbWUuZXhhbXBsZSIKICB9LAogICJhbW91bnQiOiAxNDk5Cn0=",
+    "stdout_text": "{\n  \"id\": \"123\",\n  \"status\": \"timed_out\",\n  \"customer\": {\n    \"name\": \"Acme Corp\",\n    \"email\": \"buyer@acme.example\"\n  },\n  \"amount\": 1499\n}",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "application/json"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

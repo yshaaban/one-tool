@@ -1,0 +1,37 @@
+{
+  "id": "append-from-stdin",
+  "command": "append",
+  "args": [
+    "/notes/log.txt"
+  ],
+  "stdin_b64": "IHdvcmxk",
+  "world": {
+    "files": {
+      "/notes/log.txt": {
+        "kind": "text",
+        "text": "hello"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "YXBwZW5kZWQgNkIgdG8gL25vdGVzL2xvZy50eHQ=",
+    "stdout_text": "appended 6B to /notes/log.txt",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/notes",
+        "kind": "dir"
+      },
+      {
+        "path": "/notes/log.txt",
+        "kind": "text",
+        "text": "hello world"
+      }
+    ],
+    "memory": []
+  }
+}

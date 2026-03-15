@@ -1,0 +1,55 @@
+{
+  "id": "custom-binary-save-failure",
+  "commandLine": "binary",
+  "builtinCommands": false,
+  "customCommands": [
+    "binary"
+  ],
+  "vfsResourcePolicy": {
+    "maxOutputArtifactBytes": 3
+  },
+  "execution": {
+    "exitCode": 0,
+    "stdout_b64": "AAECAw==",
+    "stderr": "",
+    "contentType": "application/octet-stream",
+    "trace": [
+      {
+        "relationFromPrevious": null,
+        "executed": true,
+        "exitCode": 0,
+        "commands": [
+          {
+            "argv": [
+              "binary"
+            ],
+            "stdinBytes": 0,
+            "stdoutBytes": 4,
+            "stderr": "",
+            "exitCode": 0,
+            "contentType": "application/octet-stream"
+          }
+        ]
+      }
+    ],
+    "presentation": {
+      "text": "[error] command produced binary output that should not be sent to the model.\nFull output could not be saved because maxOutputArtifactBytes was exceeded (4 > 3).\n\n[exit:0 | 0ms]",
+      "body": "[error] command produced binary output that should not be sent to the model.\nFull output could not be saved because maxOutputArtifactBytes was exceeded (4 > 3).",
+      "stdoutMode": "binary-guard",
+      "totalBytes": 4
+    }
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/.system",
+        "kind": "dir"
+      },
+      {
+        "path": "/.system/cmd-output",
+        "kind": "dir"
+      }
+    ],
+    "memory": []
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "id": "conformance-too-few-args",
+  "command": "grep",
+  "args": [],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "",
+    "stderr": "grep: usage: grep [-i] [-v] [-c] [-n] [-F] [-E] [-o] [-w] [-x] [-q] <pattern> [path]",
+    "exitCode": 1,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

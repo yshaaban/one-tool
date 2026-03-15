@@ -1,0 +1,19 @@
+{
+  "id": "conformance-representative",
+  "command": "diff",
+  "args": [
+    "/",
+    "/"
+  ],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "id": "custom-truncated-save-failure",
+  "commandLine": "burst",
+  "builtinCommands": false,
+  "customCommands": [
+    "burst"
+  ],
+  "outputLimits": {
+    "maxLines": 1,
+    "maxBytes": 1024
+  },
+  "vfsResourcePolicy": {
+    "maxOutputArtifactBytes": 8
+  },
+  "execution": {
+    "exitCode": 0,
+    "stdout_b64": "Zmlyc3QgbGluZQpzZWNvbmQgbGluZQp0aGlyZCBsaW5l",
+    "stdout_text": "first line\nsecond line\nthird line",
+    "stderr": "",
+    "contentType": "text/plain",
+    "trace": [
+      {
+        "relationFromPrevious": null,
+        "executed": true,
+        "exitCode": 0,
+        "commands": [
+          {
+            "argv": [
+              "burst"
+            ],
+            "stdinBytes": 0,
+            "stdoutBytes": 33,
+            "stderr": "",
+            "exitCode": 0,
+            "contentType": "text/plain"
+          }
+        ]
+      }
+    ],
+    "presentation": {
+      "text": "first line\n\n--- output truncated (3 lines, 33B) ---\nFull output could not be saved because maxOutputArtifactBytes was exceeded (33 > 8).\n\n[exit:0 | 0ms]",
+      "body": "first line\n\n--- output truncated (3 lines, 33B) ---\nFull output could not be saved because maxOutputArtifactBytes was exceeded (33 > 8).",
+      "stdoutMode": "truncated",
+      "totalBytes": 33,
+      "totalLines": 3
+    }
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/.system",
+        "kind": "dir"
+      },
+      {
+        "path": "/.system/cmd-output",
+        "kind": "dir"
+      }
+    ],
+    "memory": []
+  }
+}

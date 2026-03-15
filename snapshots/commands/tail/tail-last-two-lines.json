@@ -1,0 +1,35 @@
+{
+  "id": "tail-last-two-lines",
+  "command": "tail",
+  "args": [
+    "-n",
+    "2",
+    "/tail.txt"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/tail.txt": {
+        "kind": "text",
+        "text": "1\n2\n3\n4"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "Mwo0",
+    "stdout_text": "3\n4",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/tail.txt",
+        "kind": "text",
+        "text": "1\n2\n3\n4"
+      }
+    ],
+    "memory": []
+  }
+}

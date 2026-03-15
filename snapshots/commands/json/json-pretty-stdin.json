@@ -1,0 +1,19 @@
+{
+  "id": "json-pretty-stdin",
+  "command": "json",
+  "args": [
+    "pretty"
+  ],
+  "stdin_b64": "eyJiIjoyLCJhIjoxfQ==",
+  "result": {
+    "stdout_b64": "ewogICJiIjogMiwKICAiYSI6IDEKfQ==",
+    "stdout_text": "{\n  \"b\": 2,\n  \"a\": 1\n}",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "application/json"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

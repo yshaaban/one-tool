@@ -1,0 +1,314 @@
+{
+  "id": "memory-distill-owner",
+  "scenario": {
+    "id": "memory-distill-owner",
+    "category": "memory",
+    "description": "Extract the Acme owner from a file and store that fact in memory.",
+    "prompt": "Find the Acme account owner, store it in memory, and confirm you can retrieve it from memory.",
+    "maxTurns": 2,
+    "maxToolCalls": 2,
+    "world": {
+      "files": {
+        "/accounts/acme.md": {
+          "kind": "text",
+          "text": "Customer: Acme Corp\nStatus: renewal at risk\nOwner: sara@example.com\nNotes: prefers Monday check-ins and a concise status summary.\n"
+        },
+        "/config/default.json": {
+          "kind": "text",
+          "text": "{\n  \"env\": \"default\",\n  \"retries\": 3,\n  \"region\": \"us-east-1\"\n}\n"
+        },
+        "/config/prod.json": {
+          "kind": "text",
+          "text": "{\n  \"env\": \"prod\",\n  \"retries\": 5,\n  \"region\": \"eu-west-1\",\n  \"owner\": {\n    \"email\": \"ops@example.com\"\n  }\n}\n"
+        },
+        "/drafts/qbr.md": {
+          "kind": "text",
+          "text": "# QBR draft\n\nOpen items:\n- Revenue variance\n- Renewal risk\n"
+        },
+        "/images/logo.png": {
+          "kind": "bytes",
+          "data_b64": "iVBORw0KGgoAAQID"
+        },
+        "/logs/app.log": {
+          "kind": "text",
+          "text": "2026-03-12T10:00:01Z INFO startup complete\n2026-03-12T10:01:10Z ERROR payment timeout order=123\n2026-03-12T10:01:11Z ERROR payment timeout order=124\n2026-03-12T10:01:12Z WARN retry scheduled order=124\n2026-03-12T10:02:10Z ERROR failed login user=alice\n2026-03-12T10:03:55Z INFO healthcheck ok\n"
+        },
+        "/notes/todo.txt": {
+          "kind": "text",
+          "text": "1. Review refund incident timeline\n2. Confirm Acme renewal owner\n3. Draft follow-up email\n"
+        }
+      },
+      "searchDocs": [
+        {
+          "title": "Refund timeout incident retro",
+          "body": "Payment timeouts spiked during a deploy. Root cause was a retry storm against the order service.",
+          "source": "kb://incidents/refund-timeout"
+        },
+        {
+          "title": "Acme renewal risk notes",
+          "body": "Acme wants a tighter weekly status update and is blocked on invoice mapping.",
+          "source": "kb://accounts/acme-renewal"
+        },
+        {
+          "title": "EU VAT invoice checklist",
+          "body": "Collect legal entity name, billing address, VAT ID, and invoice delivery contact before issuing invoices.",
+          "source": "kb://finance/eu-vat-checklist"
+        },
+        {
+          "title": "Login failure playbook",
+          "body": "Repeated failed login errors can indicate bot traffic or a stale SSO configuration.",
+          "source": "kb://security/login-failure-playbook"
+        }
+      ],
+      "fetchResources": {
+        "crm/customer/acme": {
+          "id": "cust_acme",
+          "owner": {
+            "name": "Sara",
+            "email": "sara@example.com"
+          },
+          "tier": "enterprise",
+          "renewal_month": "2026-04"
+        },
+        "order:123": {
+          "id": "123",
+          "status": "timed_out",
+          "customer": {
+            "name": "Acme Corp",
+            "email": "buyer@acme.example"
+          },
+          "amount": 1499
+        },
+        "text:runbook": "Escalate payment timeouts to the checkout on-call if the error rate exceeds 2%."
+      },
+      "memory": [
+        "Acme prefers Monday follow-ups.",
+        "Refund incident touched payments, billing, and checkout.",
+        "Ops owner for production config is ops@example.com."
+      ]
+    },
+    "oracle": [
+      "grep \"^Owner:\" /accounts/acme.md | memory store",
+      "memory search sara@example.com"
+    ],
+    "assertions": {
+      "finalAnswer": {
+        "contains": [
+          "sara@example.com"
+        ]
+      },
+      "memory": {
+        "contains": [
+          "Owner: sara@example.com"
+        ]
+      },
+      "trace": {
+        "mustInclude": [
+          "grep \"^Owner:\" /accounts/acme.md",
+          "memory store"
+        ],
+        "maxCalls": 2
+      }
+    }
+  },
+  "trace": {
+    "scenarioId": "memory-distill-owner",
+    "steps": [
+      {
+        "command": "grep \"^Owner:\" /accounts/acme.md | memory store",
+        "output": "stored memory #4\n\n[exit:0 | 0ms]",
+        "body": "stored memory #4",
+        "exitCode": 0,
+        "expectedExitCode": 0,
+        "execution": {
+          "exitCode": 0,
+          "stdout_b64": "c3RvcmVkIG1lbW9yeSAjNA==",
+          "stdout_text": "stored memory #4",
+          "stderr": "",
+          "contentType": "text/plain",
+          "trace": [
+            {
+              "relationFromPrevious": null,
+              "executed": true,
+              "exitCode": 0,
+              "commands": [
+                {
+                  "argv": [
+                    "grep",
+                    "^Owner:",
+                    "/accounts/acme.md"
+                  ],
+                  "stdinBytes": 0,
+                  "stdoutBytes": 23,
+                  "stderr": "",
+                  "exitCode": 0,
+                  "contentType": "text/plain"
+                },
+                {
+                  "argv": [
+                    "memory",
+                    "store"
+                  ],
+                  "stdinBytes": 23,
+                  "stdoutBytes": 16,
+                  "stderr": "",
+                  "exitCode": 0,
+                  "contentType": "text/plain"
+                }
+              ]
+            }
+          ],
+          "presentation": {
+            "text": "stored memory #4\n\n[exit:0 | 0ms]",
+            "body": "stored memory #4",
+            "stdoutMode": "plain"
+          }
+        }
+      },
+      {
+        "command": "memory search sara@example.com",
+        "output": "#4  Owner: sara@example.com\n#3  Ops owner for production config is ops@example.com.\n\n[exit:0 | 0ms]",
+        "body": "#4  Owner: sara@example.com\n#3  Ops owner for production config is ops@example.com.",
+        "exitCode": 0,
+        "expectedExitCode": 0,
+        "execution": {
+          "exitCode": 0,
+          "stdout_b64": "IzQgIE93bmVyOiBzYXJhQGV4YW1wbGUuY29tCiMzICBPcHMgb3duZXIgZm9yIHByb2R1Y3Rpb24gY29uZmlnIGlzIG9wc0BleGFtcGxlLmNvbS4=",
+          "stdout_text": "#4  Owner: sara@example.com\n#3  Ops owner for production config is ops@example.com.",
+          "stderr": "",
+          "contentType": "text/plain",
+          "trace": [
+            {
+              "relationFromPrevious": null,
+              "executed": true,
+              "exitCode": 0,
+              "commands": [
+                {
+                  "argv": [
+                    "memory",
+                    "search",
+                    "sara@example.com"
+                  ],
+                  "stdinBytes": 0,
+                  "stdoutBytes": 83,
+                  "stderr": "",
+                  "exitCode": 0,
+                  "contentType": "text/plain"
+                }
+              ]
+            }
+          ],
+          "presentation": {
+            "text": "#4  Owner: sara@example.com\n#3  Ops owner for production config is ops@example.com.\n\n[exit:0 | 0ms]",
+            "body": "#4  Owner: sara@example.com\n#3  Ops owner for production config is ops@example.com.",
+            "stdoutMode": "plain"
+          }
+        }
+      }
+    ],
+    "finalOutput": "#4  Owner: sara@example.com\n#3  Ops owner for production config is ops@example.com.\n\n[exit:0 | 0ms]",
+    "finalBody": "#4  Owner: sara@example.com\n#3  Ops owner for production config is ops@example.com.",
+    "finalExitCode": 0
+  },
+  "assertionResult": {
+    "passed": true,
+    "failures": []
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/.system",
+        "kind": "dir"
+      },
+      {
+        "path": "/.system/cmd-output",
+        "kind": "dir"
+      },
+      {
+        "path": "/accounts",
+        "kind": "dir"
+      },
+      {
+        "path": "/accounts/acme.md",
+        "kind": "text",
+        "text": "Customer: Acme Corp\nStatus: renewal at risk\nOwner: sara@example.com\nNotes: prefers Monday check-ins and a concise status summary.\n"
+      },
+      {
+        "path": "/config",
+        "kind": "dir"
+      },
+      {
+        "path": "/config/default.json",
+        "kind": "text",
+        "text": "{\n  \"env\": \"default\",\n  \"retries\": 3,\n  \"region\": \"us-east-1\"\n}\n"
+      },
+      {
+        "path": "/config/prod.json",
+        "kind": "text",
+        "text": "{\n  \"env\": \"prod\",\n  \"retries\": 5,\n  \"region\": \"eu-west-1\",\n  \"owner\": {\n    \"email\": \"ops@example.com\"\n  }\n}\n"
+      },
+      {
+        "path": "/drafts",
+        "kind": "dir"
+      },
+      {
+        "path": "/drafts/qbr.md",
+        "kind": "text",
+        "text": "# QBR draft\n\nOpen items:\n- Revenue variance\n- Renewal risk\n"
+      },
+      {
+        "path": "/images",
+        "kind": "dir"
+      },
+      {
+        "path": "/images/logo.png",
+        "kind": "bytes",
+        "data_b64": "iVBORw0KGgoAAQID"
+      },
+      {
+        "path": "/logs",
+        "kind": "dir"
+      },
+      {
+        "path": "/logs/app.log",
+        "kind": "text",
+        "text": "2026-03-12T10:00:01Z INFO startup complete\n2026-03-12T10:01:10Z ERROR payment timeout order=123\n2026-03-12T10:01:11Z ERROR payment timeout order=124\n2026-03-12T10:01:12Z WARN retry scheduled order=124\n2026-03-12T10:02:10Z ERROR failed login user=alice\n2026-03-12T10:03:55Z INFO healthcheck ok\n"
+      },
+      {
+        "path": "/notes",
+        "kind": "dir"
+      },
+      {
+        "path": "/notes/todo.txt",
+        "kind": "text",
+        "text": "1. Review refund incident timeline\n2. Confirm Acme renewal owner\n3. Draft follow-up email\n"
+      }
+    ],
+    "memory": [
+      {
+        "id": 1,
+        "text": "Acme prefers Monday follow-ups.",
+        "createdEpochMs": 1700000000015,
+        "metadata": {}
+      },
+      {
+        "id": 2,
+        "text": "Refund incident touched payments, billing, and checkout.",
+        "createdEpochMs": 1700000000016,
+        "metadata": {}
+      },
+      {
+        "id": 3,
+        "text": "Ops owner for production config is ops@example.com.",
+        "createdEpochMs": 1700000000017,
+        "metadata": {}
+      },
+      {
+        "id": 4,
+        "text": "Owner: sara@example.com",
+        "createdEpochMs": 1700000000020,
+        "metadata": {}
+      }
+    ]
+  }
+}

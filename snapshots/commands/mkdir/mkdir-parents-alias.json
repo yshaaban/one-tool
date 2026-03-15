@@ -1,0 +1,33 @@
+{
+  "id": "mkdir-parents-alias",
+  "command": "mkdir",
+  "args": [
+    "-p",
+    "/reports/2026/q2"
+  ],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "Y3JlYXRlZCAvcmVwb3J0cy8yMDI2L3Ey",
+    "stdout_text": "created /reports/2026/q2",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/reports",
+        "kind": "dir"
+      },
+      {
+        "path": "/reports/2026",
+        "kind": "dir"
+      },
+      {
+        "path": "/reports/2026/q2",
+        "kind": "dir"
+      }
+    ],
+    "memory": []
+  }
+}

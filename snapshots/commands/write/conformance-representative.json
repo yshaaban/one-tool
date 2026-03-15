@@ -1,0 +1,26 @@
+{
+  "id": "conformance-representative",
+  "command": "write",
+  "args": [
+    "/t.txt",
+    "x"
+  ],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "d3JvdGUgMUIgdG8gL3QudHh0",
+    "stdout_text": "wrote 1B to /t.txt",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/t.txt",
+        "kind": "text",
+        "text": "x"
+      }
+    ],
+    "memory": []
+  }
+}

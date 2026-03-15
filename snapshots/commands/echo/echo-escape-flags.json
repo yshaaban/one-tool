@@ -1,0 +1,20 @@
+{
+  "id": "echo-escape-flags",
+  "command": "echo",
+  "args": [
+    "-e",
+    "line\\none\\tindent"
+  ],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "bGluZQpvbmUJaW5kZW50Cg==",
+    "stdout_text": "line\none\tindent\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

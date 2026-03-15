@@ -1,0 +1,101 @@
+{
+  "id": "custom-chain-skip-metadata",
+  "commandLine": "echo ok || echo skipped; fail && echo skipped2; echo final",
+  "builtinCommands": false,
+  "customCommands": [
+    "echo",
+    "fail"
+  ],
+  "execution": {
+    "exitCode": 0,
+    "stdout_b64": "b2sKZmluYWw=",
+    "stdout_text": "ok\nfinal",
+    "stderr": "",
+    "contentType": "text/plain",
+    "trace": [
+      {
+        "relationFromPrevious": null,
+        "executed": true,
+        "exitCode": 0,
+        "commands": [
+          {
+            "argv": [
+              "echo",
+              "ok"
+            ],
+            "stdinBytes": 0,
+            "stdoutBytes": 2,
+            "stderr": "",
+            "exitCode": 0,
+            "contentType": "text/plain"
+          }
+        ]
+      },
+      {
+        "relationFromPrevious": "||",
+        "executed": false,
+        "skippedReason": "previous_succeeded",
+        "commands": []
+      },
+      {
+        "relationFromPrevious": ";",
+        "executed": true,
+        "exitCode": 1,
+        "commands": [
+          {
+            "argv": [
+              "fail"
+            ],
+            "stdinBytes": 0,
+            "stdoutBytes": 0,
+            "stderr": "fail: forced failure",
+            "exitCode": 1,
+            "contentType": "text/plain"
+          }
+        ]
+      },
+      {
+        "relationFromPrevious": "&&",
+        "executed": false,
+        "skippedReason": "previous_failed",
+        "commands": []
+      },
+      {
+        "relationFromPrevious": ";",
+        "executed": true,
+        "exitCode": 0,
+        "commands": [
+          {
+            "argv": [
+              "echo",
+              "final"
+            ],
+            "stdinBytes": 0,
+            "stdoutBytes": 5,
+            "stderr": "",
+            "exitCode": 0,
+            "contentType": "text/plain"
+          }
+        ]
+      }
+    ],
+    "presentation": {
+      "text": "ok\nfinal\n\n[exit:0 | 0ms]",
+      "body": "ok\nfinal",
+      "stdoutMode": "plain"
+    }
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/.system",
+        "kind": "dir"
+      },
+      {
+        "path": "/.system/cmd-output",
+        "kind": "dir"
+      }
+    ],
+    "memory": []
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "id": "rm-recursive-alias",
+  "command": "rm",
+  "args": [
+    "-r",
+    "/tree"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/tree/a.txt": {
+        "kind": "text",
+        "text": "alpha"
+      },
+      "/tree/sub/b.txt": {
+        "kind": "text",
+        "text": "beta"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "cmVtb3ZlZCAvdHJlZQ==",
+    "stdout_text": "removed /tree",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

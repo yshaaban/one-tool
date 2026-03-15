@@ -1,0 +1,44 @@
+{
+  "id": "diff-unified-changed-files",
+  "command": "diff",
+  "args": [
+    "-u",
+    "/left.txt",
+    "/right.txt"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/left.txt": {
+        "kind": "text",
+        "text": "alpha\nbravo\n"
+      },
+      "/right.txt": {
+        "kind": "text",
+        "text": "alpha\ncharlie\n"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "LS0tIC9sZWZ0LnR4dAkyMDIzLTExLTE1IDAxOjEzOjIwLjAwMiArMDMwMAorKysgL3JpZ2h0LnR4dAkyMDIzLTExLTE1IDAxOjEzOjIwLjAwMyArMDMwMApAQCAtMSwyICsxLDIgQEAKIGFscGhhCi1icmF2bworY2hhcmxpZQo=",
+    "stdout_text": "--- /left.txt\t2023-11-15 01:13:20.002 +0300\n+++ /right.txt\t2023-11-15 01:13:20.003 +0300\n@@ -1,2 +1,2 @@\n alpha\n-bravo\n+charlie\n",
+    "stderr": "",
+    "exitCode": 1,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/left.txt",
+        "kind": "text",
+        "text": "alpha\nbravo\n"
+      },
+      {
+        "path": "/right.txt",
+        "kind": "text",
+        "text": "alpha\ncharlie\n"
+      }
+    ],
+    "memory": []
+  }
+}

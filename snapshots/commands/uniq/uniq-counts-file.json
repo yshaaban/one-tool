@@ -1,0 +1,34 @@
+{
+  "id": "uniq-counts-file",
+  "command": "uniq",
+  "args": [
+    "-c",
+    "/repeated.txt"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/repeated.txt": {
+        "kind": "text",
+        "text": "a\na\nb\nb\nb\n"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "ICAgICAgMiBhCiAgICAgIDMgYg==",
+    "stdout_text": "      2 a\n      3 b",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/repeated.txt",
+        "kind": "text",
+        "text": "a\na\nb\nb\nb\n"
+      }
+    ],
+    "memory": []
+  }
+}

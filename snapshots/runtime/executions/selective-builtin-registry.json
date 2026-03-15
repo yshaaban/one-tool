@@ -1,0 +1,56 @@
+{
+  "id": "selective-builtin-registry",
+  "commandLine": "ls",
+  "builtinCommands": {
+    "includeGroups": [
+      "system",
+      "text"
+    ],
+    "excludeCommands": [
+      "memory"
+    ]
+  },
+  "execution": {
+    "exitCode": 127,
+    "stdout_b64": "",
+    "stderr": "unknown command: ls\nAvailable: echo, grep, head, help, sed, sort, tail, tr, uniq, wc",
+    "contentType": "text/plain",
+    "trace": [
+      {
+        "relationFromPrevious": null,
+        "executed": true,
+        "exitCode": 127,
+        "commands": [
+          {
+            "argv": [
+              "ls"
+            ],
+            "stdinBytes": 0,
+            "stdoutBytes": 0,
+            "stderr": "unknown command: ls\nAvailable: echo, grep, head, help, sed, sort, tail, tr, uniq, wc",
+            "exitCode": 127,
+            "contentType": "text/plain"
+          }
+        ]
+      }
+    ],
+    "presentation": {
+      "text": "[error] unknown command: ls\nAvailable: echo, grep, head, help, sed, sort, tail, tr, uniq, wc\n\n[exit:127 | 0ms]",
+      "body": "[error] unknown command: ls\nAvailable: echo, grep, head, help, sed, sort, tail, tr, uniq, wc",
+      "stdoutMode": "plain"
+    }
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/.system",
+        "kind": "dir"
+      },
+      {
+        "path": "/.system/cmd-output",
+        "kind": "dir"
+      }
+    ],
+    "memory": []
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "id": "conformance-representative",
+  "command": "head",
+  "args": [],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "",
+    "stderr": "head: no input provided. Usage: see 'help head'",
+    "exitCode": 1,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "id": "conformance-stdin-rejection",
+  "command": "ls",
+  "args": [
+    "/"
+  ],
+  "stdin_b64": "dW53YW50ZWQgc3RkaW4=",
+  "result": {
+    "stdout_b64": "",
+    "stderr": "ls: does not accept stdin",
+    "exitCode": 1,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

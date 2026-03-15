@@ -1,0 +1,18 @@
+{
+  "id": "conformance-missing-fetch-adapter",
+  "command": "fetch",
+  "args": [
+    "res:1"
+  ],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "",
+    "stderr": "fetch: no fetch adapter configured. Pass { adapters: { fetch: ... } } to createAgentCLI(...) to use this command.",
+    "exitCode": 1,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

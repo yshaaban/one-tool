@@ -1,0 +1,18 @@
+{
+  "id": "conformance-too-few-args",
+  "command": "diff",
+  "args": [
+    "arg0"
+  ],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "",
+    "stderr": "diff: usage: diff [-u|-U N|-c|-C N] [-r] [-a] [-b] [-i] <left> <right>",
+    "exitCode": 2,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "id": "write-from-stdin",
+  "command": "write",
+  "args": [
+    "/notes/stdin.txt"
+  ],
+  "stdin_b64": "ZnJvbSBzdGRpbg==",
+  "result": {
+    "stdout_b64": "d3JvdGUgMTBCIHRvIC9ub3Rlcy9zdGRpbi50eHQ=",
+    "stdout_text": "wrote 10B to /notes/stdin.txt",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/notes",
+        "kind": "dir"
+      },
+      {
+        "path": "/notes/stdin.txt",
+        "kind": "text",
+        "text": "from stdin"
+      }
+    ],
+    "memory": []
+  }
+}

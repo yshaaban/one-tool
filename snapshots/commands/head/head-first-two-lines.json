@@ -1,0 +1,35 @@
+{
+  "id": "head-first-two-lines",
+  "command": "head",
+  "args": [
+    "-n",
+    "2",
+    "/notes.txt"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/notes.txt": {
+        "kind": "text",
+        "text": "a\nb\nc\nd"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "YQpiCg==",
+    "stdout_text": "a\nb\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/notes.txt",
+        "kind": "text",
+        "text": "a\nb\nc\nd"
+      }
+    ],
+    "memory": []
+  }
+}
