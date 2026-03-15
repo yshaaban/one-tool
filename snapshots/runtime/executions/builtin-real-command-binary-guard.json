@@ -1,0 +1,67 @@
+{
+  "id": "builtin-real-command-binary-guard",
+  "commandLine": "echo abc | tr a '\\000'",
+  "execution": {
+    "exitCode": 0,
+    "stdout_b64": "AGJjCg==",
+    "stderr": "",
+    "contentType": "application/octet-stream",
+    "trace": [
+      {
+        "relationFromPrevious": null,
+        "executed": true,
+        "exitCode": 0,
+        "commands": [
+          {
+            "argv": [
+              "echo",
+              "abc"
+            ],
+            "stdinBytes": 0,
+            "stdoutBytes": 4,
+            "stderr": "",
+            "exitCode": 0,
+            "contentType": "text/plain"
+          },
+          {
+            "argv": [
+              "tr",
+              "a",
+              "\\000"
+            ],
+            "stdinBytes": 4,
+            "stdoutBytes": 4,
+            "stderr": "",
+            "exitCode": 0,
+            "contentType": "application/octet-stream"
+          }
+        ]
+      }
+    ],
+    "presentation": {
+      "text": "[error] command produced binary output that should not be sent to the model.\nSaved to: /.system/cmd-output/cmd-0001.bin\nUse: stat /.system/cmd-output/cmd-0001.bin\n\n[exit:0 | 0ms]",
+      "body": "[error] command produced binary output that should not be sent to the model.\nSaved to: /.system/cmd-output/cmd-0001.bin\nUse: stat /.system/cmd-output/cmd-0001.bin",
+      "stdoutMode": "binary-guard",
+      "savedPath": "/.system/cmd-output/cmd-0001.bin",
+      "totalBytes": 4
+    }
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/.system",
+        "kind": "dir"
+      },
+      {
+        "path": "/.system/cmd-output",
+        "kind": "dir"
+      },
+      {
+        "path": "/.system/cmd-output/cmd-0001.bin",
+        "kind": "bytes",
+        "data_b64": "AGJjCg=="
+      }
+    ],
+    "memory": []
+  }
+}

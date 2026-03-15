@@ -1,0 +1,20 @@
+{
+  "id": "parity-paired-case-classes",
+  "command": "tr",
+  "args": [
+    "[:lower:]",
+    "[:upper:]"
+  ],
+  "stdin_b64": "YWJjMTIzCg==",
+  "result": {
+    "stdout_b64": "QUJDMTIzCg==",
+    "stdout_text": "ABC123\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

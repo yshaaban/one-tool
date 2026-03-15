@@ -1,0 +1,47 @@
+{
+  "id": "parity-all-listing",
+  "command": "ls",
+  "args": [
+    "-a",
+    "/tree"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/tree/.hidden": {
+        "kind": "text",
+        "text": "secret\n"
+      },
+      "/tree/visible.txt": {
+        "kind": "text",
+        "text": "visible\n"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "LgouLgouaGlkZGVuCnZpc2libGUudHh0",
+    "stdout_text": ".\n..\n.hidden\nvisible.txt",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/tree",
+        "kind": "dir"
+      },
+      {
+        "path": "/tree/.hidden",
+        "kind": "text",
+        "text": "secret\n"
+      },
+      {
+        "path": "/tree/visible.txt",
+        "kind": "text",
+        "text": "visible\n"
+      }
+    ],
+    "memory": []
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "id": "parity-script-file-rewrite",
+  "command": "sed",
+  "args": [
+    "-n",
+    "-f",
+    "/rewrite.sed",
+    "/input.txt"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/input.txt": {
+        "kind": "text",
+        "text": "foo\nfoo\n"
+      },
+      "/rewrite.sed": {
+        "kind": "text",
+        "text": "s/foo/bar/\n2p\n"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "YmFyCg==",
+    "stdout_text": "bar\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/input.txt",
+        "kind": "text",
+        "text": "foo\nfoo\n"
+      },
+      {
+        "path": "/rewrite.sed",
+        "kind": "text",
+        "text": "s/foo/bar/\n2p\n"
+      }
+    ],
+    "memory": []
+  }
+}

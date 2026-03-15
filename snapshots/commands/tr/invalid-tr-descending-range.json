@@ -1,0 +1,19 @@
+{
+  "id": "invalid-tr-descending-range",
+  "command": "tr",
+  "args": [
+    "z-a",
+    "A-Z"
+  ],
+  "stdin_b64": "YWJjCg==",
+  "result": {
+    "stdout_b64": "",
+    "stderr": "tr: invalid descending range",
+    "exitCode": 1,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

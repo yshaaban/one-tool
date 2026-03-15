@@ -1,0 +1,20 @@
+{
+  "id": "parity-translate-lowercase-uppercase",
+  "command": "tr",
+  "args": [
+    "a-z",
+    "A-Z"
+  ],
+  "stdin_b64": "YmFuYW5hCg==",
+  "result": {
+    "stdout_b64": "QkFOQU5BCg==",
+    "stdout_text": "BANANA\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

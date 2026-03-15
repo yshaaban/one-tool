@@ -1,0 +1,30 @@
+{
+  "id": "custom-parse-background-operator",
+  "commandLine": "echo hi &",
+  "builtinCommands": false,
+  "execution": {
+    "exitCode": 2,
+    "stdout_b64": "",
+    "stderr": "background operator '&' is not supported. Use ';' or explicit chaining instead.",
+    "contentType": "text/plain",
+    "trace": [],
+    "presentation": {
+      "text": "[error] background operator '&' is not supported. Use ';' or explicit chaining instead.\n\n[exit:2 | 0ms]",
+      "body": "[error] background operator '&' is not supported. Use ';' or explicit chaining instead.",
+      "stdoutMode": "plain"
+    }
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/.system",
+        "kind": "dir"
+      },
+      {
+        "path": "/.system/cmd-output",
+        "kind": "dir"
+      }
+    ],
+    "memory": []
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "parity-squeeze-spaces",
+  "command": "tr",
+  "args": [
+    "-s",
+    " "
+  ],
+  "stdin_b64": "YSAgIGIK",
+  "result": {
+    "stdout_b64": "YSBiCg==",
+    "stdout_text": "a b\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

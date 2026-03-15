@@ -1,0 +1,37 @@
+{
+  "id": "parity-insert-and-append",
+  "command": "sed",
+  "args": [
+    "-e",
+    "1i\\TOP",
+    "-e",
+    "2a\\BOTTOM",
+    "/notes.txt"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/notes.txt": {
+        "kind": "text",
+        "text": "alpha\nbeta\n"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "VE9QCmFscGhhCmJldGEKQk9UVE9NCg==",
+    "stdout_text": "TOP\nalpha\nbeta\nBOTTOM\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/notes.txt",
+        "kind": "text",
+        "text": "alpha\nbeta\n"
+      }
+    ],
+    "memory": []
+  }
+}

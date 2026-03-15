@@ -1,0 +1,48 @@
+{
+  "id": "builtin-failing-pipeline-skips-side-effects",
+  "commandLine": "cat /missing.txt | write /tmp/oops.txt",
+  "execution": {
+    "exitCode": 1,
+    "stdout_b64": "",
+    "stderr": "cat: file not found: /missing.txt. Use: ls /",
+    "contentType": "text/plain",
+    "trace": [
+      {
+        "relationFromPrevious": null,
+        "executed": true,
+        "exitCode": 1,
+        "commands": [
+          {
+            "argv": [
+              "cat",
+              "/missing.txt"
+            ],
+            "stdinBytes": 0,
+            "stdoutBytes": 0,
+            "stderr": "cat: file not found: /missing.txt. Use: ls /",
+            "exitCode": 1,
+            "contentType": "text/plain"
+          }
+        ]
+      }
+    ],
+    "presentation": {
+      "text": "[error] cat: file not found: /missing.txt. Use: ls /\n\n[exit:1 | 0ms]",
+      "body": "[error] cat: file not found: /missing.txt. Use: ls /",
+      "stdoutMode": "plain"
+    }
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/.system",
+        "kind": "dir"
+      },
+      {
+        "path": "/.system/cmd-output",
+        "kind": "dir"
+      }
+    ],
+    "memory": []
+  }
+}

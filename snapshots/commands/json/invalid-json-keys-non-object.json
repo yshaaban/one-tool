@@ -1,0 +1,18 @@
+{
+  "id": "invalid-json-keys-non-object",
+  "command": "json",
+  "args": [
+    "keys"
+  ],
+  "stdin_b64": "WyJhbHBoYSIsImJldGEiXQ==",
+  "result": {
+    "stdout_b64": "",
+    "stderr": "json keys: input must be a JSON object",
+    "exitCode": 1,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

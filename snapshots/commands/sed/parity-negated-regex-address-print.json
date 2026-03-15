@@ -1,0 +1,20 @@
+{
+  "id": "parity-negated-regex-address-print",
+  "command": "sed",
+  "args": [
+    "-n",
+    "/keep/!p"
+  ],
+  "stdin_b64": "YQprZWVwCmIK",
+  "result": {
+    "stdout_b64": "YQpiCg==",
+    "stdout_text": "a\nb\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

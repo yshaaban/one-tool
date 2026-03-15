@@ -1,0 +1,20 @@
+{
+  "id": "parity-quiet-fixed-string-from-stdin",
+  "command": "grep",
+  "args": [
+    "-q",
+    "-F",
+    "refund"
+  ],
+  "stdin_b64": "cmVmdW5kIGNyZWF0ZWQKc2tpcAo=",
+  "result": {
+    "stdout_b64": "",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

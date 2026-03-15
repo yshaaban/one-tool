@@ -1,0 +1,40 @@
+{
+  "id": "invalid-append-resource-limit",
+  "command": "append",
+  "args": [
+    "/notes/log.txt",
+    "!"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/notes/log.txt": {
+        "kind": "text",
+        "text": "abc"
+      }
+    }
+  },
+  "vfsResourcePolicy": {
+    "maxFileBytes": 3
+  },
+  "result": {
+    "stdout_b64": "",
+    "stderr": "append: resource limit exceeded (maxFileBytes: 4 > 3) at /notes/log.txt",
+    "exitCode": 1,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/notes",
+        "kind": "dir"
+      },
+      {
+        "path": "/notes/log.txt",
+        "kind": "text",
+        "text": "abc"
+      }
+    ],
+    "memory": []
+  }
+}

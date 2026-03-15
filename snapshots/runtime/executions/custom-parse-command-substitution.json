@@ -1,0 +1,30 @@
+{
+  "id": "custom-parse-command-substitution",
+  "commandLine": "echo $(whoami)",
+  "builtinCommands": false,
+  "execution": {
+    "exitCode": 2,
+    "stdout_b64": "",
+    "stderr": "command substitution is not supported. Compose commands explicitly with pipes and files.",
+    "contentType": "text/plain",
+    "trace": [],
+    "presentation": {
+      "text": "[error] command substitution is not supported. Compose commands explicitly with pipes and files.\n\n[exit:2 | 0ms]",
+      "body": "[error] command substitution is not supported. Compose commands explicitly with pipes and files.",
+      "stdoutMode": "plain"
+    }
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/.system",
+        "kind": "dir"
+      },
+      {
+        "path": "/.system/cmd-output",
+        "kind": "dir"
+      }
+    ],
+    "memory": []
+  }
+}

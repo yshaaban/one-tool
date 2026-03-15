@@ -1,0 +1,19 @@
+{
+  "id": "parity-negated-range-change",
+  "command": "sed",
+  "args": [
+    "1,2!c\\X"
+  ],
+  "stdin_b64": "YQpiCmMKZAo=",
+  "result": {
+    "stdout_b64": "YQpiClgKWAo=",
+    "stdout_text": "a\nb\nX\nX\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

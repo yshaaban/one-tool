@@ -1,0 +1,19 @@
+{
+  "id": "parity-substitute-from-second-match",
+  "command": "sed",
+  "args": [
+    "s/a/A/2g"
+  ],
+  "stdin_b64": "YSBhIGEK",
+  "result": {
+    "stdout_b64": "YSBBIEEK",
+    "stdout_text": "a A A\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

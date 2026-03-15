@@ -1,0 +1,44 @@
+{
+  "id": "invalid-diff-context-count",
+  "command": "diff",
+  "args": [
+    "-C",
+    "nope",
+    "/left.txt",
+    "/right.txt"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/left.txt": {
+        "kind": "text",
+        "text": "left\n"
+      },
+      "/right.txt": {
+        "kind": "text",
+        "text": "right\n"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "",
+    "stderr": "diff: invalid context line count: nope",
+    "exitCode": 2,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/left.txt",
+        "kind": "text",
+        "text": "left\n"
+      },
+      {
+        "path": "/right.txt",
+        "kind": "text",
+        "text": "right\n"
+      }
+    ],
+    "memory": []
+  }
+}

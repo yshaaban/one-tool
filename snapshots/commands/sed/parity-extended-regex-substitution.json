@@ -1,0 +1,35 @@
+{
+  "id": "parity-extended-regex-substitution",
+  "command": "sed",
+  "args": [
+    "-E",
+    "s/x=([0-9]+),y=([0-9]+)/\\2,\\1/",
+    "/coords.txt"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/coords.txt": {
+        "kind": "text",
+        "text": "x=10,y=20\n"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "MjAsMTAK",
+    "stdout_text": "20,10\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/coords.txt",
+        "kind": "text",
+        "text": "x=10,y=20\n"
+      }
+    ],
+    "memory": []
+  }
+}

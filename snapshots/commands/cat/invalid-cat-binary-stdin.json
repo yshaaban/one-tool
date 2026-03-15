@@ -1,0 +1,18 @@
+{
+  "id": "invalid-cat-binary-stdin",
+  "command": "cat",
+  "args": [
+    "-"
+  ],
+  "stdin_b64": "AAECAw==",
+  "result": {
+    "stdout_b64": "",
+    "stderr": "cat: stdin is binary (4B). Pipe text only, or save binary data to a file and inspect with stat.",
+    "exitCode": 1,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

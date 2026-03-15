@@ -1,0 +1,20 @@
+{
+  "id": "parity-delete-digits",
+  "command": "tr",
+  "args": [
+    "-d",
+    "0-9"
+  ],
+  "stdin_b64": "YTFiMmMzCg==",
+  "result": {
+    "stdout_b64": "YWJjCg==",
+    "stdout_text": "abc\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

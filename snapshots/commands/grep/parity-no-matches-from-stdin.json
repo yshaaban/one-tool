@@ -1,0 +1,19 @@
+{
+  "id": "parity-no-matches-from-stdin",
+  "command": "grep",
+  "args": [
+    "-F",
+    "missing"
+  ],
+  "stdin_b64": "cmVmdW5kIGNyZWF0ZWQKc2tpcAo=",
+  "result": {
+    "stdout_b64": "",
+    "stderr": "",
+    "exitCode": 1,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

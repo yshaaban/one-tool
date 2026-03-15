@@ -1,0 +1,21 @@
+{
+  "id": "parity-truncate-set1-to-string2",
+  "command": "tr",
+  "args": [
+    "-t",
+    "abcd",
+    "xy"
+  ],
+  "stdin_b64": "YWJjZAo=",
+  "result": {
+    "stdout_b64": "eHljZAo=",
+    "stdout_text": "xycd\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "id": "parity-range-change-multiline-text",
+  "command": "sed",
+  "args": [
+    "2,3c\\line 1\\nline 2",
+    "/notes.txt"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/notes.txt": {
+        "kind": "text",
+        "text": "a\nb\nc\nd\n"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "YQpsaW5lIDEKbGluZSAyCmQK",
+    "stdout_text": "a\nline 1\nline 2\nd\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/notes.txt",
+        "kind": "text",
+        "text": "a\nb\nc\nd\n"
+      }
+    ],
+    "memory": []
+  }
+}

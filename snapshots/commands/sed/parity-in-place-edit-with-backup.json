@@ -1,0 +1,39 @@
+{
+  "id": "parity-in-place-edit-with-backup",
+  "command": "sed",
+  "args": [
+    "-i.bak",
+    "s/us-east-1/us-west-2/",
+    "/config.env"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/config.env": {
+        "kind": "text",
+        "text": "REGION=us-east-1\n"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/config.env",
+        "kind": "text",
+        "text": "REGION=us-west-2\n"
+      },
+      {
+        "path": "/config.env.bak",
+        "kind": "text",
+        "text": "REGION=us-east-1\n"
+      }
+    ],
+    "memory": []
+  }
+}

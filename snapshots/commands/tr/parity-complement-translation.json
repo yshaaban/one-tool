@@ -1,0 +1,21 @@
+{
+  "id": "parity-complement-translation",
+  "command": "tr",
+  "args": [
+    "-c",
+    "a",
+    "z"
+  ],
+  "stdin_b64": "YWIK",
+  "result": {
+    "stdout_b64": "YXp6",
+    "stdout_text": "azz",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "id": "invalid-sed-unterminated-substitute-pattern",
+  "command": "sed",
+  "args": [
+    "s/a"
+  ],
+  "stdin_b64": "YQo=",
+  "result": {
+    "stdout_b64": "",
+    "stderr": "sed: unterminated substitute pattern",
+    "exitCode": 1,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

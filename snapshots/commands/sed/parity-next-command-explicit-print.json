@@ -1,0 +1,35 @@
+{
+  "id": "parity-next-command-explicit-print",
+  "command": "sed",
+  "args": [
+    "-n",
+    "n;p",
+    "/numbers.txt"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/numbers.txt": {
+        "kind": "text",
+        "text": "1\n2\n3\n"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "Mgo=",
+    "stdout_text": "2\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/numbers.txt",
+        "kind": "text",
+        "text": "1\n2\n3\n"
+      }
+    ],
+    "memory": []
+  }
+}

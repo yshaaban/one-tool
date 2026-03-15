@@ -1,0 +1,36 @@
+{
+  "id": "parity-ignore-case-with-line-numbers",
+  "command": "grep",
+  "args": [
+    "-i",
+    "-n",
+    "error",
+    "/app.log"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/app.log": {
+        "kind": "text",
+        "text": "INFO startup\nerror timeout\nWARN retry\nerror db\n"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "MjplcnJvciB0aW1lb3V0CjQ6ZXJyb3IgZGI=",
+    "stdout_text": "2:error timeout\n4:error db",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/app.log",
+        "kind": "text",
+        "text": "INFO startup\nerror timeout\nWARN retry\nerror db\n"
+      }
+    ],
+    "memory": []
+  }
+}

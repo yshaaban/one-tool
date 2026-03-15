@@ -1,0 +1,31 @@
+{
+  "id": "invalid-append-directory-target",
+  "command": "append",
+  "args": [
+    "/notes",
+    "next"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/notes": {
+        "kind": "dir"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "",
+    "stderr": "append: path is a directory: /notes. Use: ls /notes",
+    "exitCode": 1,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/notes",
+        "kind": "dir"
+      }
+    ],
+    "memory": []
+  }
+}

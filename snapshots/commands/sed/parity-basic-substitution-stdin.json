@@ -1,0 +1,19 @@
+{
+  "id": "parity-basic-substitution-stdin",
+  "command": "sed",
+  "args": [
+    "s/ERROR/WARN/g"
+  ],
+  "stdin_b64": "RVJST1Igb25lCkVSUk9SIHR3bwo=",
+  "result": {
+    "stdout_b64": "V0FSTiBvbmUKV0FSTiB0d28K",
+    "stdout_text": "WARN one\nWARN two\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

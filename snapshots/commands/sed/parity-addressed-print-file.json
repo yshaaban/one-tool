@@ -1,0 +1,35 @@
+{
+  "id": "parity-addressed-print-file",
+  "command": "sed",
+  "args": [
+    "-n",
+    "2p",
+    "/app.log"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/app.log": {
+        "kind": "text",
+        "text": "alpha\nbeta\ngamma\n"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "YmV0YQo=",
+    "stdout_text": "beta\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/app.log",
+        "kind": "text",
+        "text": "alpha\nbeta\ngamma\n"
+      }
+    ],
+    "memory": []
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "id": "parity-fixed-string-only-matching",
+  "command": "grep",
+  "args": [
+    "-F",
+    "-o",
+    "timeout",
+    "/app.log"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/app.log": {
+        "kind": "text",
+        "text": "error timeout\nWARN timeout\ntimeout timeout\n"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "dGltZW91dAp0aW1lb3V0CnRpbWVvdXQKdGltZW91dA==",
+    "stdout_text": "timeout\ntimeout\ntimeout\ntimeout",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/app.log",
+        "kind": "text",
+        "text": "error timeout\nWARN timeout\ntimeout timeout\n"
+      }
+    ],
+    "memory": []
+  }
+}

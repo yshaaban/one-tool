@@ -1,0 +1,59 @@
+{
+  "id": "parity-plain-directory-listing",
+  "command": "ls",
+  "args": [
+    "/tree"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/tree/.hidden": {
+        "kind": "text",
+        "text": "secret\n"
+      },
+      "/tree/nested/child.txt": {
+        "kind": "text",
+        "text": "child\n"
+      },
+      "/tree/visible.txt": {
+        "kind": "text",
+        "text": "visible\n"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "bmVzdGVkCnZpc2libGUudHh0",
+    "stdout_text": "nested\nvisible.txt",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/tree",
+        "kind": "dir"
+      },
+      {
+        "path": "/tree/nested",
+        "kind": "dir"
+      },
+      {
+        "path": "/tree/nested/child.txt",
+        "kind": "text",
+        "text": "child\n"
+      },
+      {
+        "path": "/tree/.hidden",
+        "kind": "text",
+        "text": "secret\n"
+      },
+      {
+        "path": "/tree/visible.txt",
+        "kind": "text",
+        "text": "visible\n"
+      }
+    ],
+    "memory": []
+  }
+}

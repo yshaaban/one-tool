@@ -1,0 +1,35 @@
+{
+  "id": "parity-whole-line-regex",
+  "command": "grep",
+  "args": [
+    "-x",
+    "WARN retry",
+    "/app.log"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/app.log": {
+        "kind": "text",
+        "text": "WARN retry\nWARN retry later\n"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "V0FSTiByZXRyeQ==",
+    "stdout_text": "WARN retry",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/app.log",
+        "kind": "text",
+        "text": "WARN retry\nWARN retry later\n"
+      }
+    ],
+    "memory": []
+  }
+}

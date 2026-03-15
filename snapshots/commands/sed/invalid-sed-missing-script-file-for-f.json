@@ -1,0 +1,18 @@
+{
+  "id": "invalid-sed-missing-script-file-for-f",
+  "command": "sed",
+  "args": [
+    "-f"
+  ],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "",
+    "stderr": "sed: missing script file for -f",
+    "exitCode": 1,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

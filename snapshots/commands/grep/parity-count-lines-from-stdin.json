@@ -1,0 +1,20 @@
+{
+  "id": "parity-count-lines-from-stdin",
+  "command": "grep",
+  "args": [
+    "-c",
+    "refund"
+  ],
+  "stdin_b64": "cmVmdW5kIGNyZWF0ZWQKcmVmdW5kIHVwZGF0ZWQKc2tpcAo=",
+  "result": {
+    "stdout_b64": "Mg==",
+    "stdout_text": "2",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

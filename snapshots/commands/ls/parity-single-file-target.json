@@ -1,0 +1,33 @@
+{
+  "id": "parity-single-file-target",
+  "command": "ls",
+  "args": [
+    "/item.txt"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/item.txt": {
+        "kind": "text",
+        "text": "hello\n"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "L2l0ZW0udHh0",
+    "stdout_text": "/item.txt",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/item.txt",
+        "kind": "text",
+        "text": "hello\n"
+      }
+    ],
+    "memory": []
+  }
+}

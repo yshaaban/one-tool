@@ -1,0 +1,20 @@
+{
+  "id": "invalid-sed-inplace-stdin-marker",
+  "command": "sed",
+  "args": [
+    "-i",
+    "s/a/b/",
+    "-"
+  ],
+  "stdin_b64": "YQo=",
+  "result": {
+    "stdout_b64": "",
+    "stderr": "sed: cannot use -i with stdin",
+    "exitCode": 1,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

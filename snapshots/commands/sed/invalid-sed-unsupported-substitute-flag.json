@@ -1,0 +1,18 @@
+{
+  "id": "invalid-sed-unsupported-substitute-flag",
+  "command": "sed",
+  "args": [
+    "s/a/b/w"
+  ],
+  "stdin_b64": "YQo=",
+  "result": {
+    "stdout_b64": "",
+    "stderr": "sed: unsupported substitute flag: w",
+    "exitCode": 1,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

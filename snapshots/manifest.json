@@ -4,8 +4,8 @@
     "parser": 29,
     "vfs": 25,
     "utils": 29,
-    "commands": 140,
-    "runtime": 16,
+    "commands": 176,
+    "runtime": 20,
     "scenarios": 14
   }
 }

@@ -1,0 +1,20 @@
+{
+  "id": "parity-zero-second-regex-range",
+  "command": "sed",
+  "args": [
+    "-n",
+    "/hit/,0p"
+  ],
+  "stdin_b64": "aGl0CnJlc3QKaGl0Cg==",
+  "result": {
+    "stdout_b64": "aGl0CmhpdAo=",
+    "stdout_text": "hit\nhit\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

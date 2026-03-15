@@ -1,0 +1,21 @@
+{
+  "id": "parity-delete-then-squeeze-newlines",
+  "command": "tr",
+  "args": [
+    "-ds",
+    "0-9",
+    "\\n"
+  ],
+  "stdin_b64": "YTEKCjJiCg==",
+  "result": {
+    "stdout_b64": "YQpiCg==",
+    "stdout_text": "a\nb\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

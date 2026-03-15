@@ -1,0 +1,51 @@
+{
+  "id": "parity-recursive-listing",
+  "command": "ls",
+  "args": [
+    "-R",
+    "/tree"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/tree/nested/child.txt": {
+        "kind": "text",
+        "text": "child\n"
+      },
+      "/tree/visible.txt": {
+        "kind": "text",
+        "text": "visible\n"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "L3RyZWU6Cm5lc3RlZAp2aXNpYmxlLnR4dAoKL3RyZWUvbmVzdGVkOgpjaGlsZC50eHQ=",
+    "stdout_text": "/tree:\nnested\nvisible.txt\n\n/tree/nested:\nchild.txt",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/tree",
+        "kind": "dir"
+      },
+      {
+        "path": "/tree/nested",
+        "kind": "dir"
+      },
+      {
+        "path": "/tree/nested/child.txt",
+        "kind": "text",
+        "text": "child\n"
+      },
+      {
+        "path": "/tree/visible.txt",
+        "kind": "text",
+        "text": "visible\n"
+      }
+    ],
+    "memory": []
+  }
+}
