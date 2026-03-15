@@ -301,41 +301,48 @@ async def _read_sed_script_file(
 
 def _parse_sed_commands(script: str, extended_regex: bool) -> tuple[list[SedCommand], str | None]:
     commands: list[SedCommand] = []
-    for raw in _split_sed_script(script):
-        command, error_text = _parse_sed_command(raw, extended_regex)
+    index = 0
+
+    while index < len(script):
+        index = _skip_sed_separators(script, index)
+        if index >= len(script):
+            break
+
+        command, index, error_text = _parse_sed_command(script, index, extended_regex)
         if error_text is not None:
             return ([], error_text)
         assert command is not None
         commands.append(command)
+
+    if not commands:
+        return ([], "empty script")
+
     return (commands, None)
 
 
-def _split_sed_script(script: str) -> list[str]:
-    commands: list[str] = []
-    for line in script.splitlines():
-        stripped = line.strip()
-        if stripped == "":
-            continue
-        commands.append(stripped)
-    return commands
-
-
-def _parse_sed_command(raw: str, extended_regex: bool) -> tuple[SedCommand | None, str | None]:
-    index = 0
+def _parse_sed_command(
+    raw: str,
+    start_index: int,
+    extended_regex: bool,
+) -> tuple[SedCommand | None, int, str | None]:
+    index = start_index
     address1, index, error_text = _parse_sed_address(raw, index, extended_regex)
     if error_text is not None:
-        return (None, error_text)
+        return (None, start_index, error_text)
     address2: SedAddress | None = None
     negated = False
+    if address1 is not None:
+        index = _skip_sed_horizontal_whitespace(raw, index)
     if address1 is not None and index < len(raw) and raw[index] == ",":
         address2, index, error_text = _parse_sed_address(raw, index + 1, extended_regex)
         if error_text is not None:
-            return (None, error_text)
+            return (None, start_index, error_text)
         if address2 is None:
-            return (None, "missing second address")
+            return (None, start_index, "missing second address")
+        index = _skip_sed_horizontal_whitespace(raw, index)
 
     if not _has_valid_zero_address_usage(address1, address2):
-        return (None, "invalid usage of line address 0")
+        return (None, start_index, "invalid usage of line address 0")
 
     index = _skip_sed_horizontal_whitespace(raw, index)
     if index < len(raw) and raw[index] == "!":
@@ -344,10 +351,10 @@ def _parse_sed_command(raw: str, extended_regex: bool) -> tuple[SedCommand | Non
         index = _skip_sed_horizontal_whitespace(raw, index)
 
     if index >= len(raw):
-        return (None, "missing sed command")
+        return (None, start_index, "unexpected end of script")
 
     kind = raw[index]
-    payload = raw[index + 1 :]
+    index += 1
     if kind in {"p", "d", "q", "n"}:
         mapped_kind = {
             "p": "print",
@@ -355,21 +362,25 @@ def _parse_sed_command(raw: str, extended_regex: bool) -> tuple[SedCommand | Non
             "q": "quit",
             "n": "next",
         }[kind]
-        return (SedCommand(address1, address2, negated, mapped_kind), None)
+        return (SedCommand(address1, address2, negated, mapped_kind), _finish_sed_simple_command(raw, index), None)
     if kind in {"a", "i", "c"}:
-        text = _parse_sed_text_argument(payload)
+        text = _parse_sed_text_argument(raw, index)
         mapped_kind = {
             "a": "append",
             "i": "insert",
             "c": "change",
         }[kind]
-        return (SedCommand(address1, address2, negated, mapped_kind, text=text), None)
+        return (
+            SedCommand(address1, address2, negated, mapped_kind, text=text),
+            _advance_past_sed_text_argument(raw, index),
+            None,
+        )
     if kind == "s":
-        substitute, error_text = _parse_sed_substitute(payload, extended_regex)
+        substitute, next_index, error_text = _parse_sed_substitute(raw, index, extended_regex)
         if error_text is not None:
-            return (None, error_text)
-        return (SedCommand(address1, address2, negated, "substitute", substitute=substitute), None)
-    return (None, f"unsupported sed command: {kind}")
+            return (None, start_index, error_text)
+        return (SedCommand(address1, address2, negated, "substitute", substitute=substitute), next_index, None)
+    return (None, start_index, f"unsupported sed command: {kind}")
 
 
 def _parse_sed_address(
@@ -422,46 +433,35 @@ def _skip_sed_horizontal_whitespace(raw: str, index: int) -> int:
     return index
 
 
-def _parse_sed_substitute(source: str, extended_regex: bool) -> tuple[SedSubstitute | None, str | None]:
-    if source == "":
-        return (None, "missing substitute delimiter")
-    delimiter = source[0]
-    parts: list[str] = []
-    current: list[str] = []
-    escaped = False
-    index = 1
-    while index < len(source):
-        char = source[index]
-        if char == delimiter and not escaped:
-            parts.append("".join(current))
-            current = []
-            index += 1
-            if len(parts) == 2:
-                break
-            continue
-        if char == "\\" and not escaped:
-            escaped = True
-            current.append(char)
-            index += 1
-            continue
-        escaped = False
-        current.append(char)
-        index += 1
-    else:
-        return (None, "unterminated substitute command")
+def _parse_sed_substitute(
+    source: str,
+    start_index: int,
+    extended_regex: bool,
+) -> tuple[SedSubstitute | None, int, str | None]:
+    if start_index >= len(source):
+        return (None, start_index, "invalid substitute delimiter")
+    delimiter = source[start_index]
+    if delimiter in {"\n", ";", "\\"}:
+        return (None, start_index, "invalid substitute delimiter")
 
-    flags_text = source[index:]
-    pattern, replacement = parts
-    global_flag = "g" in flags_text
-    print_on_success = "p" in flags_text
-    ignore_case = "i" in flags_text
+    pattern, next_index, ok = _parse_sed_delimited_content(source, start_index + 1, delimiter)
+    if not ok:
+        return (None, start_index, "unterminated substitute pattern")
+    replacement, next_index, ok = _parse_sed_delimited_content(source, next_index, delimiter)
+    if not ok:
+        return (None, start_index, "unterminated substitute replacement")
 
-    occurrence_text = "".join(char for char in flags_text if char.isdigit())
-    occurrence = int(occurrence_text, 10) if occurrence_text else None
+    global_flag, print_on_success, occurrence, ignore_case, next_index, error_text = _parse_sed_substitute_flags(
+        source,
+        next_index,
+    )
+    if error_text is not None:
+        return (None, start_index, error_text)
+
     try:
         regex = _compile_sed_regex(pattern, extended_regex, ignore_case)
     except re.error as caught:
-        return (None, f"invalid regex: {error_message(caught)}")
+        return (None, start_index, f"invalid regex: {error_message(caught)}")
 
     return (
         SedSubstitute(
@@ -473,13 +473,93 @@ def _parse_sed_substitute(source: str, extended_regex: bool) -> tuple[SedSubstit
             ignore_case=ignore_case,
             regex=regex,
         ),
+        next_index,
         None,
     )
 
 
-def _parse_sed_text_argument(source: str) -> str:
-    text = source[1:] if source.startswith("\\") else source
-    return _decode_sed_text_escapes(text)
+def _parse_sed_delimited_content(source: str, start_index: int, delimiter: str) -> tuple[str, int, bool]:
+    pieces: list[str] = []
+    index = start_index
+    escaped = False
+
+    while index < len(source):
+        char = source[index]
+        if escaped:
+            pieces.append(f"\\{char}")
+            escaped = False
+            index += 1
+            continue
+        if char == "\\":
+            escaped = True
+            index += 1
+            continue
+        if char == delimiter:
+            return ("".join(pieces), index + 1, True)
+        pieces.append(char)
+        index += 1
+
+    return ("", index, False)
+
+
+def _parse_sed_substitute_flags(
+    source: str,
+    start_index: int,
+) -> tuple[bool, bool, int | None, bool, int, str | None]:
+    global_flag = False
+    print_on_success = False
+    occurrence: int | None = None
+    ignore_case = False
+    index = start_index
+    digits = ""
+
+    while index < len(source):
+        char = source[index]
+        if char in {";", "\n"}:
+            break
+        if char in {" ", "\t", "\r"}:
+            index += 1
+            continue
+        if char.isdigit():
+            digits += char
+            index += 1
+            continue
+        if digits:
+            occurrence = int(digits, 10)
+            digits = ""
+
+        if char == "g":
+            global_flag = True
+            index += 1
+            continue
+        if char == "p":
+            print_on_success = True
+            index += 1
+            continue
+        if char in {"i", "I"}:
+            ignore_case = True
+            index += 1
+            continue
+        return (False, False, None, False, start_index, f"unsupported substitute flag: {char}")
+
+    if digits:
+        occurrence = int(digits, 10)
+
+    return (
+        global_flag,
+        print_on_success,
+        occurrence,
+        ignore_case,
+        _finish_sed_simple_command(source, index),
+        None,
+    )
+
+
+def _parse_sed_text_argument(source: str, start_index: int) -> str:
+    index = _skip_sed_horizontal_whitespace(source, start_index)
+    if index < len(source) and source[index] == "\\":
+        index += 1
+    return _decode_sed_text_escapes(source[index : _find_sed_line_end(source, index)])
 
 
 def _decode_sed_text_escapes(text: str) -> str:
@@ -502,6 +582,44 @@ def _decode_sed_text_escapes(text: str) -> str:
         index += 2
 
     return "".join(pieces)
+
+
+def _advance_past_sed_text_argument(source: str, start_index: int) -> int:
+    end_index = _find_sed_line_end(source, start_index)
+    if end_index < len(source) and source[end_index] == "\n":
+        return end_index + 1
+    return end_index
+
+
+def _find_sed_line_end(source: str, start_index: int) -> int:
+    index = start_index
+    while index < len(source) and source[index] != "\n":
+        index += 1
+    return index
+
+
+def _skip_sed_separators(source: str, index: int) -> int:
+    next_index = index
+    while next_index < len(source):
+        char = source[next_index]
+        if char in {";", "\n", " ", "\t", "\r"}:
+            next_index += 1
+            continue
+        break
+    return next_index
+
+
+def _finish_sed_simple_command(source: str, index: int) -> int:
+    next_index = index
+    while next_index < len(source):
+        char = source[next_index]
+        if char in {" ", "\t", "\r"}:
+            next_index += 1
+            continue
+        if char in {";", "\n"}:
+            return next_index + 1
+        break
+    return next_index
 
 
 def _compile_sed_regex(pattern: str, extended_regex: bool, ignore_case: bool) -> re.Pattern[str]:
@@ -691,17 +809,21 @@ def _execute_sed_program(
 
     records: list[SedInputLine] = []
     quit_requested = False
+    cursor = 0
 
-    for line in stream:
+    while cursor < len(stream):
+        line = stream[cursor]
+        current_line = line
         current_text = line.text
         current_terminated = line.terminated
+        next_cursor = cursor + 1
         deleted = False
         suppress_default = False
         print_after: list[SedInputLine] = []
         print_before: list[SedInputLine] = []
 
         for command, state in zip(program.commands, states):
-            matched, started_range = _match_sed_command(command, line, state)
+            matched, started_range = _match_sed_command(command, current_line, state)
             if not matched:
                 continue
 
@@ -734,9 +856,18 @@ def _execute_sed_program(
                     records.extend(print_before)
                     print_before = []
                     records.append(SedInputLine(current_text, current_terminated))
-                deleted = True
-                suppress_default = True
-                break
+                records.extend(print_after)
+                print_after = []
+                if next_cursor >= len(stream):
+                    deleted = True
+                    suppress_default = True
+                    quit_requested = True
+                    break
+                current_line = stream[next_cursor]
+                current_text = current_line.text
+                current_terminated = current_line.terminated
+                next_cursor += 1
+                continue
             if command.kind == "substitute" and command.substitute is not None:
                 current_text, changed = _apply_sed_substitute(current_text, command.substitute)
                 if changed and command.substitute.print_on_success:
@@ -751,6 +882,8 @@ def _execute_sed_program(
 
         if quit_requested:
             break
+
+        cursor = next_cursor
 
     return (_render_sed_records(records), None)
 

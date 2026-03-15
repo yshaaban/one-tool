@@ -7,6 +7,7 @@ import type { WorldSpec, ScenarioSpec } from '../src/testing/index.js';
 import type { VfsResourcePolicy } from '../src/vfs/index.js';
 import { adversarialScenarios } from '../test/e2e/scenarios/adversarial.js';
 import { createBaseWorld } from '../test/e2e/scenarios/base-world.js';
+import type { RuntimeFixtureCommandId } from '../test/runtime-fixture-commands.js';
 import { coreScenarios } from '../test/e2e/scenarios/core.js';
 
 export interface SnapshotDirectoryEntry {
@@ -30,7 +31,7 @@ export interface CommandSnapshotCase {
   vfsResourcePolicy?: VfsResourcePolicy;
 }
 
-export type RuntimeCustomCommandId = 'echo' | 'fail' | 'burst' | 'binary' | 'longline' | 'help-override';
+export type RuntimeCustomCommandId = RuntimeFixtureCommandId;
 
 export interface RuntimeSnapshotCase {
   id: string;
@@ -192,12 +193,6 @@ export const COMMAND_EXTRA_CASES: CommandSnapshotCase[] = [
     },
   },
   {
-    id: 'grep-stdin-count',
-    commandName: 'grep',
-    args: ['-c', 'refund'],
-    stdin: encodeText('refund created\nrefund updated\nskip'),
-  },
-  {
     id: 'head-first-two-lines',
     commandName: 'head',
     args: ['-n', '2', '/notes.txt'],
@@ -225,17 +220,6 @@ export const COMMAND_EXTRA_CASES: CommandSnapshotCase[] = [
     world: {
       files: {
         '/payload.json': '{"user":{"email":"buyer@acme.example"}}',
-      },
-    },
-  },
-  {
-    id: 'ls-show-hidden-with-all',
-    commandName: 'ls',
-    args: ['-a', '/'],
-    world: {
-      files: {
-        '/visible.txt': 'visible',
-        '/.hidden.txt': 'hidden',
       },
     },
   },
@@ -287,120 +271,6 @@ export const COMMAND_EXTRA_CASES: CommandSnapshotCase[] = [
     },
   },
   {
-    id: 'sed-substitute-stdin',
-    commandName: 'sed',
-    args: ['s/foo/bar/g'],
-    stdin: encodeText('foo\nfoo\n'),
-  },
-  {
-    id: 'sed-multiline-append-stdin',
-    commandName: 'sed',
-    args: ['2a\\line A\\n\\tline B'],
-    stdin: encodeText('alpha\nbeta\n'),
-  },
-  {
-    id: 'sed-multiline-change-stdin',
-    commandName: 'sed',
-    args: ['2,3c\\line 1\\nline 2'],
-    stdin: encodeText('a\nb\nc\nd\n'),
-  },
-  {
-    id: 'sed-multiline-insert-stdin',
-    commandName: 'sed',
-    args: ['2i\\line 0\\n\\tline 0.5'],
-    stdin: encodeText('alpha\nbeta\n'),
-  },
-  {
-    id: 'sed-multiline-replacement-stdin',
-    commandName: 'sed',
-    args: ['s/foo/bar\\n\\tbaz/'],
-    stdin: encodeText('foo\n'),
-  },
-  {
-    id: 'sed-whole-match-replacement-stdin',
-    commandName: 'sed',
-    args: ['s/foo/[&]/'],
-    stdin: encodeText('foo\n'),
-  },
-  {
-    id: 'sed-basic-backreference-stdin',
-    commandName: 'sed',
-    args: ['s/\\(foo\\)/[\\1]/'],
-    stdin: encodeText('foo\n'),
-  },
-  {
-    id: 'sed-bre-literal-dot-replacement-stdin',
-    commandName: 'sed',
-    args: ['s/\\./-/'],
-    stdin: encodeText('file.txt\n'),
-  },
-  {
-    id: 'sed-negated-address-print-stdin',
-    commandName: 'sed',
-    args: ['-n', '/keep/!p'],
-    stdin: encodeText('a\nkeep\nb\n'),
-  },
-  {
-    id: 'sed-negated-line-delete-stdin',
-    commandName: 'sed',
-    args: ['2!d'],
-    stdin: encodeText('a\nb\nc\n'),
-  },
-  {
-    id: 'sed-zero-regex-range-first-hit-stdin',
-    commandName: 'sed',
-    args: ['-n', '0,/hit/p'],
-    stdin: encodeText('hit\nrest\n'),
-  },
-  {
-    id: 'sed-regex-range-next-hit-stdin',
-    commandName: 'sed',
-    args: ['-n', '/hit/,/hit/p'],
-    stdin: encodeText('hit\nrest\nhit\nlast\n'),
-  },
-  {
-    id: 'sed-descending-line-range-stdin',
-    commandName: 'sed',
-    args: ['-n', '2,1p'],
-    stdin: encodeText('a\nb\nc\n'),
-  },
-  {
-    id: 'sed-zero-second-line-range-stdin',
-    commandName: 'sed',
-    args: ['-n', '1,0p'],
-    stdin: encodeText('a\nb\nc\n'),
-  },
-  {
-    id: 'sed-zero-second-regex-range-stdin',
-    commandName: 'sed',
-    args: ['-n', '/hit/,0p'],
-    stdin: encodeText('hit\nrest\nhit\n'),
-  },
-  {
-    id: 'sed-invalid-zero-address-stdin',
-    commandName: 'sed',
-    args: ['0p'],
-    stdin: encodeText('alpha\n'),
-  },
-  {
-    id: 'sed-invalid-zero-range-stdin',
-    commandName: 'sed',
-    args: ['0,1p'],
-    stdin: encodeText('alpha\n'),
-  },
-  {
-    id: 'sed-negated-range-change-stdin',
-    commandName: 'sed',
-    args: ['1,2!c\\X'],
-    stdin: encodeText('a\nb\nc\nd\n'),
-  },
-  {
-    id: 'sed-extended-regex-backreference-stdin',
-    commandName: 'sed',
-    args: ['-E', 's/x=([0-9]+),y=([0-9]+)/\\2,\\1/'],
-    stdin: encodeText('x=10,y=20\n'),
-  },
-  {
     id: 'sort-versioned-file',
     commandName: 'sort',
     args: ['-V', '/versions.txt'],
@@ -429,12 +299,6 @@ export const COMMAND_EXTRA_CASES: CommandSnapshotCase[] = [
         '/tail.txt': '1\n2\n3\n4',
       },
     },
-  },
-  {
-    id: 'tr-translate-stdin',
-    commandName: 'tr',
-    args: ['a-z', 'A-Z'],
-    stdin: encodeText('banana'),
   },
   {
     id: 'uniq-counts-file',
@@ -513,6 +377,16 @@ export const RUNTIME_EXECUTION_CASES: RuntimeSnapshotCase[] = [
     customCommands: ['echo'],
   },
   {
+    id: 'custom-parse-command-substitution',
+    commandLine: 'echo $(whoami)',
+    builtinCommands: false,
+  },
+  {
+    id: 'custom-parse-background-operator',
+    commandLine: 'echo hi &',
+    builtinCommands: false,
+  },
+  {
     id: 'custom-truncated-burst',
     commandLine: 'burst',
     builtinCommands: false,
@@ -549,6 +423,14 @@ export const RUNTIME_EXECUTION_CASES: RuntimeSnapshotCase[] = [
     vfsResourcePolicy: {
       maxOutputArtifactBytes: 3,
     },
+  },
+  {
+    id: 'builtin-failing-pipeline-skips-side-effects',
+    commandLine: 'cat /missing.txt | write /tmp/oops.txt',
+  },
+  {
+    id: 'builtin-real-command-binary-guard',
+    commandLine: `echo abc | tr a '\\000'`,
   },
   {
     id: 'selective-builtin-registry',

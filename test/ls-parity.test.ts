@@ -7,50 +7,9 @@ import { makeCtx, runCommand } from './commands/harness.js';
 import {
   hasOracleUtility,
   runLsOracle,
-  type OracleWorkspaceFiles,
   withOracleFixtureWorkspace,
 } from './oracles/parity-harness.js';
-
-interface LsParityCase {
-  args: string[];
-  files: OracleWorkspaceFiles;
-  name: string;
-}
-
-const PARITY_CASES: LsParityCase[] = [
-  {
-    name: 'plain directory listing hides dotfiles',
-    files: {
-      'tree/.hidden': 'secret\n',
-      'tree/nested/child.txt': 'child\n',
-      'tree/visible.txt': 'visible\n',
-    },
-    args: ['tree'],
-  },
-  {
-    name: 'all listing includes dot entries',
-    files: {
-      'tree/.hidden': 'secret\n',
-      'tree/visible.txt': 'visible\n',
-    },
-    args: ['-a', 'tree'],
-  },
-  {
-    name: 'recursive listing matches host shape',
-    files: {
-      'tree/nested/child.txt': 'child\n',
-      'tree/visible.txt': 'visible\n',
-    },
-    args: ['-R', 'tree'],
-  },
-  {
-    name: 'single file target',
-    files: {
-      'item.txt': 'hello\n',
-    },
-    args: ['item.txt'],
-  },
-];
+import { LS_PARITY_CASES, buildLsHostArgs, buildLsRuntimeArgs } from './parity-cases/ls.js';
 
 test('ls matches host GNU ls for the supported parity corpus', async function (t): Promise<void> {
   if (!(await hasOracleUtility('ls'))) {
@@ -58,12 +17,12 @@ test('ls matches host GNU ls for the supported parity corpus', async function (t
     return;
   }
 
-  for (const parityCase of PARITY_CASES) {
+  for (const parityCase of LS_PARITY_CASES) {
     await withOracleFixtureWorkspace(parityCase.files, async function (workspace): Promise<void> {
-      const host = await runLsOracle(toHostArgs(parityCase.args, workspace.rootDir), {
+      const host = await runLsOracle(buildLsHostArgs(parityCase.args, workspace.rootDir), {
         cwd: workspace.rootDir,
       });
-      const runtime = await runRuntimeLs(workspace.rootDir, toRuntimeArgs(parityCase.args));
+      const runtime = await runRuntimeLs(workspace.rootDir, buildLsRuntimeArgs(parityCase.args));
 
       assert.equal(runtime.exitCode, host.exitCode, `${parityCase.name}: exit code mismatch`);
       assert.equal(runtime.stderr, host.stderr, `${parityCase.name}: stderr mismatch`);
@@ -89,32 +48,6 @@ async function runRuntimeLs(
     stderr: result.stderr,
     stdoutText: new TextDecoder().decode(result.stdout),
   };
-}
-
-function toHostArgs(args: string[], rootDir: string): string[] {
-  if (args.length === 0) {
-    return args;
-  }
-
-  const mapped = [...args];
-  const last = mapped[mapped.length - 1]!;
-  if (!last.startsWith('-')) {
-    mapped[mapped.length - 1] = `${rootDir}/${last}`;
-  }
-  return mapped;
-}
-
-function toRuntimeArgs(args: string[]): string[] {
-  if (args.length === 0) {
-    return args;
-  }
-
-  const mapped = [...args];
-  const last = mapped[mapped.length - 1]!;
-  if (!last.startsWith('-')) {
-    mapped[mapped.length - 1] = `/${last}`;
-  }
-  return mapped;
 }
 
 function stripOracleRoot(output: string, rootDir: string): string {

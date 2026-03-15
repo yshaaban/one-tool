@@ -1,17 +1,16 @@
 import path from 'node:path';
 
-import { createCommandRegistry, type CommandSpec } from '../../src/commands/index.js';
+import { createCommandRegistry } from '../../src/commands/index.js';
 import { resolveExecutionPolicy } from '../../src/execution-policy.js';
 import { SimpleMemory } from '../../src/memory.js';
 import { createTestCommandContext, runRegisteredCommand } from '../../src/testing/index.js';
 import { MemoryVFS } from '../../src/vfs/memory-vfs.js';
-import type { CommandSnapshotCase, SnapshotWorld } from '../snapshot-cases.js';
-import { COMMAND_EXTRA_CASES, DEFAULT_ADAPTER_WORLD } from '../snapshot-cases.js';
+import { buildSnapshotCommandCases } from '../command-cases.js';
+import type { CommandSnapshotCase } from '../snapshot-cases.js';
 import {
   EMPTY_STDIN,
   SNAPSHOT_ROOT,
   buildAdapters,
-  encodeText,
   seedSnapshotWorld,
   serializeCommandResult,
   serializeExecutionPolicy,
@@ -24,8 +23,7 @@ import {
 } from './shared.js';
 
 export async function writeCommandSnapshots(): Promise<number> {
-  const cases = [...buildConformanceCommandCases(), ...COMMAND_EXTRA_CASES];
-  validateUniqueCaseIds(cases);
+  const cases = buildSnapshotCommandCases();
 
   for (const testCase of cases) {
     const payload = await snapshotCommandCase(testCase);
@@ -34,115 +32,6 @@ export async function writeCommandSnapshots(): Promise<number> {
   }
 
   return cases.length;
-}
-
-function buildConformanceCommandCases(): CommandSnapshotCase[] {
-  const registry = createCommandRegistry();
-  const cases: CommandSnapshotCase[] = [];
-  const hasHelp = registry.has('help');
-
-  for (const spec of registry.all()) {
-    const representativeArgs = [...(spec.conformanceArgs ?? [])];
-    const representativeWorld = representativeWorldFor(spec);
-
-    cases.push({
-      id: 'conformance-representative',
-      commandName: spec.name,
-      args: representativeArgs,
-      ...(representativeWorld === undefined ? {} : { world: representativeWorld }),
-    });
-
-    if (hasHelp) {
-      cases.push({
-        id: 'conformance-help-entry',
-        commandName: 'help',
-        snapshotGroup: spec.name,
-        args: [spec.name],
-      });
-    }
-
-    if (spec.acceptsStdin === false) {
-      cases.push({
-        id: 'conformance-stdin-rejection',
-        commandName: spec.name,
-        args: representativeArgs,
-        stdin: encodeText('unwanted stdin'),
-        ...(representativeWorld === undefined ? {} : { world: representativeWorld }),
-      });
-    }
-
-    if ((spec.minArgs ?? 0) > 0) {
-      cases.push({
-        id: 'conformance-too-few-args',
-        commandName: spec.name,
-        args: tooFewArgsFor(spec),
-      });
-    }
-
-    if (spec.maxArgs !== undefined) {
-      cases.push({
-        id: 'conformance-too-many-args',
-        commandName: spec.name,
-        args: tooManyArgsFor(spec),
-      });
-    }
-
-    if (spec.requiresAdapter !== undefined) {
-      cases.push({
-        id: `conformance-missing-${spec.requiresAdapter}-adapter`,
-        commandName: spec.name,
-        args: adapterArgsFor(spec),
-      });
-    }
-  }
-
-  return cases;
-}
-
-function representativeWorldFor(spec: CommandSpec): SnapshotWorld | undefined {
-  if (spec.requiresAdapter === undefined) {
-    return undefined;
-  }
-
-  return DEFAULT_ADAPTER_WORLD;
-}
-
-function adapterArgsFor(spec: CommandSpec): string[] {
-  if (spec.conformanceArgs !== undefined && spec.conformanceArgs.length > 0) {
-    return [...spec.conformanceArgs];
-  }
-
-  const count = Math.max(spec.minArgs ?? 0, 1);
-  return Array.from({ length: count }, function (_, index) {
-    return `arg${index}`;
-  });
-}
-
-function tooFewArgsFor(spec: CommandSpec): string[] {
-  const count = Math.max((spec.minArgs ?? 0) - 1, 0);
-  return Array.from({ length: count }, function (_, index) {
-    return `arg${index}`;
-  });
-}
-
-function tooManyArgsFor(spec: CommandSpec): string[] {
-  const count = (spec.maxArgs ?? 0) + 1;
-  return Array.from({ length: count }, function (_, index) {
-    return `arg${index}`;
-  });
-}
-
-function validateUniqueCaseIds(cases: CommandSnapshotCase[]): void {
-  const seen = new Set<string>();
-
-  for (const testCase of cases) {
-    const snapshotGroup = testCase.snapshotGroup ?? testCase.commandName;
-    const key = `${snapshotGroup}:${testCase.id}`;
-    if (seen.has(key)) {
-      throw new Error(`duplicate command snapshot case: ${key}`);
-    }
-    seen.add(key);
-  }
 }
 
 async function snapshotCommandCase(testCase: CommandSnapshotCase): Promise<Record<string, unknown>> {
