@@ -21,6 +21,7 @@ type SedParseResult<T> = { ok: true; value: T } | { ok: false; error: CommandRes
 type SedCommandKind = 'append' | 'insert' | 'change' | 'delete' | 'next' | 'print' | 'quit' | 'substitute';
 
 type SedAddress =
+  | { kind: 'zero' }
   | { kind: 'line'; value: number }
   | { kind: 'last' }
   | { kind: 'regex'; source: string; regex: RegExp };
@@ -28,6 +29,7 @@ type SedAddress =
 interface SedCommand {
   address1: SedAddress | undefined;
   address2: SedAddress | undefined;
+  negated: boolean;
   kind: SedCommandKind;
   text: string | undefined;
   substitute: SedSubstituteCommand | undefined;
@@ -473,6 +475,7 @@ function parseSedCommand(
   const address1 = parseSedAddress(source, index, extendedRegex);
   let firstAddress: SedAddress | undefined;
   let secondAddress: SedAddress | undefined;
+  let negated = false;
 
   if (address1.ok) {
     firstAddress = address1.value.address;
@@ -491,6 +494,15 @@ function parseSedCommand(
     }
   }
 
+  if (!hasValidSedZeroAddressUsage(firstAddress, secondAddress)) {
+    return { ok: false, error: 'invalid usage of line address 0' };
+  }
+  if (source[index] === '!') {
+    negated = true;
+    index += 1;
+    index = skipSedHorizontalWhitespace(source, index);
+  }
+
   const commandChar = source[index];
   if (commandChar === undefined) {
     return { ok: false, error: 'unexpected end of script' };
@@ -502,7 +514,7 @@ function parseSedCommand(
     return {
       ok: true,
       value: {
-        command: createSedCommand('print', firstAddress, secondAddress),
+        command: createSedCommand('print', firstAddress, secondAddress, { negated }),
         nextIndex: finishSedSimpleCommand(source, index),
       },
     };
@@ -511,7 +523,7 @@ function parseSedCommand(
     return {
       ok: true,
       value: {
-        command: createSedCommand('delete', firstAddress, secondAddress),
+        command: createSedCommand('delete', firstAddress, secondAddress, { negated }),
         nextIndex: finishSedSimpleCommand(source, index),
       },
     };
@@ -520,7 +532,7 @@ function parseSedCommand(
     return {
       ok: true,
       value: {
-        command: createSedCommand('quit', firstAddress, secondAddress),
+        command: createSedCommand('quit', firstAddress, secondAddress, { negated }),
         nextIndex: finishSedSimpleCommand(source, index),
       },
     };
@@ -529,7 +541,7 @@ function parseSedCommand(
     return {
       ok: true,
       value: {
-        command: createSedCommand('next', firstAddress, secondAddress),
+        command: createSedCommand('next', firstAddress, secondAddress, { negated }),
         nextIndex: finishSedSimpleCommand(source, index),
       },
     };
@@ -544,6 +556,7 @@ function parseSedCommand(
           firstAddress,
           secondAddress,
           {
+            negated,
             text,
           },
         ),
@@ -560,6 +573,7 @@ function parseSedCommand(
       ok: true,
       value: {
         command: createSedCommand('substitute', firstAddress, secondAddress, {
+          negated,
           substitute: substitute.value.substitute,
         }),
         nextIndex: substitute.value.nextIndex,
@@ -577,6 +591,16 @@ function parseSedAddress(
 ): { ok: true; value: { address: SedAddress; nextIndex: number } } | { ok: false } {
   if (startIndex >= source.length) {
     return { ok: false };
+  }
+
+  if (source[startIndex] === '0' && !isAsciiDigit(source[startIndex + 1] ?? '')) {
+    return {
+      ok: true,
+      value: {
+        address: { kind: 'zero' },
+        nextIndex: startIndex + 1,
+      },
+    };
   }
 
   if (source[startIndex] === '$') {
@@ -822,11 +846,22 @@ function decodeSedTextEscapes(text: string): string {
   return output;
 }
 
+function hasValidSedZeroAddressUsage(
+  address1: SedAddress | undefined,
+  address2: SedAddress | undefined,
+): boolean {
+  if (address1?.kind !== 'zero') {
+    return true;
+  }
+  return address2?.kind === 'regex';
+}
+
 function createSedCommand(
   kind: SedCommandKind,
   address1: SedAddress | undefined,
   address2: SedAddress | undefined,
   options: {
+    negated?: boolean;
     text?: string;
     substitute?: SedSubstituteCommand;
   } = {},
@@ -834,6 +869,7 @@ function createSedCommand(
   return {
     address1,
     address2,
+    negated: options.negated ?? false,
     kind,
     text: options.text,
     substitute: options.substitute,
@@ -1121,7 +1157,7 @@ function executeSedStream(
           break;
         case 'change':
           suppressAutoPrint = true;
-          if (!command.address2 || match.startedRange) {
+          if (!command.address2 || match.startedRange || command.negated) {
             emitSedText(outputs, command.text ?? '');
           }
           flushSedAppendQueue(outputs, appendQueue);
@@ -1223,6 +1259,21 @@ function matchesSedCommand(
   state: SedCommandState,
   current: SedCycleLine,
 ): SedCommandMatch {
+  const baseMatch = matchesSedCommandBase(command, state, current);
+  if (!command.negated) {
+    return baseMatch;
+  }
+  return {
+    matched: !baseMatch.matched,
+    startedRange: false,
+  };
+}
+
+function matchesSedCommandBase(
+  command: SedCommand,
+  state: SedCommandState,
+  current: SedCycleLine,
+): SedCommandMatch {
   if (!command.address1) {
     return { matched: true, startedRange: false };
   }
@@ -1235,7 +1286,7 @@ function matchesSedCommand(
   }
 
   if (state.inRange) {
-    const shouldCloseRange = matchesSedAddress(command.address2, current);
+    const shouldCloseRange = closesSedRange(command.address2, current, true);
     if (shouldCloseRange) {
       state.inRange = false;
     }
@@ -1246,12 +1297,15 @@ function matchesSedCommand(
     return { matched: false, startedRange: false };
   }
 
-  const closesImmediately = matchesSedAddress(command.address2, current);
+  const closesImmediately = closesSedRange(command.address2, current, command.address1.kind === 'zero');
   state.inRange = !closesImmediately;
   return { matched: true, startedRange: true };
 }
 
 function matchesSedAddress(address: SedAddress, current: SedCycleLine): boolean {
+  if (address.kind === 'zero') {
+    return current.absoluteIndex === 0;
+  }
   if (address.kind === 'line') {
     return current.absoluteIndex + 1 === address.value;
   }
@@ -1259,6 +1313,22 @@ function matchesSedAddress(address: SedAddress, current: SedCycleLine): boolean 
     return current.isLastLine;
   }
   return address.regex.test(current.text);
+}
+
+function closesSedRange(address: SedAddress, current: SedCycleLine, allowRegexMatch: boolean): boolean {
+  if (address.kind === 'zero') {
+    return true;
+  }
+  if (address.kind === 'line') {
+    return current.absoluteIndex + 1 >= address.value;
+  }
+  if (address.kind === 'last') {
+    return current.isLastLine;
+  }
+  if (address.kind === 'regex') {
+    return allowRegexMatch && address.regex.test(current.text);
+  }
+  return false;
 }
 
 function runSedSubstitute(
@@ -1475,7 +1545,7 @@ function translateSedBasicRegex(pattern: string): string {
       } else if (isAsciiDigit(next)) {
         output += `\\${next}`;
       } else {
-        output += `\\${escapeSedRegexLiteral(next)}`;
+        output += escapeSedRegexLiteral(next);
       }
       index += 2;
       continue;

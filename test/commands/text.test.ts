@@ -342,6 +342,79 @@ test('text: sed decodes escaped newlines and tabs in text arguments and replacem
   }
 });
 
+test('text: sed supports BRE literal escapes, negated addresses, and GNU-style ranges', async () => {
+  const cases = [
+    {
+      args: ['s/\\./-/'],
+      stdin: 'file.txt\n',
+      stdout: 'file-txt\n',
+    },
+    {
+      args: ['s/\\*/X/'],
+      stdin: 'a*b\n',
+      stdout: 'aXb\n',
+    },
+    {
+      args: ['s/\\[b\\]/X/'],
+      stdin: 'a[b]c\n',
+      stdout: 'aXc\n',
+    },
+    {
+      args: ['-n', '/\\./p'],
+      stdin: 'a.b\nplain\n',
+      stdout: 'a.b\n',
+    },
+    {
+      args: ['-n', '/keep/!p'],
+      stdin: 'a\nkeep\nb\n',
+      stdout: 'a\nb\n',
+    },
+    {
+      args: ['2!d'],
+      stdin: 'a\nb\nc\n',
+      stdout: 'b\n',
+    },
+    {
+      args: ['-n', '0,/hit/p'],
+      stdin: 'hit\nrest\n',
+      stdout: 'hit\n',
+    },
+    {
+      args: ['-n', '/hit/,/hit/p'],
+      stdin: 'hit\nrest\nhit\nlast\n',
+      stdout: 'hit\nrest\nhit\n',
+    },
+    {
+      args: ['-n', '2,1p'],
+      stdin: 'a\nb\nc\n',
+      stdout: 'b\n',
+    },
+    {
+      args: ['-n', '1,0p'],
+      stdin: 'a\nb\nc\n',
+      stdout: 'a\n',
+    },
+    {
+      args: ['-n', '/hit/,0p'],
+      stdin: 'hit\nrest\nhit\n',
+      stdout: 'hit\nhit\n',
+    },
+    {
+      args: ['1,2!c\\X'],
+      stdin: 'a\nb\nc\nd\n',
+      stdout: 'a\nb\nX\nX\n',
+    },
+  ];
+
+  for (const testCase of cases) {
+    const result = await runCommand('sed', testCase.args, {
+      stdin: stdinText(testCase.stdin),
+    });
+    assert.equal(result.result.exitCode, 0);
+    assert.equal(stdoutText(result.result), testCase.stdout);
+  }
+});
+
 test('text: sed supports in-place editing and backup suffixes', async () => {
   const ctx = makeCtx();
   await ctx.vfs.writeBytes('/notes.txt', textEncoder.encode('alpha\nbeta\n'));
@@ -369,6 +442,18 @@ test('text: sed reports usage and script errors clearly', async () => {
   const unsupported = await runCommand('sed', ['x']);
   assert.equal(unsupported.result.exitCode, 1);
   assert.match(unsupported.result.stderr, /sed: unsupported sed command: x/);
+
+  const invalidZero = await runCommand('sed', ['0p'], {
+    stdin: stdinText('alpha\n'),
+  });
+  assert.equal(invalidZero.result.exitCode, 1);
+  assert.match(invalidZero.result.stderr, /sed: invalid usage of line address 0/);
+
+  const invalidZeroRange = await runCommand('sed', ['0,1p'], {
+    stdin: stdinText('alpha\n'),
+  });
+  assert.equal(invalidZeroRange.result.exitCode, 1);
+  assert.match(invalidZeroRange.result.stderr, /sed: invalid usage of line address 0/);
 });
 
 test('text: sed formats parent-not-directory and in-place resource-limit failures cleanly', async () => {

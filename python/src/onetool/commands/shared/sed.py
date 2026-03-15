@@ -24,7 +24,7 @@ class ParsedSedProgram:
 @dataclass(frozen=True, slots=True)
 class SedAddress:
     kind: str
-    value: int | str
+    value: int | str | None
     regex: re.Pattern[str] | None = None
 
 
@@ -43,6 +43,7 @@ class SedSubstitute:
 class SedCommand:
     address1: SedAddress | None
     address2: SedAddress | None
+    negated: bool
     kind: str
     text: str | None = None
     substitute: SedSubstitute | None = None
@@ -325,12 +326,22 @@ def _parse_sed_command(raw: str, extended_regex: bool) -> tuple[SedCommand | Non
     if error_text is not None:
         return (None, error_text)
     address2: SedAddress | None = None
+    negated = False
     if address1 is not None and index < len(raw) and raw[index] == ",":
         address2, index, error_text = _parse_sed_address(raw, index + 1, extended_regex)
         if error_text is not None:
             return (None, error_text)
         if address2 is None:
             return (None, "missing second address")
+
+    if not _has_valid_zero_address_usage(address1, address2):
+        return (None, "invalid usage of line address 0")
+
+    index = _skip_sed_horizontal_whitespace(raw, index)
+    if index < len(raw) and raw[index] == "!":
+        negated = True
+        index += 1
+        index = _skip_sed_horizontal_whitespace(raw, index)
 
     if index >= len(raw):
         return (None, "missing sed command")
@@ -344,7 +355,7 @@ def _parse_sed_command(raw: str, extended_regex: bool) -> tuple[SedCommand | Non
             "q": "quit",
             "n": "next",
         }[kind]
-        return (SedCommand(address1, address2, mapped_kind), None)
+        return (SedCommand(address1, address2, negated, mapped_kind), None)
     if kind in {"a", "i", "c"}:
         text = _parse_sed_text_argument(payload)
         mapped_kind = {
@@ -352,12 +363,12 @@ def _parse_sed_command(raw: str, extended_regex: bool) -> tuple[SedCommand | Non
             "i": "insert",
             "c": "change",
         }[kind]
-        return (SedCommand(address1, address2, mapped_kind, text=text), None)
+        return (SedCommand(address1, address2, negated, mapped_kind, text=text), None)
     if kind == "s":
         substitute, error_text = _parse_sed_substitute(payload, extended_regex)
         if error_text is not None:
             return (None, error_text)
-        return (SedCommand(address1, address2, "substitute", substitute=substitute), None)
+        return (SedCommand(address1, address2, negated, "substitute", substitute=substitute), None)
     return (None, f"unsupported sed command: {kind}")
 
 
@@ -368,6 +379,8 @@ def _parse_sed_address(
 ) -> tuple[SedAddress | None, int, str | None]:
     if index >= len(raw):
         return (None, index, None)
+    if raw[index] == "0" and (index + 1 >= len(raw) or not raw[index + 1].isdigit()):
+        return (SedAddress("zero", None), index + 1, None)
     if raw[index].isdigit():
         start = index
         while index < len(raw) and raw[index].isdigit():
@@ -395,6 +408,18 @@ def _parse_sed_address(
             return (None, index, f"invalid address regex: {error_message(caught)}")
         return (SedAddress("regex", pattern, regex=regex), end + 1, None)
     return (None, index, None)
+
+
+def _has_valid_zero_address_usage(address1: SedAddress | None, address2: SedAddress | None) -> bool:
+    if address1 is None or address1.kind != "zero":
+        return True
+    return address2 is not None and address2.kind == "regex"
+
+
+def _skip_sed_horizontal_whitespace(raw: str, index: int) -> int:
+    while index < len(raw) and raw[index] in {" ", "\t", "\r"}:
+        index += 1
+    return index
 
 
 def _parse_sed_substitute(source: str, extended_regex: bool) -> tuple[SedSubstitute | None, str | None]:
@@ -687,7 +712,7 @@ def _execute_sed_program(
                 print_after.extend(_sed_text_records(command.text or ""))
                 continue
             if command.kind == "change":
-                if started_range or command.address2 is None:
+                if started_range or command.address2 is None or command.negated:
                     print_before.extend(_sed_text_records(command.text or ""))
                 deleted = True
                 suppress_default = True
@@ -735,28 +760,53 @@ def _match_sed_command(
     line: _SedCycleLine,
     state: _SedState,
 ) -> tuple[bool, bool]:
+    matched, started_range = _match_sed_command_base(command, line, state)
+    if not command.negated:
+        return (matched, started_range)
+    return (not matched, False)
+
+
+def _match_sed_command_base(
+    command: SedCommand,
+    line: _SedCycleLine,
+    state: _SedState,
+) -> tuple[bool, bool]:
     if command.address1 is None:
         return (True, False)
     if command.address2 is None:
         return (_matches_sed_address(command.address1, line), False)
     if state.in_range:
-        if _matches_sed_address(command.address2, line):
+        if _closes_sed_range(command.address2, line, True):
             state.in_range = False
         return (True, False)
     if _matches_sed_address(command.address1, line):
-        matched_second = _matches_sed_address(command.address2, line)
+        matched_second = _closes_sed_range(command.address2, line, command.address1.kind == "zero")
         state.in_range = not matched_second
         return (True, True)
     return (False, False)
 
 
 def _matches_sed_address(address: SedAddress, line: _SedCycleLine) -> bool:
+    if address.kind == "zero":
+        return line.absolute_index == 1
     if address.kind == "line":
         return line.absolute_index == int(address.value)
     if address.kind == "last":
         return line.is_last_line
     assert address.regex is not None
     return address.regex.search(line.text) is not None
+
+
+def _closes_sed_range(address: SedAddress, line: _SedCycleLine, allow_regex_match: bool) -> bool:
+    if address.kind == "zero":
+        return True
+    if address.kind == "line":
+        return line.absolute_index >= int(address.value)
+    if address.kind == "last":
+        return line.is_last_line
+    if address.kind == "regex":
+        return allow_regex_match and address.regex.search(line.text) is not None
+    return False
 
 
 def _apply_sed_substitute(text: str, substitute: SedSubstitute) -> tuple[str, bool]:

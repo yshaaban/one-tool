@@ -101,6 +101,60 @@ const SED_PARITY_CASES: SedParityCase[] = [
     stdin: textEncoder.encode('foo\n'),
   },
   {
+    name: 'replacement matches literal dot escapes',
+    files: {},
+    args: ['s/\\./-/'],
+    stdin: textEncoder.encode('file.txt\n'),
+  },
+  {
+    name: 'negated regex address print',
+    files: {},
+    args: ['-n', '/keep/!p'],
+    stdin: textEncoder.encode('a\nkeep\nb\n'),
+  },
+  {
+    name: 'negated line delete',
+    files: {},
+    args: ['2!d'],
+    stdin: textEncoder.encode('a\nb\nc\n'),
+  },
+  {
+    name: 'zero regex range closes on first matching line',
+    files: {},
+    args: ['-n', '0,/hit/p'],
+    stdin: textEncoder.encode('hit\nrest\n'),
+  },
+  {
+    name: 'regex range closes on the next matching line',
+    files: {},
+    args: ['-n', '/hit/,/hit/p'],
+    stdin: textEncoder.encode('hit\nrest\nhit\nlast\n'),
+  },
+  {
+    name: 'numeric range with descending end address closes immediately',
+    files: {},
+    args: ['-n', '2,1p'],
+    stdin: textEncoder.encode('a\nb\nc\n'),
+  },
+  {
+    name: 'numeric range with zero end address closes immediately',
+    files: {},
+    args: ['-n', '1,0p'],
+    stdin: textEncoder.encode('a\nb\nc\n'),
+  },
+  {
+    name: 'regex range with zero end address closes immediately',
+    files: {},
+    args: ['-n', '/hit/,0p'],
+    stdin: textEncoder.encode('hit\nrest\nhit\n'),
+  },
+  {
+    name: 'negated range change applies per matching line outside the range',
+    files: {},
+    args: ['1,2!c\\X'],
+    stdin: textEncoder.encode('a\nb\nc\nd\n'),
+  },
+  {
     name: 'next command with explicit print',
     files: {
       'numbers.txt': '1\n2\n3\n',

@@ -25,3 +25,38 @@ async def test_sed_decodes_multiline_text_arguments_and_replacements() -> None:
         )
         assert result.result.exit_code == 0
         assert stdout_text(result.result) == expected_stdout
+
+
+@pytest.mark.asyncio
+async def test_sed_supports_bre_literal_escapes_negated_addresses_and_ranges() -> None:
+    cases = [
+        (["s/\\./-/"], "file.txt\n", "file-txt\n"),
+        (["s/\\*/X/"], "a*b\n", "aXb\n"),
+        ([r"s/\[b\]/X/"], "a[b]c\n", "aXc\n"),
+        (["-n", r"/\./p"], "a.b\nplain\n", "a.b\n"),
+        (["-n", "/keep/!p"], "a\nkeep\nb\n", "a\nb\n"),
+        (["2!d"], "a\nb\nc\n", "b\n"),
+        (["-n", "0,/hit/p"], "hit\nrest\n", "hit\n"),
+        (["-n", "/hit/,/hit/p"], "hit\nrest\nhit\nlast\n", "hit\nrest\nhit\n"),
+        (["-n", "2,1p"], "a\nb\nc\n", "b\n"),
+        (["-n", "1,0p"], "a\nb\nc\n", "a\n"),
+        (["-n", "/hit/,0p"], "hit\nrest\nhit\n", "hit\nhit\n"),
+        (["1,2!c\\X"], "a\nb\nc\nd\n", "a\nb\nX\nX\n"),
+    ]
+
+    for args, stdin_value, expected_stdout in cases:
+        result = await run_registered_command(
+            "sed",
+            args,
+            RunRegisteredCommandOptions(stdin=stdin_text(stdin_value)),
+        )
+        assert result.result.exit_code == 0
+        assert stdout_text(result.result) == expected_stdout
+
+    invalid_zero_range = await run_registered_command(
+        "sed",
+        ["0,1p"],
+        RunRegisteredCommandOptions(stdin=stdin_text("alpha\n")),
+    )
+    assert invalid_zero_range.result.exit_code == 1
+    assert "sed: invalid usage of line address 0" in invalid_zero_range.result.stderr
