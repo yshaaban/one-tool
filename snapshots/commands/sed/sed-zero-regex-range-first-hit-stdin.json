@@ -1,0 +1,20 @@
+{
+  "id": "sed-zero-regex-range-first-hit-stdin",
+  "command": "sed",
+  "args": [
+    "-n",
+    "0,/hit/p"
+  ],
+  "stdin_b64": "aGl0CnJlc3QK",
+  "result": {
+    "stdout_b64": "aGl0Cg==",
+    "stdout_text": "hit\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

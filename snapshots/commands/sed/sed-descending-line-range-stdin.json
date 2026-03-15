@@ -1,0 +1,20 @@
+{
+  "id": "sed-descending-line-range-stdin",
+  "command": "sed",
+  "args": [
+    "-n",
+    "2,1p"
+  ],
+  "stdin_b64": "YQpiCmMK",
+  "result": {
+    "stdout_b64": "Ygo=",
+    "stdout_text": "b\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

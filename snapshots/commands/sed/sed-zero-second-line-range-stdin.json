@@ -1,0 +1,20 @@
+{
+  "id": "sed-zero-second-line-range-stdin",
+  "command": "sed",
+  "args": [
+    "-n",
+    "1,0p"
+  ],
+  "stdin_b64": "YQpiCmMK",
+  "result": {
+    "stdout_b64": "YQo=",
+    "stdout_text": "a\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

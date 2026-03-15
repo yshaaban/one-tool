@@ -1,0 +1,18 @@
+{
+  "id": "sed-invalid-zero-range-stdin",
+  "command": "sed",
+  "args": [
+    "0,1p"
+  ],
+  "stdin_b64": "YWxwaGEK",
+  "result": {
+    "stdout_b64": "",
+    "stderr": "sed: invalid usage of line address 0",
+    "exitCode": 1,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

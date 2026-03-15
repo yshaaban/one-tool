@@ -1,0 +1,19 @@
+{
+  "id": "sed-negated-line-delete-stdin",
+  "command": "sed",
+  "args": [
+    "2!d"
+  ],
+  "stdin_b64": "YQpiCmMK",
+  "result": {
+    "stdout_b64": "Ygo=",
+    "stdout_text": "b\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

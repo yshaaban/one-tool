@@ -1,0 +1,19 @@
+{
+  "id": "sed-bre-literal-dot-replacement-stdin",
+  "command": "sed",
+  "args": [
+    "s/\\./-/"
+  ],
+  "stdin_b64": "ZmlsZS50eHQK",
+  "result": {
+    "stdout_b64": "ZmlsZS10eHQK",
+    "stdout_text": "file-txt\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}
