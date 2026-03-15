@@ -1,0 +1,12 @@
+{"expression":"1 + 2 * 3","result":7}
+{"expression":"(1 + 2) * 3","result":9}
+{"expression":"2 ** 3 ** 2","result":512}
+{"expression":"7 // 2","result":3}
+{"expression":"7 % 4","result":3}
+{"expression":"-3 + 5","result":2}
+{"expression":"2 ** 0.5","result":1.4142135623730951}
+{"expression":".5 + .25","result":0.75}
+{"expression":"10 / 4","result":2.5}
+{"expression":"1 / 0","error":"result is not finite"}
+{"expression":"","error":"empty expression"}
+{"expression":"2 + abc","error":"unsupported character: a"}

@@ -1,0 +1,9 @@
+{"input":"ls /foo","tokens":["ls","/foo"]}
+{"input":"a | b && c || d ; e","tokens":["a","|","b","&&","c","||","d",";","e"]}
+{"input":"write /f 'hello world'","tokens":["write","/f","hello world"]}
+{"input":"write /f \"hello world\"","tokens":["write","/f","hello world"]}
+{"input":"write /f \"say \\\"hi\\\"\"","tokens":["write","/f","say \"hi\""]}
+{"input":"echo '--- types ---' && sed -n '1,2p' /docs/types.txt","tokens":["echo","--- types ---","&&","sed","-n","1,2p","/docs/types.txt"]}
+{"input":"cat /f | grep x","tokens":["cat","/f","|","grep","x"]}
+{"input":"write ../../outside.txt safe && stat /outside.txt","tokens":["write","../../outside.txt","safe","&&","stat","/outside.txt"]}
+{"input":"grep \"^Owner:\" /accounts/acme.md | memory store","tokens":["grep","^Owner:","/accounts/acme.md","|","memory","store"]}

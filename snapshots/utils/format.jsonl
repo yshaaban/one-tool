@@ -1,0 +1,11 @@
+{"kind":"duration","input":0,"output":"0ms"}
+{"kind":"duration","input":999,"output":"999ms"}
+{"kind":"duration","input":1000,"output":"1.0s"}
+{"kind":"duration","input":1550,"output":"1.6s"}
+{"kind":"duration","input":61000,"output":"1m1.0s"}
+{"kind":"size","input":0,"output":"0B"}
+{"kind":"size","input":1023,"output":"1023B"}
+{"kind":"size","input":1024,"output":"1.0KB"}
+{"kind":"size","input":1536,"output":"1.5KB"}
+{"kind":"size","input":1048576,"output":"1.0MB"}
+{"kind":"size","input":1073741824,"output":"1.0GB"}

@@ -1,0 +1,12 @@
+{"input":"","stage":"tokenize","error":"empty command string"}
+{"input":"write /f \"unterminated","stage":"tokenize","error":"unterminated \" quote"}
+{"input":"write /f trailing\\","stage":"tokenize","error":"dangling escape at end of command"}
+{"input":"echo $(whoami)","stage":"tokenize","error":"command substitution is not supported. Compose commands explicitly with pipes and files."}
+{"input":"echo `whoami`","stage":"tokenize","error":"command substitution is not supported. Compose commands explicitly with pipes and files."}
+{"input":"cat /f > out.txt","stage":"tokenize","error":"redirection operator '>' is not supported. Use pipes plus write/append instead."}
+{"input":"cat /f < in.txt","stage":"tokenize","error":"redirection operator '<' is not supported. Use pipes plus write/append instead."}
+{"input":"long_task &","stage":"tokenize","error":"background operator '&' is not supported. Use ';' or explicit chaining instead."}
+{"input":"a |","stage":"parse","error":"unexpected end of command"}
+{"input":"a &&","stage":"parse","error":"unexpected end of command"}
+{"input":"a | | b","stage":"parse","error":"unexpected operator"}
+{"input":"   ","stage":"parse","error":"empty command string"}

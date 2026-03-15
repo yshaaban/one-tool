@@ -26,5 +26,5 @@
       "@onetool/one-tool/vfs/browser": ["./src/vfs/browser-vfs.ts"]
     }
   },
-  "include": ["src/**/*.ts", "test/**/*.ts", "examples/**/*.ts"]
+  "include": ["src/**/*.ts", "test/**/*.ts", "examples/**/*.ts", "scripts/**/*.ts"]
 }
