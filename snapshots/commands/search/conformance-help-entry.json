@@ -1,0 +1,20 @@
+{
+  "id": "conformance-help-entry",
+  "command": "help",
+  "snapshotGroup": "search",
+  "args": [
+    "search"
+  ],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "c2VhcmNoOiBRdWVyeSB5b3VyIGNvbmZpZ3VyZWQgc2VhcmNoIHRvb2wgYW5kIHJldHVybiB0ZXh0IHJlc3VsdHMuClVzYWdlOiBzZWFyY2ggPHF1ZXJ5PgoKUmFua2luZyBhbmQgcmVjYWxsIGNvbWUgZnJvbSB0aGUgY29uZmlndXJlZCBhZGFwdGVyLiBUaGlzIGNvbW1hbmQgZm9ybWF0cyB0aGUgdG9wIHJlc3VsdHMgZm9yIHRoZSBydW50aW1lLgpFeGFtcGxlczoKICBzZWFyY2ggInJlZnVuZCB0aW1lb3V0IGluY2lkZW50IgogIHNlYXJjaCAiYWNtZSByZW5ld2FsIHJpc2siIHwgaGVhZCAtbiA1",
+    "stdout_text": "search: Query your configured search tool and return text results.\nUsage: search <query>\n\nRanking and recall come from the configured adapter. This command formats the top results for the runtime.\nExamples:\n  search \"refund timeout incident\"\n  search \"acme renewal risk\" | head -n 5",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

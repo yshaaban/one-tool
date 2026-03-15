@@ -1,0 +1,20 @@
+{
+  "id": "conformance-help-entry",
+  "command": "help",
+  "snapshotGroup": "rm",
+  "args": [
+    "rm"
+  ],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "cm06IERlbGV0ZSBhIGZpbGUgb3IgZGlyZWN0b3J5IHJlY3Vyc2l2ZWx5LgpVc2FnZTogcm0gWy1yfC1SXSA8cGF0aD4KClJlbW92ZXMgZmlsZXMgYW5kIGRpcmVjdG9yaWVzIHJlY3Vyc2l2ZWx5IGJ5IGRlZmF1bHQuIGAtcmAgYW5kIGAtUmAgYXJlIGFjY2VwdGVkIGFzIGNvbXBhdGliaWxpdHkgYWxpYXNlcy4KRXhhbXBsZXM6CiAgcm0gL3RtcC9vdXQudHh0CiAgcm0gLXIgL3NjcmF0Y2g=",
+    "stdout_text": "rm: Delete a file or directory recursively.\nUsage: rm [-r|-R] <path>\n\nRemoves files and directories recursively by default. `-r` and `-R` are accepted as compatibility aliases.\nExamples:\n  rm /tmp/out.txt\n  rm -r /scratch",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "conformance-help-entry",
+  "command": "help",
+  "snapshotGroup": "uniq",
+  "args": [
+    "uniq"
+  ],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "dW5pcTogQ29sbGFwc2UgYWRqYWNlbnQgZHVwbGljYXRlIGxpbmVzIGZyb20gc3RkaW4gb3IgYSBmaWxlLgpVc2FnZTogdW5pcSBbLWNdIFstZF0gWy1pXSBbLXVdIFtwYXRoXQoKRXhhbXBsZXM6CiAgc29ydCAvbG9ncy9lcnJvcnMudHh0IHwgdW5pcSAtYwogIHNvcnQgL2xvZ3MvZXJyb3JzLnR4dCB8IHVuaXEgLWQKICBjYXQgL25vdGVzL3RvZG8udHh0IHwgdW5pcQogIHVuaXEgLWkgL3RtcC9uYW1lcy50eHQ=",
+    "stdout_text": "uniq: Collapse adjacent duplicate lines from stdin or a file.\nUsage: uniq [-c] [-d] [-i] [-u] [path]\n\nExamples:\n  sort /logs/errors.txt | uniq -c\n  sort /logs/errors.txt | uniq -d\n  cat /notes/todo.txt | uniq\n  uniq -i /tmp/names.txt",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

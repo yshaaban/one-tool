@@ -1,0 +1,20 @@
+{
+  "id": "conformance-help-entry",
+  "command": "help",
+  "snapshotGroup": "calc",
+  "args": [
+    "calc"
+  ],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "Y2FsYzogRXZhbHVhdGUgYSBzYWZlIGFyaXRobWV0aWMgZXhwcmVzc2lvbi4KVXNhZ2U6IGNhbGMgPGV4cHJlc3Npb24+CgpTdXBwb3J0cyBudW1iZXJzLCBwYXJlbnRoZXNlcywgYW5kIHRoZSBvcGVyYXRvcnMgKywgLSwgKiwgLywgYW5kICUuCkV4YW1wbGVzOgogIGNhbGMgNDEgKyAxCiAgY2FsYyAoMTIgKiA4KSAvIDM=",
+    "stdout_text": "calc: Evaluate a safe arithmetic expression.\nUsage: calc <expression>\n\nSupports numbers, parentheses, and the operators +, -, *, /, and %.\nExamples:\n  calc 41 + 1\n  calc (12 * 8) / 3",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

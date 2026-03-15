@@ -1,0 +1,20 @@
+{
+  "id": "conformance-help-entry",
+  "command": "help",
+  "snapshotGroup": "ls",
+  "args": [
+    "ls"
+  ],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "bHM6IExpc3QgZmlsZXMgb3IgZGlyZWN0b3JpZXMgaW4gdGhlIHJvb3RlZCB2aXJ0dWFsIGZpbGUgc3lzdGVtLgpVc2FnZTogbHMgWy0xYVJsXSBbcGF0aF0KCkV4YW1wbGVzOgogIGxzCiAgbHMgLWEgLwogIGxzIC1SIC9sb2dzCiAgbHMgLWwgbm90ZXM=",
+    "stdout_text": "ls: List files or directories in the rooted virtual file system.\nUsage: ls [-1aRl] [path]\n\nExamples:\n  ls\n  ls -a /\n  ls -R /logs\n  ls -l notes",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

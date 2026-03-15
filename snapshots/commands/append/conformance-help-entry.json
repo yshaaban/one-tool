@@ -1,0 +1,20 @@
+{
+  "id": "conformance-help-entry",
+  "command": "help",
+  "snapshotGroup": "append",
+  "args": [
+    "append"
+  ],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "YXBwZW5kOiBBcHBlbmQgdG8gYSBmaWxlIGZyb20gaW5saW5lIGNvbnRlbnQgb3Igc3RkaW4uClVzYWdlOiBhcHBlbmQgPHBhdGg+IFtjb250ZW50XQoKRXhhbXBsZXM6CiAgYXBwZW5kIC9ub3Rlcy90b2RvLnR4dCAibmV4dCBpdGVtIgogIGNhdCAvdG1wL291dC50eHQgfCBhcHBlbmQgL25vdGVzL2FyY2hpdmUudHh0",
+    "stdout_text": "append: Append to a file from inline content or stdin.\nUsage: append <path> [content]\n\nExamples:\n  append /notes/todo.txt \"next item\"\n  cat /tmp/out.txt | append /notes/archive.txt",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

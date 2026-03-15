@@ -1,0 +1,20 @@
+{
+  "id": "conformance-help-entry",
+  "command": "help",
+  "snapshotGroup": "grep",
+  "args": [
+    "grep"
+  ],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "Z3JlcDogRmlsdGVyIGxpbmVzIGJ5IHBhdHRlcm4uIFN1cHBvcnRzIGEgY29tbW9uIEdOVSBncmVwIHN1YnNldC4KVXNhZ2U6IGdyZXAgWy1pXSBbLXZdIFstY10gWy1uXSBbLUZdIFstRV0gWy1vXSBbLXddIFsteF0gWy1xXSA8cGF0dGVybj4gW3BhdGhdCgpFeGFtcGxlczoKICBncmVwIEVSUk9SIC9sb2dzL2FwcC5sb2cKICBjYXQgL2xvZ3MvYXBwLmxvZyB8IGdyZXAgLWkgdGltZW91dAogIGdyZXAgLUYgLW8gInRpbWVvdXQiIC9sb2dzL2FwcC5sb2cKICBncmVwIC1jICJwYXltZW50IGZhaWxlZCIgL2xvZ3MvYXBwLmxvZw==",
+    "stdout_text": "grep: Filter lines by pattern. Supports a common GNU grep subset.\nUsage: grep [-i] [-v] [-c] [-n] [-F] [-E] [-o] [-w] [-x] [-q] <pattern> [path]\n\nExamples:\n  grep ERROR /logs/app.log\n  cat /logs/app.log | grep -i timeout\n  grep -F -o \"timeout\" /logs/app.log\n  grep -c \"payment failed\" /logs/app.log",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

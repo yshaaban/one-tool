@@ -1,0 +1,20 @@
+{
+  "id": "conformance-help-entry",
+  "command": "help",
+  "snapshotGroup": "memory",
+  "args": [
+    "memory"
+  ],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "bWVtb3J5OiBTZWFyY2gsIHN0b3JlLCBvciBpbnNwZWN0IGxpZ2h0d2VpZ2h0IHJ1bnRpbWUtc2NvcGVkIHdvcmtpbmcgbWVtb3J5LgpVc2FnZTogbWVtb3J5IHNlYXJjaCA8cXVlcnk+IHwgbWVtb3J5IHJlY2VudCBbTl0gfCBtZW1vcnkgc3RvcmUgPHRleHQ+CgpUaGlzIGlzIGxpZ2h0d2VpZ2h0IHJ1bnRpbWUgbWVtb3J5IGZvciB0aGUgY3VycmVudCBhZ2VudCBzZXNzaW9uLiBJdCBpcyBub3QgZmlsZSBzdG9yYWdlIG9yIHNlbWFudGljIHJldHJpZXZhbCBpbmZyYXN0cnVjdHVyZS4KRXhhbXBsZXM6CiAgbWVtb3J5IHN0b3JlICJBY21lIHByZWZlcnMgTW9uZGF5IGZvbGxvdy11cHMiCiAgbWVtb3J5IHNlYXJjaCAiQWNtZSBmb2xsb3ctdXAiCiAgbWVtb3J5IHJlY2VudCA1",
+    "stdout_text": "memory: Search, store, or inspect lightweight runtime-scoped working memory.\nUsage: memory search <query> | memory recent [N] | memory store <text>\n\nThis is lightweight runtime memory for the current agent session. It is not file storage or semantic retrieval infrastructure.\nExamples:\n  memory store \"Acme prefers Monday follow-ups\"\n  memory search \"Acme follow-up\"\n  memory recent 5",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

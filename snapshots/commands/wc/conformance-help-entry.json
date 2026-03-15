@@ -1,0 +1,20 @@
+{
+  "id": "conformance-help-entry",
+  "command": "help",
+  "snapshotGroup": "wc",
+  "args": [
+    "wc"
+  ],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "d2M6IENvdW50IGxpbmVzLCB3b3JkcywgYW5kIGJ5dGVzIGZyb20gc3RkaW4gb3IgYSBmaWxlLgpVc2FnZTogd2MgWy1sXSBbLXddIFstY10gW3BhdGhdCgpFeGFtcGxlczoKICB3YyAvbG9ncy9hcHAubG9nCiAgd2MgLWwgL2xvZ3MvYXBwLmxvZwogIGZldGNoIHRleHQ6cnVuYm9vayB8IHdjIC13",
+    "stdout_text": "wc: Count lines, words, and bytes from stdin or a file.\nUsage: wc [-l] [-w] [-c] [path]\n\nExamples:\n  wc /logs/app.log\n  wc -l /logs/app.log\n  fetch text:runbook | wc -w",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

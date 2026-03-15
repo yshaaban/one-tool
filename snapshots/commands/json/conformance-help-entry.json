@@ -1,0 +1,20 @@
+{
+  "id": "conformance-help-entry",
+  "command": "help",
+  "snapshotGroup": "json",
+  "args": [
+    "json"
+  ],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "anNvbjogSW5zcGVjdCBKU09OIGZyb20gc3RkaW4gb3IgYSBmaWxlOiBwcmV0dHksIGtleXMsIGdldC4KVXNhZ2U6IGpzb24gcHJldHR5IFtwYXRoXSB8IGpzb24ga2V5cyBbcGF0aF0gfCBqc29uIGdldCA8ZmllbGQucGF0aD4gW3BhdGhdCgpVc2VzIGEgc21hbGwgZG90LWFuZC1pbmRleCBwYXRoIHN5bnRheCBzdWNoIGFzIGN1c3RvbWVyLmVtYWlsIG9yIGl0ZW1zWzBdLmlkLiBJdCBpcyBub3QganEuCkV4YW1wbGVzOgogIGZldGNoIG9yZGVyOjEyMyB8IGpzb24gcHJldHR5CiAgZmV0Y2ggb3JkZXI6MTIzIHwganNvbiBnZXQgY3VzdG9tZXIuZW1haWwKICBqc29uIGtleXMgL2NvbmZpZy9kZWZhdWx0Lmpzb24=",
+    "stdout_text": "json: Inspect JSON from stdin or a file: pretty, keys, get.\nUsage: json pretty [path] | json keys [path] | json get <field.path> [path]\n\nUses a small dot-and-index path syntax such as customer.email or items[0].id. It is not jq.\nExamples:\n  fetch order:123 | json pretty\n  fetch order:123 | json get customer.email\n  json keys /config/default.json",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "conformance-help-entry",
+  "command": "help",
+  "snapshotGroup": "write",
+  "args": [
+    "write"
+  ],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "d3JpdGU6IFdyaXRlIGEgZmlsZSBmcm9tIGlubGluZSBjb250ZW50IG9yIHN0ZGluLgpVc2FnZTogd3JpdGUgPHBhdGg+IFtjb250ZW50XQoKRXhhbXBsZXM6CiAgd3JpdGUgL25vdGVzL3RvZG8udHh0ICJsaW5lIG9uZSIKICBzZWFyY2ggInJlZnVuZCBpc3N1ZSIgfCB3cml0ZSAvcmVwb3J0cy9yZWZ1bmQudHh0",
+    "stdout_text": "write: Write a file from inline content or stdin.\nUsage: write <path> [content]\n\nExamples:\n  write /notes/todo.txt \"line one\"\n  search \"refund issue\" | write /reports/refund.txt",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "conformance-help-entry",
+  "command": "help",
+  "snapshotGroup": "tr",
+  "args": [
+    "tr"
+  ],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "dHI6IFRyYW5zbGF0ZSwgZGVsZXRlLCBhbmQgc3F1ZWV6ZSBieXRlcyBmcm9tIHN0ZGluLgpVc2FnZTogdHIgW09QVElPTl0uLi4gU1RSSU5HMSBbU1RSSU5HMl0KCkV4YW1wbGVzOgogIGNhdCAvbG9ncy9hcHAubG9nIHwgdHIgYS16IEEtWgogIGNhdCAvbm90ZXMudHh0IHwgdHIgLXMgIiAiCiAgY2F0IC9kYXRhLnR4dCB8IHRyIC1kIDAtOQ==",
+    "stdout_text": "tr: Translate, delete, and squeeze bytes from stdin.\nUsage: tr [OPTION]... STRING1 [STRING2]\n\nExamples:\n  cat /logs/app.log | tr a-z A-Z\n  cat /notes.txt | tr -s \" \"\n  cat /data.txt | tr -d 0-9",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

@@ -22,6 +22,7 @@ export interface SnapshotWorld extends Omit<WorldSpec, 'files'> {
 export interface CommandSnapshotCase {
   id: string;
   commandName: string;
+  snapshotGroup?: string;
   args: string[];
   stdin?: Uint8Array;
   world?: SnapshotWorld;

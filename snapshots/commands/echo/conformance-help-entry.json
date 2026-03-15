@@ -1,0 +1,20 @@
+{
+  "id": "conformance-help-entry",
+  "command": "help",
+  "snapshotGroup": "echo",
+  "args": [
+    "echo"
+  ],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "ZWNobzogV3JpdGUgYXJndW1lbnRzIGJhY2sgYXMgcGxhaW4gdGV4dCBvdXRwdXQuIFN1cHBvcnRzIC1uLCAtZSwgYW5kIC1FLgpVc2FnZTogZWNobyBbLW5dIFstZXwtRV0gW3RleHQgLi4uXQoKRXhhbXBsZXM6CiAgZWNobyBoZWxsbyB3b3JsZAogIGVjaG8gLW4gInJlYWR5IGZvciByZXZpZXciCiAgZWNobyAtZSAibGluZSAxXG5saW5lIDIiCiAgZWNobyBzdGF0dXM6b2sgfCB3cml0ZSAvbm90ZXMvc3RhdHVzLnR4dA==",
+    "stdout_text": "echo: Write arguments back as plain text output. Supports -n, -e, and -E.\nUsage: echo [-n] [-e|-E] [text ...]\n\nExamples:\n  echo hello world\n  echo -n \"ready for review\"\n  echo -e \"line 1\\nline 2\"\n  echo status:ok | write /notes/status.txt",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

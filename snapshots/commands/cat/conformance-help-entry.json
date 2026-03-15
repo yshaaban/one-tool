@@ -1,0 +1,20 @@
+{
+  "id": "conformance-help-entry",
+  "command": "help",
+  "snapshotGroup": "cat",
+  "args": [
+    "cat"
+  ],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "Y2F0OiBSZWFkIHRleHQgZnJvbSBvbmUgb3IgbW9yZSBmaWxlcywgb3Igc3BsaWNlIHBpcGVkIHN0ZGluIHdpdGggYC1gLgpVc2FnZTogY2F0IFtwYXRoIC4uLnwtXQoKUmVhZHMgcm9vdGVkIHRleHQgZmlsZXMgb3IgcGlwZWQgdGV4dC4gVXNlIGAtYCB0byBzcGxpY2UgcGlwZWQgc3RkaW4gaW50byB0aGUgZmlsZSBsaXN0LiBGb3IgZGlyZWN0b3JpZXMgdXNlIGxzLiBGb3IgYmluYXJ5IGNvbnRlbnQgdXNlIHN0YXQuCkV4YW1wbGVzOgogIGNhdCAvbm90ZXMvdG9kby50eHQKICBjYXQgL25vdGVzL2EudHh0IC9ub3Rlcy9iLnR4dAogIGdyZXAgRVJST1IgL2xvZ3MvYXBwLmxvZyB8IGNhdAogIGdyZXAgRVJST1IgL2xvZ3MvYXBwLmxvZyB8IGNhdCAvbm90ZXMvaGVhZGVyLnR4dCAt",
+    "stdout_text": "cat: Read text from one or more files, or splice piped stdin with `-`.\nUsage: cat [path ...|-]\n\nReads rooted text files or piped text. Use `-` to splice piped stdin into the file list. For directories use ls. For binary content use stat.\nExamples:\n  cat /notes/todo.txt\n  cat /notes/a.txt /notes/b.txt\n  grep ERROR /logs/app.log | cat\n  grep ERROR /logs/app.log | cat /notes/header.txt -",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

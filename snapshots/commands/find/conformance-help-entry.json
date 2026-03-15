@@ -1,0 +1,20 @@
+{
+  "id": "conformance-help-entry",
+  "command": "help",
+  "snapshotGroup": "find",
+  "args": [
+    "find"
+  ],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "ZmluZDogUmVjdXJzaXZlbHkgbGlzdCBmaWxlcyBhbmQgZGlyZWN0b3JpZXMgd2l0aCBvcHRpb25hbCBmaWx0ZXJzLgpVc2FnZTogZmluZCBbcGF0aF0gWy0tdHlwZSBmaWxlfGRpcnwtdHlwZSBmfC10eXBlIGRdIFstLW5hbWUgcGF0dGVybnwtbmFtZSBwYXR0ZXJuXSBbLS1tYXgtZGVwdGggTnwtbWF4ZGVwdGggTl0KCkV4YW1wbGVzOgogIGZpbmQgL2xvZ3MKICBmaW5kIC9jb25maWcgLXR5cGUgZiAtbmFtZSAiKi5qc29uIgogIGZpbmQgL2RyYWZ0cyAtLW1heC1kZXB0aCAx",
+    "stdout_text": "find: Recursively list files and directories with optional filters.\nUsage: find [path] [--type file|dir|-type f|-type d] [--name pattern|-name pattern] [--max-depth N|-maxdepth N]\n\nExamples:\n  find /logs\n  find /config -type f -name \"*.json\"\n  find /drafts --max-depth 1",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

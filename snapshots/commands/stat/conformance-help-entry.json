@@ -1,0 +1,20 @@
+{
+  "id": "conformance-help-entry",
+  "command": "help",
+  "snapshotGroup": "stat",
+  "args": [
+    "stat"
+  ],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "c3RhdDogU2hvdyBvbmUtdG9vbCBmaWxlIG1ldGFkYXRhIHN1Y2ggYXMgc2l6ZSwgdHlwZSwgYW5kIG1vZGlmaWVkIHRpbWUuClVzYWdlOiBzdGF0IDxwYXRoPgoKUmV0dXJucyBvbmUtdG9vbCBtZXRhZGF0YSBmaWVsZHMgZm9yIHRoZSByb290ZWQgd29ya3NwYWNlLiBJdCBkb2VzIG5vdCBhaW0gZm9yIFBPU0lYIHN0YXQgb3V0cHV0IHBhcml0eS4KRXhhbXBsZXM6CiAgc3RhdCAvbG9ncy9hcHAubG9nCiAgc3RhdCBub3Rlcy90b2RvLnR4dA==",
+    "stdout_text": "stat: Show one-tool file metadata such as size, type, and modified time.\nUsage: stat <path>\n\nReturns one-tool metadata fields for the rooted workspace. It does not aim for POSIX stat output parity.\nExamples:\n  stat /logs/app.log\n  stat notes/todo.txt",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

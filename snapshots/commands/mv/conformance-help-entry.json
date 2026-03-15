@@ -1,0 +1,20 @@
+{
+  "id": "conformance-help-entry",
+  "command": "help",
+  "snapshotGroup": "mv",
+  "args": [
+    "mv"
+  ],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "bXY6IE1vdmUgb3IgcmVuYW1lIGEgZmlsZSBvciBkaXJlY3RvcnkuClVzYWdlOiBtdiA8c3JjPiA8ZHN0PgoKTW92ZXMgZmlsZXMgb3IgZGlyZWN0b3JpZXMgdG8gYSBuZXcgcm9vdGVkIGRlc3RpbmF0aW9uIHBhdGguIFRoZSBkZXN0aW5hdGlvbiBtdXN0IG5vdCBhbHJlYWR5IGV4aXN0LgpFeGFtcGxlczoKICBtdiAvZHJhZnRzL3Fici5tZCAvYXJjaGl2ZS9xYnIubWQ=",
+    "stdout_text": "mv: Move or rename a file or directory.\nUsage: mv <src> <dst>\n\nMoves files or directories to a new rooted destination path. The destination must not already exist.\nExamples:\n  mv /drafts/qbr.md /archive/qbr.md",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

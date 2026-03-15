@@ -1,0 +1,20 @@
+{
+  "id": "conformance-help-entry",
+  "command": "help",
+  "snapshotGroup": "cp",
+  "args": [
+    "cp"
+  ],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "Y3A6IENvcHkgYSBmaWxlIG9yIGRpcmVjdG9yeSBpbnNpZGUgdGhlIHJvb3RlZCB2aXJ0dWFsIGZpbGUgc3lzdGVtLgpVc2FnZTogY3AgPHNyYz4gPGRzdD4KCkNvcGllcyBmaWxlcyBvciBkaXJlY3RvcmllcyB0byBhIG5ldyByb290ZWQgZGVzdGluYXRpb24gcGF0aC4gVGhlIGRlc3RpbmF0aW9uIG11c3Qgbm90IGFscmVhZHkgZXhpc3QuCkV4YW1wbGVzOgogIGNwIC9kcmFmdHMvcWJyLm1kIC9yZXBvcnRzL3Fici12MS5tZA==",
+    "stdout_text": "cp: Copy a file or directory inside the rooted virtual file system.\nUsage: cp <src> <dst>\n\nCopies files or directories to a new rooted destination path. The destination must not already exist.\nExamples:\n  cp /drafts/qbr.md /reports/qbr-v1.md",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

@@ -472,7 +472,8 @@ async function writeCommandSnapshots(): Promise<number> {
 
   for (const testCase of cases) {
     const payload = await snapshotCommandCase(testCase);
-    await writeJson(path.join(SNAPSHOT_ROOT, 'commands', testCase.commandName, `${testCase.id}.json`), payload);
+    const snapshotGroup = testCase.snapshotGroup ?? testCase.commandName;
+    await writeJson(path.join(SNAPSHOT_ROOT, 'commands', snapshotGroup, `${testCase.id}.json`), payload);
   }
 
   return cases.length;
@@ -514,6 +515,15 @@ function buildConformanceCommandCases(): CommandSnapshotCase[] {
       args: [...(spec.conformanceArgs ?? [])],
       ...(representativeWorld === undefined ? {} : { world: representativeWorld }),
     });
+
+    if (registry.has('help')) {
+      cases.push({
+        id: 'conformance-help-entry',
+        commandName: 'help',
+        snapshotGroup: spec.name,
+        args: [spec.name],
+      });
+    }
 
     if (spec.acceptsStdin === false) {
       cases.push({
@@ -589,7 +599,8 @@ function validateUniqueCaseIds(cases: CommandSnapshotCase[]): void {
   const seen = new Set<string>();
 
   for (const testCase of cases) {
-    const key = `${testCase.commandName}:${testCase.id}`;
+    const snapshotGroup = testCase.snapshotGroup ?? testCase.commandName;
+    const key = `${snapshotGroup}:${testCase.id}`;
     if (seen.has(key)) {
       throw new Error(`duplicate command snapshot case: ${key}`);
     }
@@ -621,6 +632,7 @@ async function snapshotCommandCase(testCase: CommandSnapshotCase): Promise<Recor
     return {
       id: testCase.id,
       command: testCase.commandName,
+      ...(testCase.snapshotGroup === undefined ? {} : { snapshotGroup: testCase.snapshotGroup }),
       args: [...testCase.args],
       stdin_b64: toBase64(stdin),
       ...(testCase.world === undefined ? {} : { world: serializeSnapshotWorld(testCase.world) }),

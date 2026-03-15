@@ -1,0 +1,20 @@
+{
+  "id": "conformance-help-entry",
+  "command": "help",
+  "snapshotGroup": "mkdir",
+  "args": [
+    "mkdir"
+  ],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "bWtkaXI6IENyZWF0ZSBhIGRpcmVjdG9yeSBhbmQgYW55IG1pc3NpbmcgcGFyZW50cy4KVXNhZ2U6IG1rZGlyIFstcF0gPHBhdGg+CgpDcmVhdGVzIG1pc3NpbmcgcGFyZW50cyBieSBkZWZhdWx0LiBgLXBgIGlzIGFjY2VwdGVkIGFzIGEgY29tcGF0aWJpbGl0eSBhbGlhcy4KRXhhbXBsZXM6CiAgbWtkaXIgL3JlcG9ydHMKICBta2RpciAtcCBub3Rlcy9hcmNoaXZlLzIwMjY=",
+    "stdout_text": "mkdir: Create a directory and any missing parents.\nUsage: mkdir [-p] <path>\n\nCreates missing parents by default. `-p` is accepted as a compatibility alias.\nExamples:\n  mkdir /reports\n  mkdir -p notes/archive/2026",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

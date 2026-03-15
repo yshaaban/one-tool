@@ -25,7 +25,13 @@ from onetool.testing import (
     build_world,
     run_oracle,
 )
-from onetool.utils import looks_binary
+from snapshot_helpers import (
+    decode_fetch_payload,
+    mock_now_ms,
+    normalize_presentation_text,
+    serialize_run_execution,
+    snapshot_world_state,
+)
 from onetool.vfs.memory_vfs import MemoryVFS
 
 SCENARIO_SNAPSHOT_ROOT = ROOT_DIR / "snapshots" / "scenarios"
@@ -43,7 +49,7 @@ def test_scenario_matches_typescript_snapshot(snapshot_path: Path) -> None:
 
 
 async def _assert_scenario_snapshot(record: dict[str, Any]) -> None:
-    now_ms = _mock_now_ms()
+    now_ms = mock_now_ms()
     scenario = _scenario_from_snapshot(record["scenario"])
     vfs = MemoryVFS(_now_ms=now_ms)
     memory = SimpleMemory(_now_ms=now_ms)
@@ -54,7 +60,7 @@ async def _assert_scenario_snapshot(record: dict[str, Any]) -> None:
 
     assert _serialize_oracle_trace(trace) == record["trace"]
     assert _serialize_assertion_result(assertion_result) == record["assertionResult"]
-    assert await _snapshot_world_state(runtime.ctx.vfs, runtime.ctx.memory) == record["worldAfter"]
+    assert await snapshot_world_state(runtime.ctx.vfs, runtime.ctx.memory) == record["worldAfter"]
 
 
 def _scenario_from_snapshot(raw: dict[str, Any]) -> ScenarioSpec:
@@ -106,7 +112,7 @@ def _world_from_snapshot(raw: dict[str, Any]) -> WorldSpec:
     raw_fetch_resources = raw.get("fetchResources")
     if isinstance(raw_fetch_resources, dict):
         fetch_resources = {
-            resource: _decode_fetch_payload(payload)
+            resource: decode_fetch_payload(payload)
             for resource, payload in raw_fetch_resources.items()
         }
 
@@ -214,35 +220,21 @@ def _oracle_from_snapshot(raw: Any) -> list[str | OracleCommandSpec]:
     return steps
 
 
-def _decode_fetch_payload(value: Any) -> Any:
-    if not isinstance(value, dict):
-        return value
-    kind = value.get("kind")
-    if kind == "bytes":
-        return decode_b64(value["data_b64"])
-    if kind == "undefined":
-        return None
-    return {
-        key: _decode_fetch_payload(payload)
-        for key, payload in value.items()
-    }
-
-
 def _serialize_oracle_trace(trace: Any) -> dict[str, Any]:
     return {
         "scenarioId": trace.scenario_id,
         "steps": [
             {
                 "command": step.command,
-                "output": _normalize_presentation_text(step.output),
+                "output": normalize_presentation_text(step.output),
                 "body": step.body,
                 "exitCode": step.exit_code,
                 "expectedExitCode": step.expected_exit_code,
-                "execution": _serialize_run_execution(step.execution),
+                "execution": serialize_run_execution(step.execution),
             }
             for step in trace.steps
         ],
-        "finalOutput": _normalize_presentation_text(trace.final_output),
+        "finalOutput": normalize_presentation_text(trace.final_output),
         "finalBody": trace.final_body,
         "finalExitCode": trace.final_exit_code,
     }
@@ -253,131 +245,3 @@ def _serialize_assertion_result(result: Any) -> dict[str, Any]:
         "passed": result.passed,
         "failures": list(result.failures),
     }
-
-
-def _serialize_run_execution(execution: Any) -> dict[str, Any]:
-    payload = {
-        "exitCode": execution.exit_code,
-        "stdout_b64": _to_base64(execution.stdout),
-        "stderr": execution.stderr,
-        "contentType": execution.content_type,
-        "trace": [_serialize_pipeline_trace(item) for item in execution.trace],
-        "presentation": {
-            "text": _normalize_presentation_text(execution.presentation.text),
-            "body": execution.presentation.body,
-            "stdoutMode": execution.presentation.stdout_mode,
-        },
-    }
-    if execution.stdout and not looks_binary(execution.stdout):
-        payload["stdout_text"] = execution.stdout.decode("utf-8")
-    if execution.presentation.saved_path is not None:
-        payload["presentation"]["savedPath"] = execution.presentation.saved_path
-    if execution.presentation.total_bytes is not None:
-        payload["presentation"]["totalBytes"] = execution.presentation.total_bytes
-    if execution.presentation.total_lines is not None:
-        payload["presentation"]["totalLines"] = execution.presentation.total_lines
-    return payload
-
-
-def _serialize_pipeline_trace(trace: Any) -> dict[str, Any]:
-    payload = {
-        "relationFromPrevious": trace.relation_from_previous,
-        "executed": trace.executed,
-        "commands": [
-            {
-                "argv": list(command_trace.argv),
-                "stdinBytes": command_trace.stdin_bytes,
-                "stdoutBytes": command_trace.stdout_bytes,
-                "stderr": command_trace.stderr,
-                "exitCode": command_trace.exit_code,
-                "contentType": command_trace.content_type,
-            }
-            for command_trace in trace.commands
-        ],
-    }
-    if trace.skipped_reason is not None:
-        payload["skippedReason"] = trace.skipped_reason
-    if trace.exit_code is not None:
-        payload["exitCode"] = trace.exit_code
-    return payload
-
-
-async def _snapshot_world_state(vfs: MemoryVFS, memory: SimpleMemory) -> dict[str, Any]:
-    return {
-        "files": await _snapshot_vfs_entries(vfs),
-        "memory": _snapshot_memory_items(memory),
-    }
-
-
-async def _snapshot_vfs_entries(vfs: MemoryVFS) -> list[dict[str, Any]]:
-    entries: list[dict[str, Any]] = []
-
-    async def walk(dir_path: str) -> None:
-        for child in await vfs.listdir(dir_path):
-            is_dir = child.endswith("/")
-            name = child[:-1] if is_dir else child
-            full_path = f"/{name}" if dir_path == "/" else f"{dir_path}/{name}"
-
-            if is_dir:
-                entries.append({"path": full_path, "kind": "dir"})
-                await walk(full_path)
-                continue
-
-            data = await vfs.read_bytes(full_path)
-            if looks_binary(data):
-                entries.append(
-                    {
-                        "path": full_path,
-                        "kind": "bytes",
-                        "data_b64": _to_base64(data),
-                    }
-                )
-                continue
-
-            entries.append(
-                {
-                    "path": full_path,
-                    "kind": "text",
-                    "text": data.decode("utf-8"),
-                }
-            )
-
-    await walk("/")
-    return entries
-
-
-def _snapshot_memory_items(memory: SimpleMemory) -> list[dict[str, Any]]:
-    items = memory.recent(2**31 - 1)
-    items.reverse()
-    return [
-        {
-            "id": item.id,
-            "text": item.text,
-            "createdEpochMs": item.created_epoch_ms,
-            "metadata": item.metadata,
-        }
-        for item in items
-    ]
-
-
-def _normalize_presentation_text(text: str) -> str:
-    import re
-
-    return re.sub(r"\[exit:(-?\d+) \| [^\]]+\]$", r"[exit:\1 | 0ms]", text)
-
-
-def _mock_now_ms() -> Any:
-    current = 1_700_000_000_000
-
-    def now_ms() -> int:
-        nonlocal current
-        current += 1
-        return current
-
-    return now_ms
-
-
-def _to_base64(data: bytes) -> str:
-    import base64
-
-    return base64.b64encode(data).decode("ascii")

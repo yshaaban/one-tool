@@ -1,0 +1,20 @@
+{
+  "id": "conformance-help-entry",
+  "command": "help",
+  "snapshotGroup": "sort",
+  "args": [
+    "sort"
+  ],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "c29ydDogU29ydCBsaW5lcyBmcm9tIHN0ZGluIG9yIGEgZmlsZS4KVXNhZ2U6IHNvcnQgWy1yXSBbLW5dIFstdV0gWy1mXSBbLVZdIFtwYXRoXQoKRXhhbXBsZXM6CiAgc29ydCAvbm90ZXMvdG9kby50eHQKICBzb3J0IC1mIC90bXAvbmFtZXMudHh0CiAgc29ydCAtViAvdG1wL3JlbGVhc2VzLnR4dAogIGZpbmQgL2NvbmZpZyAtdHlwZSBmIHwgc29ydCAtcg==",
+    "stdout_text": "sort: Sort lines from stdin or a file.\nUsage: sort [-r] [-n] [-u] [-f] [-V] [path]\n\nExamples:\n  sort /notes/todo.txt\n  sort -f /tmp/names.txt\n  sort -V /tmp/releases.txt\n  find /config -type f | sort -r",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

@@ -1,25 +1,27 @@
 from __future__ import annotations
 
 import asyncio
-import base64
 import json
-import re
-from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-from conftest import ROOT_DIR, decode_b64
+from conftest import ROOT_DIR
 from onetool.commands import CommandSpec
-from onetool.execution_policy import AgentCLIExecutionPolicy
 from onetool.memory import SimpleMemory
 from onetool.runtime import AgentCLI
-from onetool.testing.adapters import DemoFetch, DemoSearch, DemoSearchDocument
-from onetool.types import ToolAdapters, err, ok, ok_bytes
-from onetool.utils import looks_binary
+from onetool.types import err, ok, ok_bytes
+from snapshot_helpers import (
+    build_adapters,
+    execution_policy_from_snapshot,
+    mock_now_ms,
+    resource_policy_from_snapshot,
+    seed_snapshot_world,
+    serialize_run_execution,
+    snapshot_world_state,
+)
 from onetool.vfs.memory_vfs import MemoryVFS
-from onetool.vfs.policy import VfsResourcePolicy
 
 RUNTIME_SNAPSHOT_ROOT = ROOT_DIR / "snapshots" / "runtime"
 RUNTIME_EXECUTION_SNAPSHOTS = sorted((RUNTIME_SNAPSHOT_ROOT / "executions").glob("*.json"))
@@ -50,8 +52,8 @@ async def _assert_runtime_execution_snapshot(record: dict[str, Any]) -> None:
     runtime = await _create_snapshot_runtime(record)
     execution = await runtime.run_detailed(record["commandLine"])
 
-    assert _serialize_run_execution(execution) == record["execution"]
-    assert await _snapshot_world_state(runtime.ctx.vfs, runtime.ctx.memory) == record["worldAfter"]
+    assert serialize_run_execution(execution) == record["execution"]
+    assert await snapshot_world_state(runtime.ctx.vfs, runtime.ctx.memory) == record["worldAfter"]
 
 
 async def _assert_runtime_description_snapshot(record: dict[str, Any]) -> None:
@@ -60,22 +62,22 @@ async def _assert_runtime_description_snapshot(record: dict[str, Any]) -> None:
 
 
 async def _create_snapshot_runtime(record: dict[str, Any]) -> AgentCLI:
-    now_ms = _mock_now_ms()
+    now_ms = mock_now_ms()
     vfs = MemoryVFS(
-        resource_policy=_resource_policy_from_snapshot(record.get("vfsResourcePolicy")),
+        resource_policy=resource_policy_from_snapshot(record.get("vfsResourcePolicy")),
         _now_ms=now_ms,
     )
     memory = SimpleMemory(_now_ms=now_ms)
-    await _seed_snapshot_world(vfs, memory, record.get("world"))
+    await seed_snapshot_world(vfs, memory, record.get("world"))
 
     runtime = AgentCLI(
         vfs=vfs,
-        adapters=_build_adapters(record.get("world")),
+        adapters=build_adapters(record.get("world")),
         memory=memory,
         builtin_commands=record.get("builtinCommands"),
         commands=_runtime_fixture_commands(record.get("customCommands", [])),
         output_limits=record.get("outputLimits"),
-        execution_policy=_execution_policy_from_snapshot(record.get("executionPolicy")),
+        execution_policy=execution_policy_from_snapshot(record.get("executionPolicy")),
     )
     await runtime.initialize()
     return runtime
@@ -153,222 +155,3 @@ def _runtime_fixture_commands(ids: list[str]) -> tuple[CommandSpec, ...]:
         raise AssertionError(f"unsupported runtime fixture command: {command_id}")
 
     return tuple(fixtures)
-
-
-def _build_adapters(raw_world: object) -> ToolAdapters:
-    if not isinstance(raw_world, dict):
-        return ToolAdapters()
-
-    adapters = ToolAdapters()
-    search_docs = raw_world.get("searchDocs")
-    if isinstance(search_docs, list):
-        adapters.search = DemoSearch(
-            [
-                DemoSearchDocument(
-                    title=doc["title"],
-                    body=doc["body"],
-                    source=doc["source"],
-                )
-                for doc in search_docs
-            ]
-        )
-
-    fetch_resources = raw_world.get("fetchResources")
-    if isinstance(fetch_resources, dict):
-        adapters.fetch = DemoFetch(
-            {
-                resource: _decode_fetch_payload(payload)
-                for resource, payload in fetch_resources.items()
-            }
-        )
-
-    return adapters
-
-
-async def _seed_snapshot_world(vfs: MemoryVFS, memory: SimpleMemory, raw_world: object) -> None:
-    if not isinstance(raw_world, dict):
-        return
-
-    files = raw_world.get("files")
-    if isinstance(files, dict):
-        for file_path in sorted(files):
-            entry = files[file_path]
-            if not isinstance(entry, dict):
-                continue
-            kind = entry.get("kind")
-            if kind == "dir":
-                await vfs.mkdir(file_path, True)
-                continue
-            if kind == "text":
-                await vfs.write_bytes(file_path, entry["text"].encode("utf-8"), True)
-                continue
-            if kind == "bytes":
-                await vfs.write_bytes(file_path, decode_b64(entry["data_b64"]), True)
-                continue
-            raise AssertionError(f"unsupported snapshot file kind: {kind}")
-
-    memory_items = raw_world.get("memory")
-    if isinstance(memory_items, list):
-        for item in memory_items:
-            if isinstance(item, str):
-                memory.store(item)
-
-
-def _decode_fetch_payload(value: object) -> Any:
-    if not isinstance(value, dict):
-        return value
-    kind = value.get("kind")
-    if kind == "bytes" and set(value) == {"kind", "data_b64"}:
-        return decode_b64(value["data_b64"])
-    if kind == "undefined" and set(value) == {"kind"}:
-        return None
-    return {key: _decode_fetch_payload(payload) for key, payload in value.items()}
-
-
-def _execution_policy_from_snapshot(raw: object) -> AgentCLIExecutionPolicy | None:
-    if not isinstance(raw, dict):
-        return None
-    return AgentCLIExecutionPolicy(max_materialized_bytes=raw.get("maxMaterializedBytes"))
-
-
-def _resource_policy_from_snapshot(raw: object) -> VfsResourcePolicy | None:
-    if not isinstance(raw, dict):
-        return None
-    return VfsResourcePolicy(
-        max_file_bytes=raw.get("maxFileBytes"),
-        max_total_bytes=raw.get("maxTotalBytes"),
-        max_directory_depth=raw.get("maxDirectoryDepth"),
-        max_entries_per_directory=raw.get("maxEntriesPerDirectory"),
-        max_output_artifact_bytes=raw.get("maxOutputArtifactBytes"),
-    )
-
-
-def _serialize_run_execution(execution: Any) -> dict[str, object]:
-    payload: dict[str, object] = {
-        "exitCode": execution.exit_code,
-        "stdout_b64": _to_base64(execution.stdout),
-        "stderr": execution.stderr,
-        "contentType": execution.content_type,
-        "trace": [_serialize_pipeline_trace(item) for item in execution.trace],
-        "presentation": _serialize_presentation(execution.presentation),
-    }
-    if execution.stdout and not looks_binary(execution.stdout):
-        payload["stdout_text"] = execution.stdout.decode("utf-8")
-    return payload
-
-
-def _serialize_pipeline_trace(trace: Any) -> dict[str, object]:
-    payload: dict[str, object] = {
-        "relationFromPrevious": trace.relation_from_previous,
-        "executed": trace.executed,
-        "commands": [
-            {
-                "argv": list(command_trace.argv),
-                "stdinBytes": command_trace.stdin_bytes,
-                "stdoutBytes": command_trace.stdout_bytes,
-                "stderr": command_trace.stderr,
-                "exitCode": command_trace.exit_code,
-                "contentType": command_trace.content_type,
-            }
-            for command_trace in trace.commands
-        ],
-    }
-    if trace.skipped_reason is not None:
-        payload["skippedReason"] = trace.skipped_reason
-    if trace.exit_code is not None:
-        payload["exitCode"] = trace.exit_code
-    return payload
-
-
-def _serialize_presentation(presentation: Any) -> dict[str, object]:
-    payload: dict[str, object] = {
-        "text": _normalize_presentation_text(presentation.text),
-        "body": presentation.body,
-        "stdoutMode": presentation.stdout_mode,
-    }
-    if presentation.saved_path is not None:
-        payload["savedPath"] = presentation.saved_path
-    if presentation.total_bytes is not None:
-        payload["totalBytes"] = presentation.total_bytes
-    if presentation.total_lines is not None:
-        payload["totalLines"] = presentation.total_lines
-    return payload
-
-
-async def _snapshot_world_state(vfs: MemoryVFS, memory: SimpleMemory) -> dict[str, object]:
-    return {
-        "files": await _snapshot_vfs_entries(vfs),
-        "memory": _snapshot_memory_items(memory),
-    }
-
-
-async def _snapshot_vfs_entries(vfs: MemoryVFS) -> list[dict[str, object]]:
-    entries: list[dict[str, object]] = []
-
-    async def walk(dir_path: str) -> None:
-        for child in await vfs.listdir(dir_path):
-            is_dir = child.endswith("/")
-            name = child[:-1] if is_dir else child
-            full_path = f"/{name}" if dir_path == "/" else f"{dir_path}/{name}"
-
-            if is_dir:
-                entries.append({"path": full_path, "kind": "dir"})
-                await walk(full_path)
-                continue
-
-            data = await vfs.read_bytes(full_path)
-            if looks_binary(data):
-                entries.append(
-                    {
-                        "path": full_path,
-                        "kind": "bytes",
-                        "data_b64": _to_base64(data),
-                    }
-                )
-                continue
-
-            entries.append(
-                {
-                    "path": full_path,
-                    "kind": "text",
-                    "text": data.decode("utf-8"),
-                }
-            )
-
-    await walk("/")
-    return entries
-
-
-def _snapshot_memory_items(memory: SimpleMemory) -> list[dict[str, object]]:
-    items = memory.recent(2**31 - 1)
-    items.reverse()
-    return [
-        {
-            "id": item.id,
-            "text": item.text,
-            "createdEpochMs": item.created_epoch_ms,
-            "metadata": item.metadata,
-        }
-        for item in items
-    ]
-
-
-def _normalize_presentation_text(text: str) -> str:
-    return re.sub(r"\[exit:(-?\d+) \| [^\]]+\]$", r"[exit:\1 | 0ms]", text)
-
-
-def _mock_now_ms() -> Callable[[], int]:
-    current = 1_700_000_000_000
-
-    def now_ms() -> int:
-        nonlocal current
-        current += 1
-        return current
-
-    return now_ms
-
-
-def _to_base64(data: bytes) -> str:
-    if not data:
-        return ""
-    return base64.b64encode(data).decode("ascii")

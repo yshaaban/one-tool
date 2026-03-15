@@ -1,0 +1,20 @@
+{
+  "id": "conformance-help-entry",
+  "command": "help",
+  "snapshotGroup": "sed",
+  "args": [
+    "sed"
+  ],
+  "stdin_b64": "",
+  "result": {
+    "stdout_b64": "c2VkOiBTdHJlYW0gZWRpdG9yIHdpdGggaW4tcGxhY2UgZWRpdGluZywgYWRkcmVzc2VzLCBhbmQgc3Vic3RpdHV0aW9ucy4KVXNhZ2U6IHNlZCBbT1BUSU9OXS4uLiBbU0NSSVBUXSBbSU5QVVRGSUxFLi4uXQoKU3VwcG9ydHMgYSBHTlUtY29tcGF0aWJsZSBzdWJzZXQ6IGFkZHJlc3NlcyAobGluZSwgJCwgL3JlZ2V4LywgcmFuZ2UpLCBjb21tYW5kcyBwL2QvcS9uL3MvYS9pL2MsIGFuZCBvcHRpb25zIC1uLCAtZSwgLWYsIC1FLCAtaVtTVUZGSVhdLiBDb21tb24gY2x1c3RlcmVkIHNob3J0IG9wdGlvbnMgbGlrZSAtbmUgYW5kIC1uRWY8ZmlsZT4gYWxzbyB3b3JrLgpFeGFtcGxlczoKICBzZWQgInMvRVJST1IvV0FSTi8iIC9sb2dzL2FwcC5sb2cKICBzZWQgLW4gIjEsNXAiIC9sb2dzL2FwcC5sb2cKICBzZWQgLWkuYmFrICJzL3VzLWVhc3QtMS91cy13ZXN0LTIvIiAvY29uZmlnL2FwcC5lbnY=",
+    "stdout_text": "sed: Stream editor with in-place editing, addresses, and substitutions.\nUsage: sed [OPTION]... [SCRIPT] [INPUTFILE...]\n\nSupports a GNU-compatible subset: addresses (line, $, /regex/, range), commands p/d/q/n/s/a/i/c, and options -n, -e, -f, -E, -i[SUFFIX]. Common clustered short options like -ne and -nEf<file> also work.\nExamples:\n  sed \"s/ERROR/WARN/\" /logs/app.log\n  sed -n \"1,5p\" /logs/app.log\n  sed -i.bak \"s/us-east-1/us-west-2/\" /config/app.env",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}
