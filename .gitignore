@@ -8,5 +8,7 @@ site/dist/
 site/node_modules/
 python/.pytest_cache/
 python/.venv/
+try-cli.mjs
+try-edit.mjs
 **/__pycache__/
 *.py[cod]
