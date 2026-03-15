@@ -22,6 +22,7 @@ from snapshot_helpers import (
     snapshot_world_state,
 )
 from onetool.vfs.memory_vfs import MemoryVFS
+from runtime_fixture_commands import runtime_fixture_commands
 
 RUNTIME_SNAPSHOT_ROOT = ROOT_DIR / "snapshots" / "runtime"
 RUNTIME_EXECUTION_SNAPSHOTS = sorted((RUNTIME_SNAPSHOT_ROOT / "executions").glob("*.json"))
@@ -75,83 +76,9 @@ async def _create_snapshot_runtime(record: dict[str, Any]) -> AgentCLI:
         adapters=build_adapters(record.get("world")),
         memory=memory,
         builtin_commands=record.get("builtinCommands"),
-        commands=_runtime_fixture_commands(record.get("customCommands", [])),
+        commands=runtime_fixture_commands(record.get("customCommands", [])),
         output_limits=record.get("outputLimits"),
         execution_policy=execution_policy_from_snapshot(record.get("executionPolicy")),
     )
     await runtime.initialize()
     return runtime
-
-
-def _runtime_fixture_commands(ids: list[str]) -> tuple[CommandSpec, ...]:
-    fixtures: list[CommandSpec] = []
-    for command_id in ids:
-        if command_id == "echo":
-            fixtures.append(
-                CommandSpec(
-                    name="echo",
-                    summary="Echo text.",
-                    usage="echo <text...>",
-                    details="Examples:\n  echo hello",
-                    handler=lambda _ctx, args, _stdin: ok(" ".join(args)),
-                )
-            )
-            continue
-        if command_id == "fail":
-            fixtures.append(
-                CommandSpec(
-                    name="fail",
-                    summary="Fail immediately.",
-                    usage="fail",
-                    details="Examples:\n  fail",
-                    handler=lambda _ctx, _args, _stdin: err("fail: forced failure"),
-                )
-            )
-            continue
-        if command_id == "burst":
-            fixtures.append(
-                CommandSpec(
-                    name="burst",
-                    summary="Emit three lines.",
-                    usage="burst",
-                    details="Examples:\n  burst",
-                    handler=lambda _ctx, _args, _stdin: ok("first line\nsecond line\nthird line"),
-                )
-            )
-            continue
-        if command_id == "binary":
-            fixtures.append(
-                CommandSpec(
-                    name="binary",
-                    summary="Emit binary bytes.",
-                    usage="binary",
-                    details="Examples:\n  binary",
-                    handler=lambda _ctx, _args, _stdin: ok_bytes(bytes([0, 1, 2, 3]), "application/octet-stream"),
-                )
-            )
-            continue
-        if command_id == "longline":
-            fixtures.append(
-                CommandSpec(
-                    name="longline",
-                    summary="Emit one long line.",
-                    usage="longline",
-                    details="Examples:\n  longline",
-                    handler=lambda _ctx, _args, _stdin: ok("abcdefghijklmnopqrstuvwxyz"),
-                )
-            )
-            continue
-        if command_id == "help-override":
-            fixtures.append(
-                CommandSpec(
-                    name="help",
-                    summary="Overridden help.",
-                    usage="help",
-                    details="Examples:\n  help",
-                    handler=lambda _ctx, _args, _stdin: ok("override help"),
-                )
-            )
-            continue
-        raise AssertionError(f"unsupported runtime fixture command: {command_id}")
-
-    return tuple(fixtures)
