@@ -2,6 +2,10 @@ node_modules/
 dist/
 agent_state/
 .env
+.claude/
 *.tsbuildinfo
 site/dist/
 site/node_modules/
+python/.pytest_cache/
+**/__pycache__/
+*.py[cod]
