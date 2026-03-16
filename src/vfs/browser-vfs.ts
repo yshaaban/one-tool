@@ -49,6 +49,14 @@ function promisifyRequest<T>(request: IDBRequest<T>): Promise<T> {
   });
 }
 
+function readStoreRecord<T>(store: IDBObjectStore, key: IDBValidKey): Promise<T | undefined> {
+  return promisifyRequest(store.get(key) as IDBRequest<T | undefined>);
+}
+
+function readAllStoreRecords<T>(store: IDBObjectStore): Promise<T[]> {
+  return promisifyRequest(store.getAll() as IDBRequest<T[]>);
+}
+
 function promisifyTransaction(tx: IDBTransaction): Promise<void> {
   return new Promise((resolve, reject) => {
     tx.oncomplete = () => resolve();
@@ -112,7 +120,7 @@ export class BrowserVFS implements VFS {
     // Ensure root dir exists
     const tx = db.transaction(STORE_DIRS, 'readwrite');
     const store = tx.objectStore(STORE_DIRS);
-    const existing = await promisifyRequest(store.get('/'));
+    const existing = await readStoreRecord<DirRecord>(store, '/');
     if (!existing) {
       store.put({ path: '/', mtimeMs: Date.now() } satisfies DirRecord);
     }
@@ -153,13 +161,13 @@ export class BrowserVFS implements VFS {
 
   private async hasDir(path: string, dirStore?: IDBObjectStore): Promise<boolean> {
     const store = dirStore ?? this.tx(STORE_DIRS, 'readonly').objectStore(STORE_DIRS);
-    const record = await promisifyRequest(store.get(path));
+    const record = await readStoreRecord<DirRecord>(store, path);
     return record !== undefined;
   }
 
   private async hasFile(path: string, fileStore?: IDBObjectStore): Promise<boolean> {
     const store = fileStore ?? this.tx(STORE_FILES, 'readonly').objectStore(STORE_FILES);
-    const record = await promisifyRequest(store.get(path));
+    const record = await readStoreRecord<FileRecord>(store, path);
     return record !== undefined;
   }
 
@@ -174,12 +182,12 @@ export class BrowserVFS implements VFS {
       current += '/' + seg;
       // If a file already occupies an ancestor path, the mkdir is invalid
       if (fileStore) {
-        const fileCollision = await promisifyRequest(fileStore.get(current));
+        const fileCollision = await readStoreRecord<FileRecord>(fileStore, current);
         if (fileCollision) {
           throw vfsError('ENOTDIR', current);
         }
       }
-      const existing = await promisifyRequest(dirStore.get(current));
+      const existing = await readStoreRecord<DirRecord>(dirStore, current);
       if (!existing) {
         dirStore.put({ path: current, mtimeMs: Date.now() } satisfies DirRecord);
       }
@@ -191,15 +199,15 @@ export class BrowserVFS implements VFS {
     let current = '';
     for (const segment of segments) {
       current += `/${segment}`;
-      if (await promisifyRequest(fileStore.get(current))) {
+      if (await readStoreRecord<FileRecord>(fileStore, current)) {
         throw vfsError('ENOTDIR', current);
       }
     }
   }
 
   private async createSnapshot(dirStore: IDBObjectStore, fileStore: IDBObjectStore): Promise<VfsSnapshot> {
-    const allDirs = (await promisifyRequest(dirStore.getAll())) as DirRecord[];
-    const allFiles = (await promisifyRequest(fileStore.getAll())) as FileRecord[];
+    const allDirs = await readAllStoreRecords<DirRecord>(dirStore);
+    const allFiles = await readAllStoreRecords<FileRecord>(fileStore);
     return createSnapshotFromEntries(
       allFiles.map(function (file) {
         return [file.path, file.data.length] as const;
@@ -230,9 +238,9 @@ export class BrowserVFS implements VFS {
   async exists(inputPath: string): Promise<boolean> {
     const p = this.normalize(inputPath);
     const tx = this.tx([STORE_DIRS, STORE_FILES], 'readonly');
-    const inDirs = await promisifyRequest(tx.objectStore(STORE_DIRS).get(p));
+    const inDirs = await readStoreRecord<DirRecord>(tx.objectStore(STORE_DIRS), p);
     if (inDirs) return true;
-    const inFiles = await promisifyRequest(tx.objectStore(STORE_FILES).get(p));
+    const inFiles = await readStoreRecord<FileRecord>(tx.objectStore(STORE_FILES), p);
     return inFiles !== undefined;
   }
 
@@ -250,7 +258,7 @@ export class BrowserVFS implements VFS {
     const fileStore = tx.objectStore(STORE_FILES);
 
     // Collision: a file already exists at this exact path
-    const fileCollision = await promisifyRequest(fileStore.get(p));
+    const fileCollision = await readStoreRecord<FileRecord>(fileStore, p);
     if (fileCollision) {
       throw vfsError('EEXIST', p);
     }
@@ -258,10 +266,10 @@ export class BrowserVFS implements VFS {
       await this.validateParents(p, fileStore);
     } else {
       const parent = parentOf(p);
-      if (await promisifyRequest(fileStore.get(parent))) {
+      if (await readStoreRecord<FileRecord>(fileStore, parent)) {
         throw vfsError('ENOTDIR', parent);
       }
-      const parentExists = await promisifyRequest(dirStore.get(parent));
+      const parentExists = await readStoreRecord<DirRecord>(dirStore, parent);
       if (!parentExists) {
         throw vfsError('ENOENT', parent);
       }
@@ -287,9 +295,9 @@ export class BrowserVFS implements VFS {
     const dirStore = tx.objectStore(STORE_DIRS);
     const fileStore = tx.objectStore(STORE_FILES);
 
-    const dirExists = await promisifyRequest(dirStore.get(p));
+    const dirExists = await readStoreRecord<DirRecord>(dirStore, p);
     if (!dirExists) {
-      const fileExists = await promisifyRequest(fileStore.get(p));
+      const fileExists = await readStoreRecord<FileRecord>(fileStore, p);
       if (fileExists) {
         throw vfsError('ENOTDIR', p);
       }
@@ -304,7 +312,7 @@ export class BrowserVFS implements VFS {
     // large filesystems, add an IDB index on a "parent" field instead.
 
     // Scan all dirs
-    const allDirs = (await promisifyRequest(dirStore.getAll())) as DirRecord[];
+    const allDirs = await readAllStoreRecords<DirRecord>(dirStore);
     for (const dir of allDirs) {
       if (dir.path === p) continue;
       if (!dir.path.startsWith(prefix)) continue;
@@ -315,7 +323,7 @@ export class BrowserVFS implements VFS {
     }
 
     // Scan all files
-    const allFiles = (await promisifyRequest(fileStore.getAll())) as FileRecord[];
+    const allFiles = await readAllStoreRecords<FileRecord>(fileStore);
     for (const file of allFiles) {
       if (!file.path.startsWith(prefix)) continue;
       const rest = file.path.slice(prefix.length);
@@ -336,12 +344,12 @@ export class BrowserVFS implements VFS {
     const p = this.normalize(inputPath);
     const tx = this.tx([STORE_DIRS, STORE_FILES], 'readonly');
 
-    const dirExists = await promisifyRequest(tx.objectStore(STORE_DIRS).get(p));
+    const dirExists = await readStoreRecord<DirRecord>(tx.objectStore(STORE_DIRS), p);
     if (dirExists) {
       throw vfsError('EISDIR', p);
     }
 
-    const record = (await promisifyRequest(tx.objectStore(STORE_FILES).get(p))) as FileRecord | undefined;
+    const record = await readStoreRecord<FileRecord>(tx.objectStore(STORE_FILES), p);
     if (!record) {
       throw vfsError('ENOENT', p);
     }
@@ -361,7 +369,7 @@ export class BrowserVFS implements VFS {
     const fileStore = tx.objectStore(STORE_FILES);
 
     // Collision: cannot overwrite a directory with a file
-    const dirCollision = await promisifyRequest(dirStore.get(p));
+    const dirCollision = await readStoreRecord<DirRecord>(dirStore, p);
     if (dirCollision) {
       throw vfsError('EISDIR', p);
     }
@@ -369,10 +377,10 @@ export class BrowserVFS implements VFS {
       await this.validateParents(parentOf(p), fileStore);
     } else {
       const parent = parentOf(p);
-      if (await promisifyRequest(fileStore.get(parent))) {
+      if (await readStoreRecord<FileRecord>(fileStore, parent)) {
         throw vfsError('ENOTDIR', parent);
       }
-      if (!(await promisifyRequest(dirStore.get(parent)))) {
+      if (!(await readStoreRecord<DirRecord>(dirStore, parent))) {
         throw vfsError('ENOENT', parent);
       }
     }
@@ -401,7 +409,7 @@ export class BrowserVFS implements VFS {
     const dirStore = tx.objectStore(STORE_DIRS);
 
     // Collision: cannot append to a directory
-    const dirCollision = await promisifyRequest(dirStore.get(p));
+    const dirCollision = await readStoreRecord<DirRecord>(dirStore, p);
     if (dirCollision) {
       throw vfsError('EISDIR', p);
     }
@@ -411,10 +419,10 @@ export class BrowserVFS implements VFS {
       await this.validateParents(parentOf(p), fileStore);
     } else {
       const parent = parentOf(p);
-      if (await promisifyRequest(fileStore.get(parent))) {
+      if (await readStoreRecord<FileRecord>(fileStore, parent)) {
         throw vfsError('ENOTDIR', parent);
       }
-      if (!(await promisifyRequest(dirStore.get(parent)))) {
+      if (!(await readStoreRecord<DirRecord>(dirStore, parent))) {
         throw vfsError('ENOENT', parent);
       }
     }
@@ -426,7 +434,7 @@ export class BrowserVFS implements VFS {
       await this.ensureParents(parentOf(p), dirStore, fileStore);
     }
 
-    const existing = (await promisifyRequest(fileStore.get(p))) as FileRecord | undefined;
+    const existing = await readStoreRecord<FileRecord>(fileStore, p);
 
     if (existing) {
       const merged = new Uint8Array(existing.data.length + data.length);
@@ -448,7 +456,7 @@ export class BrowserVFS implements VFS {
     const dirStore = tx.objectStore(STORE_DIRS);
 
     // Check if it's a file
-    const fileRecord = await promisifyRequest(fileStore.get(p));
+    const fileRecord = await readStoreRecord<FileRecord>(fileStore, p);
     if (fileRecord) {
       fileStore.delete(p);
       await promisifyTransaction(tx);
@@ -456,7 +464,7 @@ export class BrowserVFS implements VFS {
     }
 
     // Check if it's a directory
-    const dirRecord = await promisifyRequest(dirStore.get(p));
+    const dirRecord = await readStoreRecord<DirRecord>(dirStore, p);
     if (!dirRecord) {
       throw vfsError('ENOENT', p);
     }
@@ -467,14 +475,14 @@ export class BrowserVFS implements VFS {
     // Delete the dir and all children
     const prefix = p + '/';
 
-    const allDirs = (await promisifyRequest(dirStore.getAll())) as DirRecord[];
+    const allDirs = await readAllStoreRecords<DirRecord>(dirStore);
     for (const dir of allDirs) {
       if (dir.path === p || dir.path.startsWith(prefix)) {
         dirStore.delete(dir.path);
       }
     }
 
-    const allFiles = (await promisifyRequest(fileStore.getAll())) as FileRecord[];
+    const allFiles = await readAllStoreRecords<FileRecord>(fileStore);
     for (const file of allFiles) {
       if (file.path.startsWith(prefix)) {
         fileStore.delete(file.path);
@@ -493,9 +501,9 @@ export class BrowserVFS implements VFS {
     const dirStore = tx.objectStore(STORE_DIRS);
 
     // File copy
-    const fileRecord = (await promisifyRequest(fileStore.get(srcP))) as FileRecord | undefined;
+    const fileRecord = await readStoreRecord<FileRecord>(fileStore, srcP);
     if (fileRecord) {
-      const dstDirCollision = await promisifyRequest(dirStore.get(dstP));
+      const dstDirCollision = await readStoreRecord<DirRecord>(dirStore, dstP);
       if (dstDirCollision) {
         throw vfsError('EISDIR', dstP);
       }
@@ -514,14 +522,14 @@ export class BrowserVFS implements VFS {
     }
 
     // Directory copy
-    const dirRecord = await promisifyRequest(dirStore.get(srcP));
+    const dirRecord = await readStoreRecord<DirRecord>(dirStore, srcP);
     if (!dirRecord) {
       throw vfsError('ENOENT', srcP);
     }
 
     // Check destination doesn't exist
-    const dstDirExists = await promisifyRequest(dirStore.get(dstP));
-    const dstFileExists = await promisifyRequest(fileStore.get(dstP));
+    const dstDirExists = await readStoreRecord<DirRecord>(dirStore, dstP);
+    const dstFileExists = await readStoreRecord<FileRecord>(fileStore, dstP);
     if (dstDirExists || dstFileExists) {
       throw vfsError('EEXIST', dstP);
     }
@@ -538,7 +546,7 @@ export class BrowserVFS implements VFS {
     dirStore.put({ path: dstP, mtimeMs: Date.now() } satisfies DirRecord);
     const prefix = srcP === '/' ? '/' : srcP + '/';
 
-    const allDirs = (await promisifyRequest(dirStore.getAll())) as DirRecord[];
+    const allDirs = await readAllStoreRecords<DirRecord>(dirStore);
     for (const dir of allDirs) {
       if (dir.path.startsWith(prefix)) {
         dirStore.put({
@@ -548,7 +556,7 @@ export class BrowserVFS implements VFS {
       }
     }
 
-    const allFiles = (await promisifyRequest(fileStore.getAll())) as FileRecord[];
+    const allFiles = await readAllStoreRecords<FileRecord>(fileStore);
     for (const file of allFiles) {
       if (file.path.startsWith(prefix)) {
         fileStore.put({
@@ -574,9 +582,9 @@ export class BrowserVFS implements VFS {
     const dirStore = tx.objectStore(STORE_DIRS);
     const fileStore = tx.objectStore(STORE_FILES);
 
-    const fileRecord = (await promisifyRequest(fileStore.get(srcP))) as FileRecord | undefined;
+    const fileRecord = await readStoreRecord<FileRecord>(fileStore, srcP);
     if (fileRecord) {
-      if (await promisifyRequest(dirStore.get(dstP))) {
+      if (await readStoreRecord<DirRecord>(dirStore, dstP)) {
         throw vfsError('EISDIR', dstP);
       }
       await this.validateParents(dstParent, fileStore);
@@ -594,15 +602,15 @@ export class BrowserVFS implements VFS {
       return { src: srcP, dst: dstP };
     }
 
-    const dirRecord = await promisifyRequest(dirStore.get(srcP));
+    const dirRecord = await readStoreRecord<DirRecord>(dirStore, srcP);
     if (!dirRecord) {
       throw vfsError('ENOENT', srcP);
     }
     if (isStrictDescendantPath(srcP, dstP)) {
       throw vfsError('EINVAL', dstP, { targetPath: srcP });
     }
-    const dstDirExists = await promisifyRequest(dirStore.get(dstP));
-    const dstFileExists = await promisifyRequest(fileStore.get(dstP));
+    const dstDirExists = await readStoreRecord<DirRecord>(dirStore, dstP);
+    const dstFileExists = await readStoreRecord<FileRecord>(fileStore, dstP);
     if (dstDirExists || dstFileExists) {
       throw vfsError('EEXIST', dstP);
     }
@@ -615,7 +623,7 @@ export class BrowserVFS implements VFS {
     dirStore.put({ path: dstP, mtimeMs: Date.now() } satisfies DirRecord);
     const prefix = srcP === '/' ? '/' : srcP + '/';
 
-    const allDirs = (await promisifyRequest(dirStore.getAll())) as DirRecord[];
+    const allDirs = await readAllStoreRecords<DirRecord>(dirStore);
     for (const dir of allDirs) {
       if (dir.path.startsWith(prefix)) {
         dirStore.put({
@@ -625,7 +633,7 @@ export class BrowserVFS implements VFS {
       }
     }
 
-    const allFiles = (await promisifyRequest(fileStore.getAll())) as FileRecord[];
+    const allFiles = await readAllStoreRecords<FileRecord>(fileStore);
     for (const file of allFiles) {
       if (file.path.startsWith(prefix)) {
         fileStore.put({
@@ -645,7 +653,7 @@ export class BrowserVFS implements VFS {
     const p = this.normalize(inputPath);
     const tx = this.tx([STORE_DIRS, STORE_FILES], 'readonly');
 
-    const dirRecord = (await promisifyRequest(tx.objectStore(STORE_DIRS).get(p))) as DirRecord | undefined;
+    const dirRecord = await readStoreRecord<DirRecord>(tx.objectStore(STORE_DIRS), p);
     if (dirRecord) {
       return {
         path: p,
@@ -657,7 +665,7 @@ export class BrowserVFS implements VFS {
       };
     }
 
-    const fileRecord = (await promisifyRequest(tx.objectStore(STORE_FILES).get(p))) as FileRecord | undefined;
+    const fileRecord = await readStoreRecord<FileRecord>(tx.objectStore(STORE_FILES), p);
     if (fileRecord) {
       return {
         path: p,
