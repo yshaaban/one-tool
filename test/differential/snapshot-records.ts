@@ -5,6 +5,7 @@ import path from 'node:path';
 import type { AgentCLIExecutionPolicy } from '../../src/execution-policy.js';
 import { SimpleMemory } from '../../src/memory.js';
 import { MemoryVFS } from '../../src/vfs/memory-vfs.js';
+import type { VfsResourcePolicy } from '../../src/vfs/index.js';
 
 export interface SerializedTextWorldEntry {
   kind: 'text';
@@ -34,6 +35,14 @@ export interface SerializedExecutionPolicy {
   maxMaterializedBytes?: number;
 }
 
+export interface SerializedVfsResourcePolicy {
+  maxDirectoryDepth?: number;
+  maxEntriesPerDirectory?: number;
+  maxFileBytes?: number;
+  maxOutputArtifactBytes?: number;
+  maxTotalBytes?: number;
+}
+
 export async function loadJsonRecords<T>(rootDir: string, label: string): Promise<T[]> {
   const snapshotPaths = await collectJsonFiles(rootDir);
   assert.ok(snapshotPaths.length > 0, `expected committed ${label} snapshots in ${rootDir}`);
@@ -59,6 +68,33 @@ export function deserializeExecutionPolicy(
   }
 
   return { maxMaterializedBytes: raw.maxMaterializedBytes };
+}
+
+export function deserializeVfsResourcePolicy(
+  raw: SerializedVfsResourcePolicy | undefined,
+): VfsResourcePolicy | undefined {
+  if (raw === undefined) {
+    return undefined;
+  }
+
+  const policy: VfsResourcePolicy = {};
+  if (raw.maxFileBytes !== undefined) {
+    policy.maxFileBytes = raw.maxFileBytes;
+  }
+  if (raw.maxTotalBytes !== undefined) {
+    policy.maxTotalBytes = raw.maxTotalBytes;
+  }
+  if (raw.maxDirectoryDepth !== undefined) {
+    policy.maxDirectoryDepth = raw.maxDirectoryDepth;
+  }
+  if (raw.maxEntriesPerDirectory !== undefined) {
+    policy.maxEntriesPerDirectory = raw.maxEntriesPerDirectory;
+  }
+  if (raw.maxOutputArtifactBytes !== undefined) {
+    policy.maxOutputArtifactBytes = raw.maxOutputArtifactBytes;
+  }
+
+  return policy;
 }
 
 export function deserializeSnapshotWorld(raw: DifferentialSnapshotWorld | undefined): Record<string, unknown> | undefined {

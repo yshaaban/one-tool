@@ -3,11 +3,9 @@ import path from 'node:path';
 import test from 'node:test';
 
 import type { BuiltinCommandSelection } from '../src/commands/index.js';
-import type { AgentCLIExecutionPolicy } from '../src/execution-policy.js';
 import { SimpleMemory } from '../src/memory.js';
 import { AgentCLI, type AgentCLIOutputLimits } from '../src/runtime.js';
 import { MemoryVFS } from '../src/vfs/memory-vfs.js';
-import type { VfsResourcePolicy } from '../src/vfs/policy.js';
 import { runtimeFixtureCommands, type RuntimeFixtureCommandId } from './runtime-fixture-commands.js';
 import {
   buildAdapters,
@@ -19,8 +17,10 @@ import { runPythonDifferentialDriver } from './differential/python-driver.js';
 import {
   type DifferentialSnapshotWorld,
   type SerializedExecutionPolicy,
+  type SerializedVfsResourcePolicy,
   deserializeExecutionPolicy,
   deserializeSnapshotWorld,
+  deserializeVfsResourcePolicy,
   loadJsonRecords,
   seedWorldFromRecord,
 } from './differential/snapshot-records.js';
@@ -33,13 +33,7 @@ interface RuntimeExecutionRecord {
   customCommands?: RuntimeFixtureCommandId[];
   outputLimits?: AgentCLIOutputLimits;
   executionPolicy?: SerializedExecutionPolicy;
-  vfsResourcePolicy?: {
-    maxFileBytes?: number;
-    maxTotalBytes?: number;
-    maxDirectoryDepth?: number;
-    maxEntriesPerDirectory?: number;
-    maxOutputArtifactBytes?: number;
-  };
+  vfsResourcePolicy?: SerializedVfsResourcePolicy;
   execution: Record<string, unknown>;
   worldAfter: Record<string, unknown>;
 }
@@ -159,9 +153,7 @@ async function createSnapshotRuntime(
   record: RuntimeExecutionRecord | RuntimeDescriptionRecord,
 ): Promise<AgentCLI> {
   const resourcePolicy =
-    'vfsResourcePolicy' in record && record.vfsResourcePolicy !== undefined
-      ? ({ ...record.vfsResourcePolicy } satisfies VfsResourcePolicy)
-      : undefined;
+    'vfsResourcePolicy' in record ? deserializeVfsResourcePolicy(record.vfsResourcePolicy) : undefined;
   const vfs = resourcePolicy === undefined ? new MemoryVFS() : new MemoryVFS({ resourcePolicy });
   const memory = new SimpleMemory();
 

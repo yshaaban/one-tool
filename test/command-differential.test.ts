@@ -3,10 +3,10 @@ import path from 'node:path';
 import test from 'node:test';
 
 import { createCommandRegistry } from '../src/commands/index.js';
+import { resolveExecutionPolicy } from '../src/execution-policy.js';
 import { SimpleMemory } from '../src/memory.js';
 import { createTestCommandContext, runRegisteredCommand } from '../src/testing/index.js';
 import { MemoryVFS } from '../src/vfs/memory-vfs.js';
-import type { VfsResourcePolicy } from '../src/vfs/index.js';
 import {
   EMPTY_STDIN,
   buildAdapters,
@@ -18,13 +18,14 @@ import { runPythonDifferentialDriver } from './differential/python-driver.js';
 import {
   type DifferentialSnapshotWorld,
   type SerializedExecutionPolicy,
+  type SerializedVfsResourcePolicy,
   decodeBase64,
   deserializeExecutionPolicy,
   deserializeSnapshotWorld,
+  deserializeVfsResourcePolicy,
   loadJsonRecords,
   seedWorldFromRecord,
 } from './differential/snapshot-records.js';
-import { resolveExecutionPolicy } from '../src/execution-policy.js';
 
 interface CommandSnapshotRecord {
   id: string;
@@ -33,13 +34,7 @@ interface CommandSnapshotRecord {
   stdin_b64: string;
   world?: DifferentialSnapshotWorld;
   executionPolicy?: SerializedExecutionPolicy;
-  vfsResourcePolicy?: {
-    maxFileBytes?: number;
-    maxTotalBytes?: number;
-    maxDirectoryDepth?: number;
-    maxEntriesPerDirectory?: number;
-    maxOutputArtifactBytes?: number;
-  };
+  vfsResourcePolicy?: SerializedVfsResourcePolicy;
   result: Record<string, unknown>;
   worldAfter: Record<string, unknown>;
 }
@@ -87,7 +82,9 @@ async function loadCommandSnapshotRecords(): Promise<CommandSnapshotRecord[]> {
 
 async function runTypescriptCommandSnapshotRecord(record: CommandSnapshotRecord): Promise<DifferentialCommandCaseResult> {
   return withMockedNow(async function (): Promise<DifferentialCommandCaseResult> {
-    const resourcePolicy = record.vfsResourcePolicy === undefined ? undefined : { ...record.vfsResourcePolicy } satisfies VfsResourcePolicy;
+    const resourcePolicy = deserializeVfsResourcePolicy(
+      record.vfsResourcePolicy,
+    );
     const vfs = resourcePolicy === undefined ? new MemoryVFS() : new MemoryVFS({ resourcePolicy });
     const memory = new SimpleMemory();
     const ctx = createTestCommandContext({
