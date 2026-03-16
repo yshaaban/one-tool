@@ -2,6 +2,7 @@ import type { MaybePromise, CommandResult, ToolAdapters } from '../types.js';
 import type { VFS } from '../vfs/interface.js';
 import type { ResolvedAgentCLIExecutionPolicy } from '../execution-policy.js';
 import { SimpleMemory } from '../memory.js';
+import { compareCLocaleText } from '../utils.js';
 
 export interface CommandSpec {
   name: string;
@@ -56,11 +57,13 @@ export class CommandRegistry {
   }
 
   all(): CommandSpec[] {
-    return [...this.commands.values()].sort((left, right) => left.name.localeCompare(right.name));
+    return [...this.commands.values()].sort(function (left, right): number {
+      return compareCLocaleText(left.name, right.name);
+    });
   }
 
   names(): string[] {
-    return [...this.commands.keys()].sort((left, right) => left.localeCompare(right));
+    return [...this.commands.keys()].sort(compareCLocaleText);
   }
 }
 

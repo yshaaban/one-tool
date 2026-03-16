@@ -5,7 +5,7 @@ import re
 from dataclasses import dataclass
 
 from ...types import CommandResult, err, ok, ok_bytes
-from ...utils import error_message, format_size, looks_binary, parent_path
+from ...utils import error_message, format_size, looks_binary, parent_path, to_c_locale_sort_bytes
 from ...vfs.errors import format_escape_path_error_message, format_resource_limit_error_message
 from ...vfs.interface import VFileInfo
 from ...vfs.path_utils import base_name
@@ -765,12 +765,12 @@ def _create_ls_entry(display_name: str, info: VFileInfo, is_synthetic: bool = Fa
 
 
 def _compare_ls_entry_key(entry: _LsEntry) -> tuple[int, str, str]:
-    return (_ls_special_entry_rank(entry.display_name), entry.display_name.lower(), entry.display_name)
+    return (_ls_special_entry_rank(entry.display_name), to_c_locale_sort_bytes(entry.display_name))
 
 
-def _compare_path_entry_key(value: str) -> tuple[str, str]:
+def _compare_path_entry_key(value: str) -> bytes:
     name = value[:-1] if value.endswith("/") else value
-    return (name.lower(), name)
+    return to_c_locale_sort_bytes(name)
 
 
 def _ls_special_entry_rank(display_name: str) -> int:

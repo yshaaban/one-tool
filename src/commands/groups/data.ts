@@ -1,5 +1,5 @@
 import { err, ok } from '../../types.js';
-import { errorMessage, safeEvalArithmetic } from '../../utils.js';
+import { compareCLocaleText, errorMessage, safeEvalArithmetic } from '../../utils.js';
 import type { CommandContext, CommandSpec } from '../core.js';
 import { extractJsonPath, loadJson } from '../shared/json.js';
 
@@ -36,7 +36,7 @@ async function cmdJson(ctx: CommandContext, args: string[], stdin: Uint8Array) {
     }
     return ok(
       Object.keys(value as Record<string, unknown>)
-        .sort()
+        .sort(compareCLocaleText)
         .join('\n'),
     );
   }

@@ -5,6 +5,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Literal, TypeAlias, TypeVar
 
+from ..c_locale import to_c_locale_sort_bytes
 from ..execution_policy import ResolvedAgentCLIExecutionPolicy
 from ..memory import SimpleMemory
 from ..types import CommandResult, ToolAdapters
@@ -57,10 +58,10 @@ class CommandRegistry:
         return self._commands.pop(name, None) is not None
 
     def all(self) -> list[CommandSpec]:
-        return sorted(self._commands.values(), key=lambda spec: spec.name)
+        return sorted(self._commands.values(), key=lambda spec: to_c_locale_sort_bytes(spec.name))
 
     def names(self) -> list[str]:
-        return sorted(self._commands)
+        return sorted(self._commands, key=to_c_locale_sort_bytes)
 
 
 @dataclass(slots=True)

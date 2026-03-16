@@ -1,5 +1,5 @@
 import type { FetchAdapter, FetchResponse, SearchAdapter, SearchHit } from '../types.js';
-import { tokenizeForSearch } from '../utils.js';
+import { compareCLocaleText, tokenizeForSearch } from '../utils.js';
 
 export interface DemoSearchDocument {
   title: string;
@@ -111,7 +111,7 @@ function compareScoredSearchHits(left: ScoredSearchHit, right: ScoredSearchHit):
   if (right.score !== left.score) {
     return right.score - left.score;
   }
-  return left.hit.title.localeCompare(right.hit.title);
+  return compareCLocaleText(left.hit.title, right.hit.title);
 }
 
 function cloneResourceMap(resources: Record<string, unknown>): Record<string, unknown> {

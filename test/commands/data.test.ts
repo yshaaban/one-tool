@@ -21,6 +21,11 @@ test('data: json keys sorts object keys from a file', async () => {
   const { result } = await runCommand('json', ['keys', '/data.json'], { ctx });
   assert.equal(result.exitCode, 0);
   assert.equal(stdoutText(result), 'a\nz');
+
+  await ctx.vfs.writeBytes('/unicode.json', textEncoder.encode('{"z":1,"ä":2,"a":3,"É":4,"Ω":5}'));
+  const unicode = await runCommand('json', ['keys', '/unicode.json'], { ctx });
+  assert.equal(unicode.result.exitCode, 0);
+  assert.equal(stdoutText(unicode.result), 'a\nz\nÉ\nä\nΩ');
 });
 
 test('data: json get extracts nested object and array paths', async () => {

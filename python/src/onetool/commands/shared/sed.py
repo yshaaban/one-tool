@@ -3,13 +3,14 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from ...types import CommandResult, err, ok
-from ...utils import error_message, parent_path
+from ...c_locale import C_LOCALE_REGEX_FLAGS
+from ...types import CommandResult, err, ok_bytes
+from ...utils import build_c_locale_case_insensitive_regex_source, error_message, parent_path
 from ...vfs.errors import format_escape_path_error_message, format_resource_limit_error_message
 from ..core import CommandContext
 from .errors import blocking_parent_path, error_code, first_file_in_path
 from .io import materialized_limit_error
-from .line_model import decode_c_locale_text, encode_c_locale_text
+from .line_model import decode_c_locale_text, encode_c_locale_text, normalize_c_locale_input_text
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,7 +94,7 @@ async def run_sed_command(ctx: CommandContext, args: list[str], stdin: bytes) ->
     output, error_result = _execute_sed_program(parsed, inputs)
     if error_result is not None:
         return error_result
-    return ok(output.decode("latin1"), content_type="text/plain")
+    return ok_bytes(output, "text/plain")
 
 
 async def _parse_sed_program(
@@ -127,7 +128,11 @@ async def _parse_sed_program(
             if "in_place_suffix" in parsed_option:
                 in_place_suffix = parsed_option["in_place_suffix"]  # type: ignore[assignment]
             if "script_source" in parsed_option:
-                script_sources.append(parsed_option["script_source"])  # type: ignore[arg-type]
+                script_source = parsed_option["script_source"]  # type: ignore[assignment]
+                if parsed_option.get("script_source_is_c_locale"):
+                    script_sources.append(script_source)  # type: ignore[arg-type]
+                else:
+                    script_sources.append(_normalize_sed_script_source(script_source))  # type: ignore[arg-type]
             index = next_index + 1
             continue
 
@@ -142,7 +147,7 @@ async def _parse_sed_program(
         index += 1
 
     if inline_script is not None:
-        script_sources.append(inline_script)
+        script_sources.append(_normalize_sed_script_source(inline_script))
     if not script_sources:
         return (None, err("sed: missing script. Usage: sed [OPTION]... [SCRIPT] [INPUTFILE...]"))
 
@@ -210,6 +215,7 @@ async def _parse_sed_option(
                 "quiet": False,
                 "extended_regex": False,
                 "script_source": loaded_script,
+                "script_source_is_c_locale": True,
             },
             None,
             index if len(arg) > 2 else index + 1,
@@ -263,6 +269,7 @@ async def _parse_sed_option(
                     "quiet": quiet,
                     "extended_regex": extended_regex,
                     "script_source": loaded_script,
+                    "script_source_is_c_locale": True,
                 },
                 None,
                 index if arg[scan_index + 1 :] else index + 1,
@@ -296,7 +303,7 @@ async def _read_sed_script_file(
         return (None, limit_error)
 
     data = await ctx.vfs.read_bytes(file_path)
-    return (data.decode("utf-8"), None)
+    return (decode_c_locale_text(data), None)
 
 
 def _parse_sed_commands(script: str, extended_regex: bool) -> tuple[list[SedCommand], str | None]:
@@ -624,8 +631,13 @@ def _finish_sed_simple_command(source: str, index: int) -> int:
 
 def _compile_sed_regex(pattern: str, extended_regex: bool, ignore_case: bool) -> re.Pattern[str]:
     source = _translate_sed_extended_regex(pattern) if extended_regex else _translate_sed_basic_regex(pattern)
-    flags = re.MULTILINE | (re.IGNORECASE if ignore_case else 0)
-    return re.compile(source, flags)
+    if ignore_case:
+        source = build_c_locale_case_insensitive_regex_source(source)
+    return re.compile(source, C_LOCALE_REGEX_FLAGS)
+
+
+def _normalize_sed_script_source(source: str) -> str:
+    return normalize_c_locale_input_text(source)
 
 
 def _translate_sed_extended_regex(pattern: str) -> str:
@@ -1018,7 +1030,7 @@ async def _apply_sed_in_place(
         except Exception as caught:
             return await _format_sed_write_error(ctx, input_file.display_name, caught)
 
-    return ok("")
+    return ok_bytes(b"", "text/plain")
 
 
 async def _format_sed_path_error(

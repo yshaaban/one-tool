@@ -6,7 +6,7 @@ import { SimpleMemory } from '../../src/memory.js';
 import type { PipelineExecutionTrace, RunExecution } from '../../src/runtime.js';
 import { DemoFetch, DemoSearch } from '../../src/testing/adapters.js';
 import type { OracleTrace, ScenarioSpec } from '../../src/testing/index.js';
-import { looksBinary } from '../../src/utils.js';
+import { compareCLocaleText, looksBinary } from '../../src/utils.js';
 import type { VFS } from '../../src/vfs/interface.js';
 import type { VfsResourcePolicy } from '../../src/vfs/policy.js';
 import type { AgentCLIExecutionPolicy } from '../../src/execution-policy.js';
@@ -103,7 +103,7 @@ export async function seedSnapshotWorld(
 ): Promise<void> {
   if (world?.files !== undefined) {
     const entries = Object.entries(world.files).sort(function ([left], [right]) {
-      return left.localeCompare(right);
+      return compareCLocaleText(left, right);
     });
 
     for (const [filePath, entry] of entries) {
@@ -313,7 +313,7 @@ function serializeRawFileEntries(
   const serialized: Record<string, SerializedRawFileEntry> = {};
 
   for (const filePath of Object.keys(entries).sort(function (left, right) {
-    return left.localeCompare(right);
+    return compareCLocaleText(left, right);
   })) {
     const entry = entries[filePath]!;
     if (isSnapshotDirectoryEntry(entry)) {
@@ -342,7 +342,7 @@ function serializeFetchResources(resources: Record<string, unknown>): Record<str
   const serialized: Record<string, unknown> = {};
 
   for (const resource of Object.keys(resources).sort(function (left, right) {
-    return left.localeCompare(right);
+    return compareCLocaleText(left, right);
   })) {
     serialized[resource] = serializeFetchPayload(resources[resource]);
   }

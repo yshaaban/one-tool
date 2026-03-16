@@ -7,6 +7,7 @@ from pathlib import Path
 import shutil
 import stat
 
+from ..c_locale import to_c_locale_sort_bytes
 from .errors import vfs_error
 from .interface import VFS, VFileInfo, guess_media_type
 from .path_utils import base_name, is_strict_descendant_path, parent_of, posix_normalize
@@ -340,6 +341,6 @@ class LocalVFS(VFS):
         enforce_resource_policy(snapshot, self.resource_policy, context_path)
 
 
-def _listdir_sort_key(entry: tuple[str, bool]) -> tuple[int, str, str]:
+def _listdir_sort_key(entry: tuple[str, bool]) -> tuple[int, bytes]:
     name, is_dir = entry
-    return (0 if is_dir else 1, name.casefold(), name)
+    return (0 if is_dir else 1, to_c_locale_sort_bytes(name))

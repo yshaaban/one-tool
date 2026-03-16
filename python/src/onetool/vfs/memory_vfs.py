@@ -3,6 +3,7 @@ from __future__ import annotations
 import time
 from collections.abc import Callable
 
+from ..c_locale import to_c_locale_sort_bytes
 from .errors import vfs_error
 from .interface import VFS, VFileInfo, guess_media_type
 from .path_utils import base_name, is_strict_descendant_path, parent_of, posix_normalize
@@ -319,6 +320,6 @@ def _default_now_ms() -> int:
     return int(time.time() * 1000)
 
 
-def _listdir_sort_key(entry: tuple[str, bool]) -> tuple[int, str, str]:
+def _listdir_sort_key(entry: tuple[str, bool]) -> tuple[int, bytes]:
     name, is_dir = entry
-    return (0 if is_dir else 1, name.casefold(), name)
+    return (0 if is_dir else 1, to_c_locale_sort_bytes(name))

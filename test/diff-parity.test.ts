@@ -74,6 +74,14 @@ const DIFF_PARITY_CASES: DiffParityCase[] = [
     args: ['-b', '-i', 'left.txt', 'right.txt'],
   },
   {
+    name: 'ignore case keeps non-ascii distinct in C locale',
+    files: {
+      'left.txt': 'É\n',
+      'right.txt': 'é\n',
+    },
+    args: ['-i', 'left.txt', 'right.txt'],
+  },
+  {
     name: 'stdin operand',
     files: {
       'right.txt': 'beta\n',

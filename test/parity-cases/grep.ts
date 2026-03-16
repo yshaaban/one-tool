@@ -66,6 +66,36 @@ export const GREP_PARITY_CASES: GrepParityCase[] = [
     pattern: 'missing',
     stdin: textEncoder.encode('refund created\nskip\n'),
   },
+  {
+    id: 'ignore-case-non-ascii-regex',
+    name: 'ignore case keeps non-ascii regex distinct in C locale',
+    files: {},
+    flags: ['-i'],
+    pattern: 'é',
+    stdin: textEncoder.encode('É\né\nE\ne\n'),
+  },
+  {
+    id: 'ignore-case-non-ascii-fixed',
+    name: 'ignore case keeps non-ascii fixed strings distinct in C locale',
+    files: {},
+    flags: ['-F', '-i'],
+    pattern: 'é',
+    stdin: textEncoder.encode('É\né\nE\ne\n'),
+  },
+  {
+    id: 'single-byte-dot-regex',
+    name: 'dot regex stays byte-oriented for utf-8 input in C locale',
+    files: {},
+    pattern: '^.$',
+    stdin: textEncoder.encode('É\né\nE\ne\n'),
+  },
+  {
+    id: 'ascii-word-shorthand',
+    name: 'word shorthand stays ascii-only in C locale',
+    files: {},
+    pattern: '^\\w$',
+    stdin: textEncoder.encode('É\né\nE\ne\n'),
+  },
 ];
 
 export function buildGrepHostArgs(parityCase: GrepParityCase, rootDir: string): string[] {

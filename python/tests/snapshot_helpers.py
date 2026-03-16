@@ -6,6 +6,7 @@ from typing import Any
 
 from onetool.execution_policy import AgentCLIExecutionPolicy
 from onetool.memory import SimpleMemory
+from onetool.c_locale import to_c_locale_sort_bytes
 from onetool.testing.adapters import DemoFetch, DemoSearch, DemoSearchDocument
 from onetool.types import ToolAdapters
 from onetool.utils import looks_binary
@@ -78,7 +79,7 @@ async def seed_snapshot_world(vfs: MemoryVFS, memory: SimpleMemory, raw_world: A
 
     files = raw_world.get("files")
     if isinstance(files, dict):
-        for file_path in sorted(files):
+        for file_path in sorted(files, key=to_c_locale_sort_bytes):
             entry = files[file_path]
             if not isinstance(entry, dict):
                 continue

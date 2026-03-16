@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import type { AgentCLIExecutionPolicy } from '../../src/execution-policy.js';
 import { SimpleMemory } from '../../src/memory.js';
+import { compareCLocaleText } from '../../src/utils.js';
 import { MemoryVFS } from '../../src/vfs/memory-vfs.js';
 import type { VfsResourcePolicy } from '../../src/vfs/index.js';
 
@@ -77,24 +78,7 @@ export function deserializeVfsResourcePolicy(
     return undefined;
   }
 
-  const policy: VfsResourcePolicy = {};
-  if (raw.maxFileBytes !== undefined) {
-    policy.maxFileBytes = raw.maxFileBytes;
-  }
-  if (raw.maxTotalBytes !== undefined) {
-    policy.maxTotalBytes = raw.maxTotalBytes;
-  }
-  if (raw.maxDirectoryDepth !== undefined) {
-    policy.maxDirectoryDepth = raw.maxDirectoryDepth;
-  }
-  if (raw.maxEntriesPerDirectory !== undefined) {
-    policy.maxEntriesPerDirectory = raw.maxEntriesPerDirectory;
-  }
-  if (raw.maxOutputArtifactBytes !== undefined) {
-    policy.maxOutputArtifactBytes = raw.maxOutputArtifactBytes;
-  }
-
-  return policy;
+  return { ...raw };
 }
 
 export function deserializeSnapshotWorld(raw: DifferentialSnapshotWorld | undefined): Record<string, unknown> | undefined {
@@ -123,7 +107,7 @@ export async function seedWorldFromRecord(
 
   if (raw.files !== undefined) {
     const filePaths = Object.keys(raw.files).sort(function (left, right): number {
-      return left.localeCompare(right);
+      return compareCLocaleText(left, right);
     });
 
     for (const filePath of filePaths) {
@@ -160,7 +144,7 @@ async function collectJsonFiles(rootDir: string): Promise<string[]> {
   async function walk(dirPath: string): Promise<void> {
     const entries = await readdir(dirPath, { withFileTypes: true });
     entries.sort(function (left, right): number {
-      return left.name.localeCompare(right.name);
+      return compareCLocaleText(left.name, right.name);
     });
 
     for (const entry of entries) {

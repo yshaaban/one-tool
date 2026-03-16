@@ -1,3 +1,4 @@
+import { compareCLocaleText } from '../utils.js';
 import type { VFS, VFileInfo } from './interface.js';
 import { guessMediaType } from './interface.js';
 import { posixNormalize, parentOf, baseName, isStrictDescendantPath } from './path-utils.js';
@@ -158,7 +159,7 @@ export class MemoryVFS implements VFS {
     // Sort: dirs first, then alphabetical
     entries.sort((a, b) => {
       if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
-      return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+      return compareCLocaleText(a.name, b.name);
     });
 
     return entries.map((e) => e.name + (e.isDir ? '/' : ''));

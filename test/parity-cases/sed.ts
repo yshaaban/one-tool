@@ -166,6 +166,13 @@ export const SED_PARITY_CASES: SedParityCase[] = [
     stdin: textEncoder.encode('a\nb\nc\nd\n'),
   },
   {
+    id: 'ignore-case-non-ascii-distinct',
+    name: 'ignore-case regex keeps non-ascii distinct in C locale',
+    files: {},
+    args: ['s/é/X/I'],
+    stdin: textEncoder.encode('É\né\n'),
+  },
+  {
     id: 'next-command-explicit-print',
     name: 'next command with explicit print',
     files: {

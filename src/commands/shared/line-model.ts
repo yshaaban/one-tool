@@ -1,4 +1,5 @@
 const cLocaleDecoder = new TextDecoder('latin1');
+const utf8Encoder = new TextEncoder();
 const LINE_FEED = 10;
 
 export interface ByteLine {
@@ -47,6 +48,10 @@ export function createByteLineModel(data: Uint8Array): ByteLineModel {
 
 export function decodeCLocaleText(data: Uint8Array): string {
   return cLocaleDecoder.decode(data);
+}
+
+export function normalizeCLocaleInputText(text: string): string {
+  return decodeCLocaleText(utf8Encoder.encode(text));
 }
 
 export function encodeCLocaleText(text: string): Uint8Array {

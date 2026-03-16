@@ -1,9 +1,18 @@
 import type { CommandResult } from '../../types.js';
 import { err, ok, okBytes, textEncoder } from '../../types.js';
-import { errorMessage, looksBinary, splitLines } from '../../utils.js';
+import {
+  buildCLocaleCaseInsensitiveRegexSource,
+  compareCLocaleText as sharedCompareCLocaleText,
+  errorMessage,
+  formatSize,
+  foldAsciiCaseText,
+  looksBinary,
+  splitLines,
+} from '../../utils.js';
 import type { CommandContext, CommandSpec } from '../core.js';
 import { readBytesFromFileOrStdin } from '../shared/bytes.js';
 import { readTextFromFileOrStdin } from '../shared/io.js';
+import { createByteLineModel, encodeCLocaleText, normalizeCLocaleInputText } from '../shared/line-model.js';
 import { runSedCommand } from '../shared/sed.js';
 import { compileTrProgram } from '../shared/tr-arrays.js';
 
@@ -138,9 +147,18 @@ async function cmdGrep(ctx: CommandContext, args: string[], stdin: Uint8Array): 
 
   const { filePath, options, pattern } = parsedArgs.value;
 
-  const { text, error } = await readTextFromFileOrStdin(ctx, filePath, stdin, 'grep');
-  if (error) {
-    return error;
+  const input = await readBytesFromFileOrStdin(ctx, filePath, stdin, 'grep');
+  if (input.error) {
+    return input.error;
+  }
+  if (looksBinary(input.data)) {
+    if (input.source === 'stdin') {
+      return err(
+        `grep: stdin is binary (${formatSize(input.data.length)}). ` +
+          'Pipe text only, or save binary data to a file and inspect with stat.',
+      );
+    }
+    return err(`grep: binary file (${formatSize(input.data.length)}): ${input.source}. Use: stat ${input.source}`);
   }
 
   const builtMatcher = buildGrepMatcher(pattern, options);
@@ -148,7 +166,13 @@ async function cmdGrep(ctx: CommandContext, args: string[], stdin: Uint8Array): 
     return err(builtMatcher.error);
   }
 
-  const matches = collectGrepMatches(splitLines(text), builtMatcher.value, options);
+  const matches = collectGrepMatches(
+    createByteLineModel(input.data).lines.map(function (line) {
+      return line.text;
+    }),
+    builtMatcher.value,
+    options,
+  );
   if (options.quiet) {
     return createSuccessfulGrepResult('', matches.length > 0);
   }
@@ -264,14 +288,16 @@ function buildGrepMatcher(
   pattern: string,
   options: GrepOptions,
 ): { ok: true; value: GrepMatcher } | { ok: false; error: string } {
+  const normalizedPattern = normalizeCLocaleInputText(pattern);
+
   if (options.matchMode === 'fixed') {
     return {
       ok: true,
-      value: createFixedGrepMatcher(pattern, options),
+      value: createFixedGrepMatcher(normalizedPattern, options),
     };
   }
 
-  let source = pattern;
+  let source = normalizedPattern;
   if (options.wordMatch) {
     source = `\\b(?:${source})\\b`;
   }
@@ -279,10 +305,12 @@ function buildGrepMatcher(
     source = `^(?:${source})$`;
   }
 
-  const flags = `g${options.ignoreCase ? 'i' : ''}`;
+  if (options.ignoreCase) {
+    source = buildCLocaleCaseInsensitiveRegexSource(source);
+  }
 
   try {
-    const regex = new RegExp(source, flags);
+    const regex = new RegExp(source, 'g');
     return {
       ok: true,
       value: createRegexGrepMatcher(regex),
@@ -293,11 +321,11 @@ function buildGrepMatcher(
 }
 
 function createFixedGrepMatcher(pattern: string, options: GrepOptions): GrepMatcher {
-  const needle = options.ignoreCase ? pattern.toLocaleLowerCase() : pattern;
+  const needle = options.ignoreCase ? foldAsciiCaseText(pattern) : pattern;
 
   return {
     search(line: string): string[] {
-      const haystack = options.ignoreCase ? line.toLocaleLowerCase() : line;
+      const haystack = options.ignoreCase ? foldAsciiCaseText(line) : line;
 
       if (options.wholeLine) {
         return haystack === needle ? [line] : [];
@@ -389,8 +417,9 @@ function formatGrepMatches(matches: GrepLineMatch[], options: GrepOptions): stri
 }
 
 function createSuccessfulGrepResult(text: string, matched: boolean): CommandResult {
+  const stdout = encodeCLocaleText(text);
   return {
-    stdout: ok(text).stdout,
+    stdout,
     stderr: '',
     exitCode: matched ? 0 : 1,
     contentType: 'text/plain',
@@ -512,7 +541,10 @@ async function cmdSort(ctx: CommandContext, args: string[], stdin: Uint8Array): 
   });
 
   decorated.sort(function (left, right) {
-    const comparison = compareSortLines(left.line, right.line, parsed.value);
+    let comparison = compareSortLines(left.line, right.line, parsed.value);
+    if (comparison === 0 && !parsed.value.unique) {
+      comparison = compareTextSortLines(left.line, right.line, false);
+    }
     if (comparison !== 0) {
       return parsed.value.reverse ? -comparison : comparison;
     }
@@ -706,14 +738,9 @@ interface UniqOptions {
   uniqueOnly: boolean;
 }
 
-const VERSION_SORT_COLLATOR = new Intl.Collator(undefined, {
-  numeric: true,
-  sensitivity: 'variant',
-});
-const VERSION_SORT_FOLDED_COLLATOR = new Intl.Collator(undefined, {
-  numeric: true,
-  sensitivity: 'accent',
-});
+const ASCII_DIGIT_0 = 48;
+const ASCII_DIGIT_9 = 57;
+const VERSION_TOKEN_PATTERN = /[0-9]+|[^0-9]+/g;
 
 function parseTextSliceArgs(
   commandName: 'head' | 'tail',
@@ -990,7 +1017,7 @@ function sortLinesEquivalent(left: string, right: string, options: SortOptions):
 }
 
 function uniqKey(line: string, ignoreCase: boolean): string {
-  return ignoreCase ? line.toLowerCase() : line;
+  return ignoreCase ? foldAsciiCaseText(line) : line;
 }
 
 function renderUniqLine(line: string, count: number, includeCount: boolean): string {
@@ -1038,16 +1065,82 @@ function countWords(text: string): number {
 }
 
 function compareTextSortLines(left: string, right: string, ignoreCase: boolean): number {
-  if (!ignoreCase) {
-    return left.localeCompare(right);
-  }
-
-  return left.localeCompare(right, undefined, { sensitivity: 'accent' });
+  return sharedCompareCLocaleText(left, right, ignoreCase);
 }
 
 function compareVersionSortLines(left: string, right: string, ignoreCase: boolean): number {
-  return (ignoreCase ? VERSION_SORT_FOLDED_COLLATOR : VERSION_SORT_COLLATOR).compare(left, right);
+  const leftTokens = tokenizeVersionSortLine(left);
+  const rightTokens = tokenizeVersionSortLine(right);
+  const limit = Math.min(leftTokens.length, rightTokens.length);
+
+  for (let index = 0; index < limit; index += 1) {
+    const leftToken = leftTokens[index]!;
+    const rightToken = rightTokens[index]!;
+    const leftIsDigit = isAsciiDigitToken(leftToken);
+    const rightIsDigit = isAsciiDigitToken(rightToken);
+
+    let comparison = 0;
+    if (leftIsDigit && rightIsDigit) {
+      comparison = compareVersionNumberTokens(leftToken, rightToken);
+    } else {
+      comparison = sharedCompareCLocaleText(leftToken, rightToken, ignoreCase);
+    }
+
+    if (comparison !== 0) {
+      return comparison;
+    }
+  }
+
+  if (leftTokens.length < rightTokens.length) {
+    return -1;
+  }
+  if (leftTokens.length > rightTokens.length) {
+    return 1;
+  }
+  return 0;
 }
+
+function tokenizeVersionSortLine(value: string): string[] {
+  return value.match(VERSION_TOKEN_PATTERN) ?? [];
+}
+
+function isAsciiDigitToken(value: string): boolean {
+  if (value.length === 0) {
+    return false;
+  }
+  const code = value.charCodeAt(0);
+  return code >= ASCII_DIGIT_0 && code <= ASCII_DIGIT_9;
+}
+
+function compareVersionNumberTokens(left: string, right: string): number {
+  const leftTrimmed = trimVersionLeadingZeros(left);
+  const rightTrimmed = trimVersionLeadingZeros(right);
+
+  if (leftTrimmed.length !== rightTrimmed.length) {
+    return leftTrimmed.length - rightTrimmed.length;
+  }
+  if (leftTrimmed < rightTrimmed) {
+    return -1;
+  }
+  if (leftTrimmed > rightTrimmed) {
+    return 1;
+  }
+  if (left.length !== right.length) {
+    return right.length - left.length;
+  }
+  return 0;
+}
+
+function trimVersionLeadingZeros(value: string): string {
+  let index = 0;
+
+  while (index < value.length - 1 && value.charCodeAt(index) === ASCII_DIGIT_0) {
+    index += 1;
+  }
+
+  return value.slice(index);
+}
+
 
 function selectWcFields(
   options: WcOptions,

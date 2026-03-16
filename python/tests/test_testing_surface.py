@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import pytest
+from onetool.commands.core import CommandRegistry, CommandSpec
+from onetool.types import ok
 
 from onetool.testing import (
     NO_STDIN,
@@ -51,6 +53,22 @@ async def test_demo_search_ranks_hits_and_truncates_snippets() -> None:
     assert hits[0].title == "Acme renewal risk notes"
     assert hits[0].source == "kb://accounts/acme"
     assert len(hits[0].snippet) <= 160
+
+
+@pytest.mark.asyncio
+async def test_demo_search_uses_c_locale_order_for_tied_non_ascii_titles() -> None:
+    docs = [
+        DemoSearchDocument(title="ä title", body="refund issue", source="kb://1"),
+        DemoSearchDocument(title="z title", body="refund issue", source="kb://2"),
+        DemoSearchDocument(title="a title", body="refund issue", source="kb://3"),
+        DemoSearchDocument(title="É title", body="refund issue", source="kb://4"),
+        DemoSearchDocument(title="Ω title", body="refund issue", source="kb://5"),
+    ]
+    search = DemoSearch(docs)
+
+    hits = await search.search("refund", 10)
+
+    assert [hit.title for hit in hits] == ["a title", "z title", "É title", "ä title", "Ω title"]
 
 
 @pytest.mark.asyncio
@@ -172,3 +190,21 @@ async def test_command_conformance_cases_run_against_public_harness() -> None:
         result = case.run()
         if hasattr(result, "__await__"):
             await result
+
+
+def test_command_registry_uses_c_locale_order_for_non_ascii_names() -> None:
+    registry = CommandRegistry()
+
+    for name in ["z", "ä", "a", "É", "Ω"]:
+        registry.register(
+            CommandSpec(
+                name=name,
+                summary=f"{name} summary",
+                usage=name,
+                details=f"Examples:\n  {name}",
+                handler=lambda _ctx, _args, _stdin, *, value=name: ok(value),
+            )
+        )
+
+    assert registry.names() == ["a", "z", "É", "ä", "Ω"]
+    assert [spec.name for spec in registry.all()] == ["a", "z", "É", "ä", "Ω"]

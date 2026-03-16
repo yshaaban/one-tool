@@ -5,6 +5,12 @@ import re
 from collections.abc import Sequence
 from typing import Any
 
+from .c_locale import (
+    build_c_locale_case_insensitive_regex_source,
+    compare_c_locale_text,
+    fold_ascii_case_text,
+    to_c_locale_sort_bytes,
+)
 from .vfs.path_utils import parent_of, posix_normalize
 
 _SEARCH_TOKEN_PATTERN = re.compile(r"[a-z0-9_]+")

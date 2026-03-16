@@ -1,5 +1,5 @@
 import { textEncoder } from '../../types.js';
-import { errorMessage, looksBinary } from '../../utils.js';
+import { compareCLocaleText, errorMessage, foldAsciiCaseText, looksBinary } from '../../utils.js';
 import type { VFileInfo } from '../../vfs/interface.js';
 import type { CommandContext } from '../core.js';
 import { materializedLimitError } from './io.js';
@@ -335,7 +335,7 @@ async function compareDirectories(
   const leftEntries = await listDirectoryEntries(ctx, left.normalizedPath);
   const rightEntries = await listDirectoryEntries(ctx, right.normalizedPath);
   const names = [...new Set([...leftEntries.keys(), ...rightEntries.keys()])].sort(function (a, b) {
-    return a.localeCompare(b);
+    return compareCLocaleText(a, b);
   });
   const directoryDiffPrefix = buildDirectoryDiffPrefix(parsed);
   const chunks: Uint8Array[] = [];
@@ -871,7 +871,7 @@ function normalizeDiffLine(text: string, parsed: ParsedDiffCommand): string {
     normalized = normalized.replace(/[ \t]+/g, ' ');
   }
   if (parsed.ignoreCase) {
-    normalized = normalized.toLowerCase();
+    normalized = foldAsciiCaseText(normalized);
   }
 
   return normalized;

@@ -76,12 +76,7 @@ async def handle_request(request: dict[str, Any]) -> dict[str, Any]:
 
 
 async def run_command_snapshot_record(record: dict[str, Any]) -> dict[str, Any]:
-    now_ms = mock_now_ms()
-    vfs = MemoryVFS(
-        resource_policy=resource_policy_from_snapshot(record.get("vfsResourcePolicy")),
-        _now_ms=now_ms,
-    )
-    memory = SimpleMemory(_now_ms=now_ms)
+    vfs, memory = await _create_snapshot_state(record)
     ctx = create_test_command_context(
         CreateTestCommandContextOptions(
             vfs=vfs,
@@ -93,7 +88,6 @@ async def run_command_snapshot_record(record: dict[str, Any]) -> dict[str, Any]:
         )
     )
 
-    await seed_snapshot_world(vfs, memory, record.get("world"))
     run_result = await run_registered_command(
         record["command"],
         record["args"],
@@ -137,13 +131,7 @@ async def run_runtime_workflow(workflow: dict[str, Any]) -> dict[str, Any]:
 
 
 async def create_snapshot_runtime(record: dict[str, Any]) -> AgentCLI:
-    now_ms = mock_now_ms()
-    vfs = MemoryVFS(
-        resource_policy=resource_policy_from_snapshot(record.get("vfsResourcePolicy")),
-        _now_ms=now_ms,
-    )
-    memory = SimpleMemory(_now_ms=now_ms)
-    await seed_snapshot_world(vfs, memory, record.get("world"))
+    vfs, memory = await _create_snapshot_state(record)
 
     runtime = AgentCLI(
         vfs=vfs,
@@ -156,6 +144,17 @@ async def create_snapshot_runtime(record: dict[str, Any]) -> AgentCLI:
     )
     await runtime.initialize()
     return runtime
+
+
+async def _create_snapshot_state(record: dict[str, Any]) -> tuple[MemoryVFS, SimpleMemory]:
+    now_ms = mock_now_ms()
+    vfs = MemoryVFS(
+        resource_policy=resource_policy_from_snapshot(record.get("vfsResourcePolicy")),
+        _now_ms=now_ms,
+    )
+    memory = SimpleMemory(_now_ms=now_ms)
+    await seed_snapshot_world(vfs, memory, record.get("world"))
+    return (vfs, memory)
 
 
 async def _run_runtime_commands(runtime: AgentCLI, command_lines: list[str]) -> list[dict[str, Any]]:

@@ -6,6 +6,7 @@ import { parentPath } from '../utils.js';
 import { MemoryVFS } from '../vfs/memory-vfs.js';
 import { DemoFetch, DemoSearch } from './adapters.js';
 import type { WorldSpec } from './scenario.js';
+import { compareCLocaleText } from '../utils.js';
 
 export async function buildWorld(world: WorldSpec): Promise<AgentCLI> {
   const vfs = new MemoryVFS();
@@ -13,7 +14,7 @@ export async function buildWorld(world: WorldSpec): Promise<AgentCLI> {
 
   if (world.files !== undefined) {
     const fileEntries = Object.entries(world.files).sort(function ([left], [right]) {
-      return left.localeCompare(right);
+      return compareCLocaleText(left, right);
     });
 
     for (const [filePath, content] of fileEntries) {

@@ -44,6 +44,18 @@ export const LS_PARITY_CASES: LsParityCase[] = [
     },
     args: ['item.txt'],
   },
+  {
+    id: 'non-ascii-c-locale-order',
+    name: 'non-ascii names use C-locale byte ordering',
+    files: {
+      'tree/a': '',
+      'tree/z': '',
+      'tree/É': '',
+      'tree/ä': '',
+      'tree/Ω': '',
+    },
+    args: ['tree'],
+  },
 ];
 
 export function buildLsHostArgs(args: readonly string[], rootDir: string): string[] {

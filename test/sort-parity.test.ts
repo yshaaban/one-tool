@@ -31,6 +31,11 @@ const PARITY_CASES: SortParityCase[] = [
     stdin: textEncoder.encode('10\n2\n30\napple\n'),
   },
   {
+    name: 'numeric sort breaks ties with whole-line comparison',
+    args: ['-n'],
+    stdin: textEncoder.encode('2\n02\napple\n'),
+  },
+  {
     name: 'case-insensitive sort',
     args: ['-f'],
     stdin: textEncoder.encode('beta\nAlpha\napple\n'),
@@ -41,9 +46,29 @@ const PARITY_CASES: SortParityCase[] = [
     stdin: textEncoder.encode('v1.10\nv1.2\nv1.3\n'),
   },
   {
+    name: 'non-ascii lexical sort',
+    args: [],
+    stdin: textEncoder.encode('z\nä\na\nÉ\nΩ\n'),
+  },
+  {
+    name: 'non-ascii case-insensitive sort',
+    args: ['-f'],
+    stdin: textEncoder.encode('é\ne\nE\nÉ\n'),
+  },
+  {
+    name: 'non-ascii version sort',
+    args: ['-V'],
+    stdin: textEncoder.encode('v1.2\nv1.10\nvÉ1.2\nvé1.2\nv1.02\nv1.002\n'),
+  },
+  {
+    name: 'non-ascii case-insensitive version sort',
+    args: ['-V', '-f'],
+    stdin: textEncoder.encode('v1a\nv1A\nv1é\nv1É\n'),
+  },
+  {
     name: 'case-insensitive unique sort',
     args: ['-f', '-u'],
-    stdin: textEncoder.encode('a\nA\nbeta\n'),
+    stdin: textEncoder.encode('a\nA\nbeta\né\nÉ\n'),
   },
   {
     name: 'numeric unique sort keeps first input representative',

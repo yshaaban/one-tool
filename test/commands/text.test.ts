@@ -61,6 +61,24 @@ test('text: grep filters file content with flags', async () => {
   const wholeLine = await runCommand('grep', ['-x', 'WARN retry', '/logs/app.log'], { ctx });
   assert.equal(wholeLine.result.exitCode, 0);
   assert.equal(stdoutText(wholeLine.result), 'WARN retry');
+
+  await ctx.vfs.writeBytes('/logs/unicode.log', textEncoder.encode('É\né\nE\ne\n'));
+
+  const unicodeRegex = await runCommand('grep', ['-i', 'é', '/logs/unicode.log'], { ctx });
+  assert.equal(unicodeRegex.result.exitCode, 0);
+  assert.equal(stdoutText(unicodeRegex.result), 'é');
+
+  const unicodeFixed = await runCommand('grep', ['-F', '-i', 'é', '/logs/unicode.log'], { ctx });
+  assert.equal(unicodeFixed.result.exitCode, 0);
+  assert.equal(stdoutText(unicodeFixed.result), 'é');
+
+  const unicodeSingleByteDot = await runCommand('grep', ['^.$', '/logs/unicode.log'], { ctx });
+  assert.equal(unicodeSingleByteDot.result.exitCode, 0);
+  assert.equal(stdoutText(unicodeSingleByteDot.result), 'E\ne');
+
+  const unicodeWordRegex = await runCommand('grep', ['^\\w$', '/logs/unicode.log'], { ctx });
+  assert.equal(unicodeWordRegex.result.exitCode, 0);
+  assert.equal(stdoutText(unicodeWordRegex.result), 'E\ne');
 });
 
 test('text: grep supports stdin, counts, and invalid regex errors', async () => {
@@ -171,6 +189,12 @@ test('text: sort orders lines lexically, numerically, case-insensitively, by ver
   assert.equal(numeric.result.exitCode, 0);
   assert.equal(stdoutText(numeric.result), 'apple\n2\n10\n30');
 
+  const numericTies = await runCommand('sort', ['-n'], {
+    stdin: stdinText('2\n02\napple'),
+  });
+  assert.equal(numericTies.result.exitCode, 0);
+  assert.equal(stdoutText(numericTies.result), 'apple\n02\n2');
+
   const unique = await runCommand('sort', ['-u'], {
     stdin: stdinText('pear\napple\npear\napple'),
   });
@@ -195,11 +219,35 @@ test('text: sort orders lines lexically, numerically, case-insensitively, by ver
   assert.equal(versioned.result.exitCode, 0);
   assert.equal(stdoutText(versioned.result), 'v1.2\nv1.3\nv1.10');
 
+  const lexicalUnicode = await runCommand('sort', [], {
+    stdin: stdinText('z\nä\na\nÉ\nΩ'),
+  });
+  assert.equal(lexicalUnicode.result.exitCode, 0);
+  assert.equal(stdoutText(lexicalUnicode.result), 'a\nz\nÉ\nä\nΩ');
+
+  const foldedUnicode = await runCommand('sort', ['-f'], {
+    stdin: stdinText('é\ne\nE\nÉ'),
+  });
+  assert.equal(foldedUnicode.result.exitCode, 0);
+  assert.equal(stdoutText(foldedUnicode.result), 'E\ne\nÉ\né');
+
+  const versionedUnicode = await runCommand('sort', ['-V'], {
+    stdin: stdinText('v1.2\nv1.10\nvÉ1.2\nvé1.2\nv1.02\nv1.002'),
+  });
+  assert.equal(versionedUnicode.result.exitCode, 0);
+  assert.equal(stdoutText(versionedUnicode.result), 'v1.002\nv1.02\nv1.2\nv1.10\nvÉ1.2\nvé1.2');
+
+  const foldedVersionedUnicode = await runCommand('sort', ['-V', '-f'], {
+    stdin: stdinText('v1a\nv1A\nv1é\nv1É'),
+  });
+  assert.equal(foldedVersionedUnicode.result.exitCode, 0);
+  assert.equal(stdoutText(foldedVersionedUnicode.result), 'v1A\nv1a\nv1É\nv1é');
+
   const foldedUnique = await runCommand('sort', ['-f', '-u'], {
-    stdin: stdinText('a\nA\nbeta'),
+    stdin: stdinText('a\nA\nbeta\né\nÉ'),
   });
   assert.equal(foldedUnique.result.exitCode, 0);
-  assert.equal(stdoutText(foldedUnique.result), 'a\nbeta');
+  assert.equal(stdoutText(foldedUnique.result), 'a\nbeta\nÉ\né');
 
   const ctx = makeCtx();
   await ctx.vfs.writeBytes('/versions.txt', textEncoder.encode('v1.10\nv1.2\nv1.3'));
@@ -404,6 +452,16 @@ test('text: sed supports BRE literal escapes, negated addresses, and GNU-style r
       stdin: 'a\nb\nc\nd\n',
       stdout: 'a\nb\nX\nX\n',
     },
+    {
+      args: ['s/é/X/'],
+      stdin: 'é\n',
+      stdout: 'X\n',
+    },
+    {
+      args: ['s/é/X/I'],
+      stdin: 'É\né\n',
+      stdout: 'É\nX\n',
+    },
   ];
 
   for (const testCase of cases) {
@@ -504,10 +562,10 @@ test('text: uniq collapses adjacent duplicates and supports counts and group fil
   assert.equal(stdoutText(counted.result), '      2 a\n      3 b');
 
   const insensitive = await runCommand('uniq', ['-i'], {
-    stdin: stdinText('Error\nerror\nWARN'),
+    stdin: stdinText('Error\nerror\nWARN\né\nÉ'),
   });
   assert.equal(insensitive.result.exitCode, 0);
-  assert.equal(stdoutText(insensitive.result), 'Error\nWARN');
+  assert.equal(stdoutText(insensitive.result), 'Error\nWARN\né\nÉ');
 
   const duplicatesOnly = await runCommand('uniq', ['-d'], {
     stdin: stdinText('a\na\nb\nc\nc'),

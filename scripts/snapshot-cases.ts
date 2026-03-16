@@ -158,6 +158,17 @@ export const COMMAND_EXTRA_CASES: CommandSnapshotCase[] = [
     },
   },
   {
+    id: 'diff-ignore-case-unicode-distinct',
+    commandName: 'diff',
+    args: ['-i', '/left.txt', '/right.txt'],
+    world: {
+      files: {
+        '/left.txt': 'É\n',
+        '/right.txt': 'é\n',
+      },
+    },
+  },
+  {
     id: 'echo-escape-flags',
     commandName: 'echo',
     args: ['-e', 'line\\none\\tindent'],
@@ -193,6 +204,20 @@ export const COMMAND_EXTRA_CASES: CommandSnapshotCase[] = [
     },
   },
   {
+    id: 'find-unicode-file-order',
+    commandName: 'find',
+    args: ['/tree', '--type', 'file'],
+    world: {
+      files: {
+        '/tree/z.txt': 'z',
+        '/tree/ä.txt': 'a-umlaut',
+        '/tree/a.txt': 'a',
+        '/tree/É.txt': 'e-acute',
+        '/tree/Ω.txt': 'omega',
+      },
+    },
+  },
+  {
     id: 'head-first-two-lines',
     commandName: 'head',
     args: ['-n', '2', '/notes.txt'],
@@ -208,10 +233,34 @@ export const COMMAND_EXTRA_CASES: CommandSnapshotCase[] = [
     args: ['grep'],
   },
   {
+    id: 'grep-ignore-case-unicode-distinct',
+    commandName: 'grep',
+    args: ['-i', 'é'],
+    stdin: encodeText('É\né\nE\ne\n'),
+  },
+  {
+    id: 'grep-single-byte-dot-unicode',
+    commandName: 'grep',
+    args: ['^.$'],
+    stdin: encodeText('É\né\nE\ne\n'),
+  },
+  {
+    id: 'grep-ascii-word-shorthand-unicode',
+    commandName: 'grep',
+    args: ['^\\w$'],
+    stdin: encodeText('É\né\nE\ne\n'),
+  },
+  {
     id: 'json-pretty-stdin',
     commandName: 'json',
     args: ['pretty'],
     stdin: encodeText('{"b":2,"a":1}'),
+  },
+  {
+    id: 'json-keys-unicode-order',
+    commandName: 'json',
+    args: ['keys'],
+    stdin: encodeText('{"z":1,"ä":2,"a":3,"É":4,"Ω":5}'),
   },
   {
     id: 'json-get-file',
@@ -271,6 +320,40 @@ export const COMMAND_EXTRA_CASES: CommandSnapshotCase[] = [
     },
   },
   {
+    id: 'search-unicode-tie-order',
+    commandName: 'search',
+    args: ['refund'],
+    world: {
+      searchDocs: [
+        {
+          title: 'ä title',
+          body: 'refund issue',
+          source: 'kb://1',
+        },
+        {
+          title: 'z title',
+          body: 'refund issue',
+          source: 'kb://2',
+        },
+        {
+          title: 'a title',
+          body: 'refund issue',
+          source: 'kb://3',
+        },
+        {
+          title: 'É title',
+          body: 'refund issue',
+          source: 'kb://4',
+        },
+        {
+          title: 'Ω title',
+          body: 'refund issue',
+          source: 'kb://5',
+        },
+      ],
+    },
+  },
+  {
     id: 'sort-versioned-file',
     commandName: 'sort',
     args: ['-V', '/versions.txt'],
@@ -279,6 +362,36 @@ export const COMMAND_EXTRA_CASES: CommandSnapshotCase[] = [
         '/versions.txt': 'v1.10\nv1.2\nv1.3',
       },
     },
+  },
+  {
+    id: 'sort-unicode-lexical',
+    commandName: 'sort',
+    args: [],
+    stdin: encodeText('z\nä\na\nÉ\nΩ\n'),
+  },
+  {
+    id: 'sort-unicode-folded',
+    commandName: 'sort',
+    args: ['-f'],
+    stdin: encodeText('é\ne\nE\nÉ\n'),
+  },
+  {
+    id: 'sort-unicode-version',
+    commandName: 'sort',
+    args: ['-V'],
+    stdin: encodeText('v1.2\nv1.10\nvÉ1.2\nvé1.2\nv1.02\nv1.002\n'),
+  },
+  {
+    id: 'sort-unicode-version-folded',
+    commandName: 'sort',
+    args: ['-V', '-f'],
+    stdin: encodeText('v1a\nv1A\nv1é\nv1É\n'),
+  },
+  {
+    id: 'sort-numeric-tied-values',
+    commandName: 'sort',
+    args: ['-n'],
+    stdin: encodeText('2\n02\napple\n'),
   },
   {
     id: 'stat-existing-file',
@@ -307,6 +420,16 @@ export const COMMAND_EXTRA_CASES: CommandSnapshotCase[] = [
     world: {
       files: {
         '/repeated.txt': 'a\na\nb\nb\nb\n',
+      },
+    },
+  },
+  {
+    id: 'uniq-ignore-case-unicode',
+    commandName: 'uniq',
+    args: ['-i', '/folded.txt'],
+    world: {
+      files: {
+        '/folded.txt': 'Error\nerror\nWARN\né\nÉ\n',
       },
     },
   },

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from ..c_locale import to_c_locale_sort_bytes
 from ..memory import SimpleMemory
 from ..runtime import create_agent_cli
 from ..types import ToolAdapters
@@ -15,7 +16,7 @@ async def build_world(world: WorldSpec, **runtime_options: object):
     memory = _resolve_memory(options.get("memory"))
 
     if world.files is not None:
-        for file_path, content in sorted(world.files.items()):
+        for file_path, content in sorted(world.files.items(), key=lambda entry: to_c_locale_sort_bytes(entry[0])):
             await vfs.mkdir(parent_path(file_path), True)
             data = content if isinstance(content, bytes) else content.encode("utf-8")
             await vfs.write_bytes(file_path, data, False)

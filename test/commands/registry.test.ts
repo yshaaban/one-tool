@@ -183,3 +183,28 @@ test('CommandRegistry supports has, replace, and unregister', async function ():
     registry.replace(echo);
   }, /command not registered: echo/);
 });
+
+test('CommandRegistry uses C-locale ordering for non-ascii command names', function (): void {
+  const registry = new CommandRegistry();
+  const names = ['z', 'ä', 'a', 'É', 'Ω'];
+
+  for (const name of names) {
+    registry.register({
+      name,
+      summary: `${name} summary`,
+      usage: name,
+      details: `Examples:\n  ${name}`,
+      async handler() {
+        return ok(name);
+      },
+    });
+  }
+
+  assert.deepEqual(registry.names(), ['a', 'z', 'É', 'ä', 'Ω']);
+  assert.deepEqual(
+    registry.all().map(function (spec): string {
+      return spec.name;
+    }),
+    ['a', 'z', 'É', 'ä', 'Ω'],
+  );
+});

@@ -7,7 +7,8 @@ from pathlib import PurePosixPath
 from typing import Callable
 
 from ...types import CommandResult, err
-from ...utils import error_message, looks_binary
+from ...utils import error_message, fold_ascii_case_text, looks_binary, to_c_locale_sort_bytes
+from .line_model import encode_c_locale_text
 from ..core import CommandContext
 from .io import materialized_limit_error
 
@@ -248,7 +249,7 @@ async def _compare_directories(
 ) -> CommandResult:
     left_entries = await _list_directory_entries(ctx, left.normalized_path)
     right_entries = await _list_directory_entries(ctx, right.normalized_path)
-    names = sorted(set(left_entries) | set(right_entries))
+    names = sorted(set(left_entries) | set(right_entries), key=to_c_locale_sort_bytes)
     chunks: list[bytes] = []
     exit_code = 0
     prefix = _build_directory_diff_prefix(parsed)
@@ -416,30 +417,29 @@ def _render_normal_diff(
         [_normalize_diff_line(line, parsed) for line in right_lines],
         autojunk=False,
     )
-    chunks: list[str] = []
+    chunks: list[bytes] = []
     if directory_diff_prefix is not None:
-        chunks.append(f"{directory_diff_prefix} {left.display_name} {right.display_name}\n")
+        chunks.append(f"{directory_diff_prefix} {left.display_name} {right.display_name}\n".encode("utf-8"))
 
     for tag, i1, i2, j1, j2 in matcher.get_opcodes():
         if tag == "equal":
             continue
         if tag == "replace":
             chunks.append(
-                f"{_format_normal_range(i1 + 1, i2 - i1)}c{_format_normal_range(j1 + 1, j2 - j1)}\n"
+                f"{_format_normal_range(i1 + 1, i2 - i1)}c{_format_normal_range(j1 + 1, j2 - j1)}\n".encode("utf-8")
             )
-            chunks.extend(f"< {line}\n" for line in left_lines[i1:i2])
-            chunks.append("---\n")
-            chunks.extend(f"> {line}\n" for line in right_lines[j1:j2])
+            chunks.extend(_encode_c_locale_diff_line("< ", line) for line in left_lines[i1:i2])
+            chunks.append(b"---\n")
+            chunks.extend(_encode_c_locale_diff_line("> ", line) for line in right_lines[j1:j2])
             continue
         if tag == "delete":
-            chunks.append(f"{_format_normal_range(i1 + 1, i2 - i1)}d{j1}\n")
-            chunks.extend(f"< {line}\n" for line in left_lines[i1:i2])
+            chunks.append(f"{_format_normal_range(i1 + 1, i2 - i1)}d{j1}\n".encode("utf-8"))
+            chunks.extend(_encode_c_locale_diff_line("< ", line) for line in left_lines[i1:i2])
             continue
-        if tag == "insert":
-            chunks.append(f"{i1}a{_format_normal_range(j1 + 1, j2 - j1)}\n")
-            chunks.extend(f"> {line}\n" for line in right_lines[j1:j2])
+        chunks.append(f"{i1}a{_format_normal_range(j1 + 1, j2 - j1)}\n".encode("utf-8"))
+        chunks.extend(_encode_c_locale_diff_line("> ", line) for line in right_lines[j1:j2])
 
-    return "".join(chunks).encode("utf-8")
+    return b"".join(chunks)
 
 
 def _render_unified_diff(
@@ -468,7 +468,7 @@ def _render_unified_diff(
             lineterm="",
         )
     )
-    return "\n".join(chunks).encode("utf-8") + b"\n"
+    return _encode_rendered_diff_lines(chunks)
 
 
 def _render_context_diff(
@@ -497,7 +497,7 @@ def _render_context_diff(
             lineterm="",
         )
     )
-    return "\n".join(chunks).encode("utf-8") + b"\n"
+    return _encode_rendered_diff_lines(chunks)
 
 
 def _decode_diff_lines(data: bytes) -> list[str]:
@@ -516,8 +516,40 @@ def _normalize_diff_line(line: str, parsed: ParsedDiffCommand) -> str:
     if parsed.ignore_space_change:
         normalized = " ".join(normalized.replace("\t", " ").split())
     if parsed.ignore_case:
-        normalized = normalized.lower()
+        normalized = fold_ascii_case_text(normalized)
     return normalized
+
+
+def _encode_c_locale_diff_line(prefix: str, line: str) -> bytes:
+    return prefix.encode("utf-8") + encode_c_locale_text(line) + b"\n"
+
+
+def _encode_rendered_diff_lines(lines: list[str]) -> bytes:
+    if not lines:
+        return b""
+
+    chunks: list[bytes] = []
+    for line in lines:
+        chunks.append(_encode_rendered_diff_line(line))
+    return b"".join(chunks)
+
+
+def _encode_rendered_diff_line(line: str) -> bytes:
+    if line == r"\ No newline at end of file":
+        return b"\\ No newline at end of file\n"
+
+    if line.startswith("@@ ") or line == "***************" or line.startswith(("--- ", "+++ ", "*** ")):
+        return line.encode("utf-8") + b"\n"
+
+    if line.startswith(("  ", "! ", "- ", "+ ")):
+        prefix = line[:2]
+        return prefix.encode("utf-8") + encode_c_locale_text(line[2:]) + b"\n"
+
+    if line.startswith((" ", "+", "-")):
+        prefix = line[:1]
+        return prefix.encode("utf-8") + encode_c_locale_text(line[1:]) + b"\n"
+
+    return line.encode("utf-8") + b"\n"
 
 
 def _parse_long_diff_option(

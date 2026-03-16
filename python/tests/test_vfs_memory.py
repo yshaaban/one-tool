@@ -15,6 +15,10 @@ def test_memory_vfs_matches_golden_snapshots() -> None:
         asyncio.run(_assert_memory_vfs_case(record, _mock_now_ms()))
 
 
+def test_memory_vfs_listdir_uses_c_locale_byte_order() -> None:
+    asyncio.run(_assert_memory_vfs_non_ascii_order())
+
+
 async def _assert_memory_vfs_case(
     record: dict[str, object],
     now_ms: Callable[[], int],
@@ -115,6 +119,17 @@ def _mock_now_ms() -> Callable[[], int]:
         return current
 
     return now_ms
+
+
+async def _assert_memory_vfs_non_ascii_order() -> None:
+    vfs = MemoryVFS()
+    await vfs.write_bytes("/z", b"")
+    await vfs.write_bytes("/ä", b"")
+    await vfs.write_bytes("/a", b"")
+    await vfs.write_bytes("/É", b"")
+    await vfs.write_bytes("/Ω", b"")
+
+    assert await vfs.listdir("/") == ["a", "z", "É", "ä", "Ω"]
 
 
 def _decode_b64(value: str) -> bytes:

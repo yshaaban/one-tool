@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 
 from ...types import CommandResult, err, ok
-from ...utils import error_message, safe_eval_arithmetic
+from ...utils import error_message, safe_eval_arithmetic, to_c_locale_sort_bytes
 from ..core import CommandContext, CommandSpec
 from ..shared.json import extract_json_path, load_json
 
@@ -29,7 +29,7 @@ async def cmd_json(ctx: CommandContext, args: list[str], stdin: bytes) -> Comman
             return loaded.error
         if not isinstance(loaded.value, dict):
             return err("json keys: input must be a JSON object")
-        return ok("\n".join(sorted(loaded.value)))
+        return ok("\n".join(sorted(loaded.value, key=to_c_locale_sort_bytes)))
 
     if subcommand == "get":
         if len(args) < 2 or len(args) > 3:

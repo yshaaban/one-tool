@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   NO_STDIN,
   DemoFetch,
+  DemoSearch,
   assertScenario,
   buildWorld,
   createCommandConformanceCases,
@@ -177,4 +178,22 @@ test('DemoFetch clones JSON payloads so fetch calls cannot mutate shared fixture
   const secondPayload = second.payload as { customer: { email: string } };
 
   assert.equal(secondPayload.customer.email, 'buyer@example.com');
+});
+
+test('DemoSearch uses C-locale ordering for tied non-ascii titles', async function (): Promise<void> {
+  const search = new DemoSearch([
+    { title: 'ä title', body: 'refund issue', source: 'kb://1' },
+    { title: 'z title', body: 'refund issue', source: 'kb://2' },
+    { title: 'a title', body: 'refund issue', source: 'kb://3' },
+    { title: 'É title', body: 'refund issue', source: 'kb://4' },
+    { title: 'Ω title', body: 'refund issue', source: 'kb://5' },
+  ]);
+
+  const hits = await search.search('refund', 10);
+  assert.deepEqual(
+    hits.map(function (hit): string {
+      return hit.title;
+    }),
+    ['a title', 'z title', 'É title', 'ä title', 'Ω title'],
+  );
 });

@@ -1,6 +1,6 @@
 import type { CommandResult } from '../../types.js';
 import { err, ok, okBytes } from '../../types.js';
-import { errorMessage, formatSize, looksBinary, parentPath } from '../../utils.js';
+import { compareCLocaleText, errorMessage, formatSize, looksBinary, parentPath } from '../../utils.js';
 import { formatEscapePathErrorMessage, formatResourceLimitErrorMessage } from '../../vfs/errors.js';
 import { baseName } from '../../vfs/path-utils.js';
 import type { VFileInfo } from '../../vfs/interface.js';
@@ -844,13 +844,13 @@ function compareLsEntries(left: LsEntry, right: LsEntry): number {
     return leftRank - rightRank;
   }
 
-  return left.displayName.localeCompare(right.displayName, undefined, { sensitivity: 'base' });
+  return compareCLocaleText(left.displayName, right.displayName);
 }
 
 function comparePathEntries(left: string, right: string): number {
   const leftName = left.endsWith('/') ? left.slice(0, -1) : left;
   const rightName = right.endsWith('/') ? right.slice(0, -1) : right;
-  return leftName.localeCompare(rightName, undefined, { sensitivity: 'base' });
+  return compareCLocaleText(leftName, rightName);
 }
 
 function lsSpecialEntryRank(displayName: string): number {

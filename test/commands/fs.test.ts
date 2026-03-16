@@ -50,6 +50,19 @@ test('fs: ls supports files, recursion, and long output', async () => {
   assert.match(stdoutText(long.result), /^d +0 +\d{4}-\d{2}-\d{2}T.*Z sub$/m);
 });
 
+test('fs: ls uses C-locale byte ordering for non-ascii names', async () => {
+  const ctx = makeCtx();
+  await ctx.vfs.writeBytes('/tree/z', textEncoder.encode(''));
+  await ctx.vfs.writeBytes('/tree/ä', textEncoder.encode(''));
+  await ctx.vfs.writeBytes('/tree/a', textEncoder.encode(''));
+  await ctx.vfs.writeBytes('/tree/É', textEncoder.encode(''));
+  await ctx.vfs.writeBytes('/tree/Ω', textEncoder.encode(''));
+
+  const listing = await runCommand('ls', ['/tree'], { ctx });
+  assert.equal(listing.result.exitCode, 0);
+  assert.equal(stdoutText(listing.result), 'a\nz\nÉ\nä\nΩ');
+});
+
 test('fs: stat reports missing paths', async () => {
   const { result } = await runCommand('stat', ['/missing.txt']);
   assert.equal(result.exitCode, 1);
@@ -337,6 +350,19 @@ test('fs: find supports max depth and validates flags', async () => {
   assert.match(invalidDepth.result.stderr, /find: invalid integer for --max-depth: -1/);
 });
 
+test('fs: find uses C-locale byte ordering for multilingual paths', async () => {
+  const ctx = makeCtx();
+  await ctx.vfs.writeBytes('/tree/z.txt', textEncoder.encode('z'));
+  await ctx.vfs.writeBytes('/tree/ä.txt', textEncoder.encode('ä'));
+  await ctx.vfs.writeBytes('/tree/a.txt', textEncoder.encode('a'));
+  await ctx.vfs.writeBytes('/tree/É.txt', textEncoder.encode('É'));
+  await ctx.vfs.writeBytes('/tree/Ω.txt', textEncoder.encode('Ω'));
+
+  const result = await runCommand('find', ['/tree', '--type', 'file'], { ctx });
+  assert.equal(result.result.exitCode, 0);
+  assert.equal(stdoutText(result.result), '/tree/a.txt\n/tree/z.txt\n/tree/É.txt\n/tree/ä.txt\n/tree/Ω.txt');
+});
+
 test('fs: diff uses normal diff exit semantics for identical and changed files', async () => {
   const ctx = makeCtx();
   await ctx.vfs.writeBytes('/same-left.txt', textEncoder.encode('alpha\n'));
@@ -397,6 +423,12 @@ test('fs: diff handles binary files, stdin operands, and invalid usage', async (
   const invalid = await runCommand('diff', ['--bogus', '/left.bin', '/right.bin'], { ctx });
   assert.equal(invalid.result.exitCode, 2);
   assert.match(invalid.result.stderr, /diff: unknown option: --bogus/);
+
+  await ctx.vfs.writeBytes('/left-unicode.txt', textEncoder.encode('É\n'));
+  await ctx.vfs.writeBytes('/right-unicode.txt', textEncoder.encode('é\n'));
+  const unicodeIgnoreCase = await runCommand('diff', ['-i', '/left-unicode.txt', '/right-unicode.txt'], { ctx });
+  assert.equal(unicodeIgnoreCase.result.exitCode, 1);
+  assert.equal(stdoutText(unicodeIgnoreCase.result), '1c1\n< É\n---\n> é\n');
 });
 
 test('fs: diff compares directories recursively and non-recursively', async () => {

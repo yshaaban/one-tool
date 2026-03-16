@@ -4,6 +4,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any
 
+from ..c_locale import to_c_locale_sort_bytes
 from ..types import FetchResponse, SearchHit
 from ..utils import tokenize_for_search
 
@@ -45,7 +46,7 @@ class DemoSearch:
                 )
             )
 
-        scored.sort(key=lambda entry: (-entry.score, entry.hit.title))
+        scored.sort(key=lambda entry: (-entry.score, to_c_locale_sort_bytes(entry.hit.title)))
         return [entry.hit for entry in scored[:limit]]
 
 

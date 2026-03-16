@@ -42,6 +42,8 @@ async def test_sed_supports_bre_literal_escapes_negated_addresses_and_ranges() -
         (["-n", "1,0p"], "a\nb\nc\n", "a\n"),
         (["-n", "/hit/,0p"], "hit\nrest\nhit\n", "hit\nhit\n"),
         (["1,2!c\\X"], "a\nb\nc\nd\n", "a\nb\nX\nX\n"),
+        (["s/é/X/"], "é\n", "X\n"),
+        (["s/é/X/I"], "É\né\n", "É\nX\n"),
         (["-n", "n;p"], "1\n2\n3\n", "2\n"),
     ]
 

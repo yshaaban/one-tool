@@ -38,6 +38,12 @@ const PARITY_CASES: UniqParityCase[] = [
     stdin: textEncoder.encode('Error\nerror\nWARN\n'),
   },
   {
+    name: 'ignore case keeps non-ascii distinct in C locale',
+    args: ['-i'],
+    files: {},
+    stdin: textEncoder.encode('Error\nerror\nWARN\né\nÉ\n'),
+  },
+  {
     name: 'duplicates only',
     args: ['-d'],
     files: {},

@@ -5,11 +5,21 @@ import re
 from dataclasses import dataclass
 from functools import cmp_to_key
 
+from ...c_locale import C_LOCALE_REGEX_FLAGS
 from ...types import CommandResult, err, ok, ok_bytes
-from ...utils import error_message, looks_binary, split_lines
+from ...utils import (
+    build_c_locale_case_insensitive_regex_source,
+    compare_c_locale_text,
+    error_message,
+    format_size,
+    fold_ascii_case_text,
+    looks_binary,
+    split_lines,
+)
 from ..core import CommandContext, CommandSpec
 from ..shared.bytes import read_bytes_from_file_or_stdin
 from ..shared.io import read_text_from_file_or_stdin
+from ..shared.line_model import create_byte_line_model, encode_c_locale_text, normalize_c_locale_input_text
 from ..shared.sed import run_sed_command
 from ..shared.tr_arrays import compile_tr_program
 
@@ -21,7 +31,9 @@ UNIQ_USAGE = "uniq [-c] [-d] [-i] [-u] [path]"
 WC_USAGE = "wc [-l] [-w] [-c] [path]"
 _WORD_CHAR_PATTERN = re.compile(r"[0-9A-Za-z_]")
 _NEGATIVE_COUNT_PATTERN = re.compile(r"^-\d+$")
-_VERSION_TOKEN_PATTERN = re.compile(r"\d+|\D+")
+_VERSION_TOKEN_PATTERN = re.compile(r"[0-9]+|[^0-9]+")
+_ASCII_DIGIT_0 = ord("0")
+_ASCII_DIGIT_9 = ord("9")
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,11 +116,11 @@ class GrepMatcher:
 
 class FixedGrepMatcher(GrepMatcher):
     def __init__(self, pattern: str, options: GrepOptions) -> None:
-        self._needle = pattern.lower() if options.ignore_case else pattern
+        self._needle = fold_ascii_case_text(pattern) if options.ignore_case else pattern
         self._options = options
 
     def search(self, line: str) -> list[str]:
-        haystack = line.lower() if self._options.ignore_case else line
+        haystack = fold_ascii_case_text(line) if self._options.ignore_case else line
 
         if self._options.whole_line:
             return [line] if haystack == self._needle else []
@@ -248,16 +260,29 @@ async def cmd_grep(ctx: CommandContext, args: list[str], stdin: bytes) -> Comman
         return err(error_text)
     assert parsed is not None
 
-    loaded = await read_text_from_file_or_stdin(ctx, parsed.file_path, stdin, "grep")
+    loaded = await read_bytes_from_file_or_stdin(ctx, parsed.file_path, stdin, "grep")
     if loaded.error is not None:
         return loaded.error
+    assert loaded.data is not None and loaded.source is not None
+
+    if looks_binary(loaded.data):
+        if loaded.source == "stdin":
+            return err(
+                f"grep: stdin is binary ({format_size(len(loaded.data))}). "
+                "Pipe text only, or save binary data to a file and inspect with stat."
+            )
+        return err(
+            f"grep: binary file ({format_size(len(loaded.data))}): {loaded.source}. "
+            f"Use: stat {loaded.source}"
+        )
 
     matcher, error_text = build_grep_matcher(parsed.pattern, parsed.options)
     if error_text is not None:
         return err(error_text)
     assert matcher is not None
 
-    matches = collect_grep_matches(split_lines(loaded.text or ""), matcher, parsed.options)
+    line_model = create_byte_line_model(loaded.data)
+    matches = collect_grep_matches([line.text for line in line_model.lines], matcher, parsed.options)
     if parsed.options.quiet:
         return create_successful_grep_result("", bool(matches))
     if parsed.options.count_only:
@@ -343,21 +368,22 @@ def replace_grep_options(options: GrepOptions, **changes: object) -> GrepOptions
 
 
 def build_grep_matcher(pattern: str, options: GrepOptions) -> tuple[GrepMatcher | None, str | None]:
-    if options.match_mode == "fixed":
-        return (FixedGrepMatcher(pattern, options), None)
+    normalized_pattern = normalize_c_locale_input_text(pattern)
 
-    source = pattern
+    if options.match_mode == "fixed":
+        return (FixedGrepMatcher(normalized_pattern, options), None)
+
+    source = normalized_pattern
     if options.word_match:
         source = rf"\b(?:{source})\b"
     if options.whole_line:
         source = rf"^(?:{source})$"
 
-    flags = re.MULTILINE
     if options.ignore_case:
-        flags |= re.IGNORECASE
+        source = build_c_locale_case_insensitive_regex_source(source)
 
     try:
-        return (RegexGrepMatcher(re.compile(source, flags)), None)
+        return (RegexGrepMatcher(re.compile(source, C_LOCALE_REGEX_FLAGS)), None)
     except re.error as caught:
         return (None, f"grep: invalid regex: {error_message(caught)}")
 
@@ -403,7 +429,7 @@ def format_grep_matches(matches: list[GrepLineMatch], options: GrepOptions) -> s
 
 def create_successful_grep_result(text: str, matched: bool) -> CommandResult:
     return CommandResult(
-        stdout=ok(text).stdout,
+        stdout=encode_c_locale_text(text),
         stderr="",
         exit_code=0 if matched else 1,
         content_type="text/plain",
@@ -523,7 +549,8 @@ async def cmd_sort(ctx: CommandContext, args: list[str], stdin: bytes) -> Comman
     if loaded.error is not None:
         return loaded.error
 
-    decorated = [SortEntry(line=line, index=index) for index, line in enumerate(split_lines(loaded.text or ""))]
+    lines = split_lines(loaded.text or "")
+    decorated = [SortEntry(line=line, index=index) for index, line in enumerate(lines)]
     decorated.sort(
         key=cmp_to_key(
             lambda left, right: compare_sort_entries(left, right, parsed),
@@ -540,6 +567,8 @@ async def cmd_sort(ctx: CommandContext, args: list[str], stdin: bytes) -> Comman
 
 def compare_sort_entries(left: SortEntry, right: SortEntry, options: SortOptions) -> int:
     comparison = compare_sort_lines(left.line, right.line, options)
+    if comparison == 0 and not options.unique:
+        comparison = compare_text_sort_lines(left.line, right.line, False)
     if comparison != 0:
         return -comparison if options.reverse else comparison
     return left.index - right.index
@@ -955,7 +984,7 @@ def sort_lines_equivalent(left: str, right: str, options: SortOptions) -> bool:
 
 
 def uniq_key(line: str, ignore_case: bool) -> str:
-    return line.lower() if ignore_case else line
+    return fold_ascii_case_text(line) if ignore_case else line
 
 
 def render_uniq_line(line: str, count: int, include_count: bool) -> str:
@@ -990,18 +1019,12 @@ def count_words(text: str) -> int:
 
 
 def compare_text_sort_lines(left: str, right: str, ignore_case: bool) -> int:
-    left_value = left.casefold() if ignore_case else left
-    right_value = right.casefold() if ignore_case else right
-    if left_value < right_value:
-        return -1
-    if left_value > right_value:
-        return 1
-    return 0
+    return compare_c_locale_text(left, right, ignore_case)
 
 
 def compare_version_sort_lines(left: str, right: str, ignore_case: bool) -> int:
-    left_tokens = version_tokens(left, ignore_case)
-    right_tokens = version_tokens(right, ignore_case)
+    left_tokens = version_tokens(left)
+    right_tokens = version_tokens(right)
     limit = min(len(left_tokens), len(right_tokens))
 
     for index in range(limit):
@@ -1010,15 +1033,11 @@ def compare_version_sort_lines(left: str, right: str, ignore_case: bool) -> int:
         if left_token == right_token:
             continue
 
-        left_is_digit = isinstance(left_token, int)
-        right_is_digit = isinstance(right_token, int)
+        left_is_digit = is_ascii_digit_token(left_token)
+        right_is_digit = is_ascii_digit_token(right_token)
         if left_is_digit and right_is_digit:
-            return -1 if left_token < right_token else 1
-        if left_is_digit != right_is_digit:
-            left_text = str(left_token)
-            right_text = str(right_token)
-            return -1 if left_text < right_text else 1
-        return -1 if str(left_token) < str(right_token) else 1
+            return compare_version_number_tokens(left_token, right_token)
+        return compare_c_locale_text(left_token, right_token, ignore_case)
 
     if len(left_tokens) < len(right_tokens):
         return -1
@@ -1027,14 +1046,38 @@ def compare_version_sort_lines(left: str, right: str, ignore_case: bool) -> int:
     return 0
 
 
-def version_tokens(value: str, ignore_case: bool) -> list[int | str]:
-    tokens: list[int | str] = []
-    for token in _VERSION_TOKEN_PATTERN.findall(value):
-        if token.isdigit():
-            tokens.append(int(token, 10))
-            continue
-        tokens.append(token.casefold() if ignore_case else token)
-    return tokens
+def version_tokens(value: str) -> list[str]:
+    return _VERSION_TOKEN_PATTERN.findall(value)
+
+
+def is_ascii_digit_token(value: str) -> bool:
+    if value == "":
+        return False
+    code = ord(value[0])
+    return _ASCII_DIGIT_0 <= code <= _ASCII_DIGIT_9
+
+
+def compare_version_number_tokens(left: str, right: str) -> int:
+    left_trimmed = trim_version_leading_zeros(left)
+    right_trimmed = trim_version_leading_zeros(right)
+    if len(left_trimmed) != len(right_trimmed):
+        return -1 if len(left_trimmed) < len(right_trimmed) else 1
+    if left_trimmed < right_trimmed:
+        return -1
+    if left_trimmed > right_trimmed:
+        return 1
+    if len(left) != len(right):
+        return -1 if len(left) > len(right) else 1
+    return 0
+
+
+def trim_version_leading_zeros(value: str) -> str:
+    index = 0
+    while index < len(value) - 1 and ord(value[index]) == _ASCII_DIGIT_0:
+        index += 1
+    return value[index:]
+
+
 
 
 def select_wc_fields(options: WcOptions, line_count: int, word_count: int, byte_count: int) -> list[int]:

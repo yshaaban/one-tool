@@ -1,11 +1,21 @@
 import type { CommandResult } from '../../types.js';
 import { err, ok, okBytes } from '../../types.js';
-import { errorMessage, looksBinary, parentPath } from '../../utils.js';
+import {
+  buildCLocaleCaseInsensitiveRegexSource,
+  errorMessage,
+  looksBinary,
+  parentPath,
+} from '../../utils.js';
 import type { VFileInfo } from '../../vfs/interface.js';
 import { formatEscapePathErrorMessage, formatResourceLimitErrorMessage } from '../../vfs/errors.js';
 import type { CommandContext } from '../core.js';
 import { blockingParentPath, errorCode, firstFileInPath } from './errors.js';
-import { createByteLineModel, decodeCLocaleText, encodeCLocaleText } from './line-model.js';
+import {
+  createByteLineModel,
+  decodeCLocaleText,
+  encodeCLocaleText,
+  normalizeCLocaleInputText,
+} from './line-model.js';
 import { materializedLimitError } from './io.js';
 
 export interface ParsedSedProgram {
@@ -143,7 +153,11 @@ async function parseSedProgram(
         inPlaceSuffix = parsedOption.value.inPlaceSuffix;
       }
       if (parsedOption.value.scriptSource !== undefined) {
-        scriptSources.push(parsedOption.value.scriptSource);
+        if (parsedOption.value.scriptSourceIsCLocale) {
+          scriptSources.push(parsedOption.value.scriptSource);
+        } else {
+          scriptSources.push(normalizeSedScriptSource(parsedOption.value.scriptSource));
+        }
       }
       index = parsedOption.value.nextIndex;
       continue;
@@ -160,7 +174,7 @@ async function parseSedProgram(
   }
 
   if (inlineScript !== undefined) {
-    scriptSources.push(inlineScript);
+    scriptSources.push(normalizeSedScriptSource(inlineScript));
   }
 
   if (scriptSources.length === 0) {
@@ -204,6 +218,7 @@ async function parseSedOption(
     extendedRegex: boolean;
     inPlaceSuffix?: string | null;
     scriptSource?: string;
+    scriptSourceIsCLocale?: boolean;
   }>
 > {
   if (arg === '-n') {
@@ -286,6 +301,7 @@ async function parseSedOption(
         quiet: false,
         extendedRegex: false,
         scriptSource: loadedScript.value,
+        scriptSourceIsCLocale: true,
       },
     };
   }
@@ -305,6 +321,7 @@ async function parseSedShortOptionCluster(
     extendedRegex: boolean;
     inPlaceSuffix?: string | null;
     scriptSource?: string;
+    scriptSourceIsCLocale?: boolean;
   }>
 > {
   let quiet = false;
@@ -373,6 +390,7 @@ async function parseSedShortOptionCluster(
           quiet,
           extendedRegex,
           scriptSource: loadedScript.value,
+          scriptSourceIsCLocale: true,
         },
       };
     }
@@ -733,6 +751,10 @@ function parseSedDelimitedContent(
   }
 
   return { ok: false };
+}
+
+function normalizeSedScriptSource(source: string): string {
+  return normalizeCLocaleInputText(source);
 }
 
 function parseSedSubstituteFlags(
@@ -1352,8 +1374,7 @@ function replaceSedMatches(
   substitute: SedSubstituteCommand,
   mode: 'all' | number | { kind: 'from'; occurrence: number },
 ): { text: string; changed: boolean } {
-  const flags = `${substitute.ignoreCase ? 'i' : ''}g`;
-  const regex = new RegExp(substitute.regex.source, flags);
+  const regex = new RegExp(substitute.regex.source, 'g');
   let result = '';
   let lastIndex = 0;
   let changed = false;
@@ -1504,10 +1525,13 @@ function compileSedRegex(
   ignoreCase: boolean,
 ): { ok: true; value: RegExp } | { ok: false; error: string } {
   try {
-    const source = extendedRegex ? translateSedExtendedRegex(pattern) : translateSedBasicRegex(pattern);
+    let source = extendedRegex ? translateSedExtendedRegex(pattern) : translateSedBasicRegex(pattern);
+    if (ignoreCase) {
+      source = buildCLocaleCaseInsensitiveRegexSource(source);
+    }
     return {
       ok: true,
-      value: new RegExp(source, ignoreCase ? 'i' : ''),
+      value: new RegExp(source, ''),
     };
   } catch (caught) {
     return { ok: false, error: `invalid regex: ${errorMessage(caught)}` };

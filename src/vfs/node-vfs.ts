@@ -2,6 +2,7 @@ import { lstatSync, mkdirSync, realpathSync, type Stats } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
+import { compareCLocaleText } from '../utils.js';
 import type { VFS, VFileInfo } from './interface.js';
 import { guessMediaType } from './interface.js';
 import { vfsError } from './errors.js';
@@ -111,7 +112,7 @@ export class NodeVFS implements VFS {
       if (aDir !== bDir) {
         return aDir ? -1 : 1;
       }
-      return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+      return compareCLocaleText(a.name, b.name);
     });
 
     return entries.map(function (entry) {

@@ -116,6 +116,18 @@ async def test_listdir_hides_symlink_entries(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_listdir_uses_c_locale_byte_order(tmp_path: Path) -> None:
+    vfs = _make_vfs(tmp_path)
+    await vfs.write_bytes("/z", b"")
+    await vfs.write_bytes("/ä", b"")
+    await vfs.write_bytes("/a", b"")
+    await vfs.write_bytes("/É", b"")
+    await vfs.write_bytes("/Ω", b"")
+
+    assert await vfs.listdir("/") == ["a", "z", "É", "ä", "Ω"]
+
+
+@pytest.mark.asyncio
 async def test_write_rejects_symlinked_parent_directories(tmp_path: Path) -> None:
     outside_root = tmp_path / "outside"
     linked_dir = outside_root / "linked-dir"

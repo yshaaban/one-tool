@@ -67,6 +67,17 @@ test('listdir returns sorted entries with dirs first', async () => {
   assert.deepEqual(entries, ['m-dir/', 'a.txt', 'z.txt']);
 });
 
+test('listdir uses C-locale byte ordering for non-ascii names', async () => {
+  const vfs = new MemoryVFS();
+  await vfs.writeBytes('/z', new TextEncoder().encode(''));
+  await vfs.writeBytes('/ä', new TextEncoder().encode(''));
+  await vfs.writeBytes('/a', new TextEncoder().encode(''));
+  await vfs.writeBytes('/É', new TextEncoder().encode(''));
+  await vfs.writeBytes('/Ω', new TextEncoder().encode(''));
+  const entries = await vfs.listdir('/');
+  assert.deepEqual(entries, ['a', 'z', 'É', 'ä', 'Ω']);
+});
+
 test('listdir throws ENOENT for missing path', async () => {
   const vfs = new MemoryVFS();
   await assert.rejects(() => vfs.listdir('/missing'), /ENOENT/);

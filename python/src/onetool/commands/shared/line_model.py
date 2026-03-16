@@ -46,5 +46,9 @@ def decode_c_locale_text(data: bytes) -> str:
     return data.decode("latin1")
 
 
+def normalize_c_locale_input_text(text: str) -> str:
+    return text.encode("utf-8").decode("latin1")
+
+
 def encode_c_locale_text(text: str) -> bytes:
     return bytes(ord(char) & 0xFF for char in text)
