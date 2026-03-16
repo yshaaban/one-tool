@@ -2,7 +2,7 @@ import { lstatSync, mkdirSync, realpathSync, type Stats } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
-import { compareCLocaleText } from '../utils.js';
+import { compareCLocaleText } from '../c-locale.js';
 import type { VFS, VFileInfo } from './interface.js';
 import { guessMediaType } from './interface.js';
 import { vfsError } from './errors.js';

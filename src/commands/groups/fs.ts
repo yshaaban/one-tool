@@ -1,6 +1,7 @@
+import { compareCLocaleText } from '../../c-locale.js';
 import type { CommandResult } from '../../types.js';
 import { err, ok, okBytes } from '../../types.js';
-import { compareCLocaleText, errorMessage, formatSize, looksBinary, parentPath } from '../../utils.js';
+import { errorMessage, formatSize, looksBinary, parentPath } from '../../utils.js';
 import { formatEscapePathErrorMessage, formatResourceLimitErrorMessage } from '../../vfs/errors.js';
 import { baseName } from '../../vfs/path-utils.js';
 import type { VFileInfo } from '../../vfs/interface.js';

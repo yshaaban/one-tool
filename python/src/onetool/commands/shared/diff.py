@@ -6,8 +6,9 @@ from dataclasses import dataclass
 from pathlib import PurePosixPath
 from typing import Callable
 
+from ...c_locale import fold_ascii_case_text, to_c_locale_sort_bytes
 from ...types import CommandResult, err
-from ...utils import error_message, fold_ascii_case_text, looks_binary, to_c_locale_sort_bytes
+from ...utils import error_message, looks_binary
 from .line_model import encode_c_locale_text
 from ..core import CommandContext
 from .io import materialized_limit_error

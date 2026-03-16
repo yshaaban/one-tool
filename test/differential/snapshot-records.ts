@@ -3,8 +3,8 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import type { AgentCLIExecutionPolicy } from '../../src/execution-policy.js';
+import { compareCLocaleText } from '../../src/c-locale.js';
 import { SimpleMemory } from '../../src/memory.js';
-import { compareCLocaleText } from '../../src/utils.js';
 import { MemoryVFS } from '../../src/vfs/memory-vfs.js';
 import type { VfsResourcePolicy } from '../../src/vfs/index.js';
 

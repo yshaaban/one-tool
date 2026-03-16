@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import json
 
+from ...c_locale import to_c_locale_sort_bytes
 from ...types import CommandResult, err, ok
-from ...utils import error_message, safe_eval_arithmetic, to_c_locale_sort_bytes
+from ...utils import error_message, safe_eval_arithmetic
 from ..core import CommandContext, CommandSpec
 from ..shared.json import extract_json_path, load_json
 

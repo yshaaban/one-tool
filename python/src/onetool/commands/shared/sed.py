@@ -3,9 +3,9 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from ...c_locale import C_LOCALE_REGEX_FLAGS
+from ...c_locale import compile_c_locale_regex
 from ...types import CommandResult, err, ok_bytes
-from ...utils import build_c_locale_case_insensitive_regex_source, error_message, parent_path
+from ...utils import error_message, parent_path
 from ...vfs.errors import format_escape_path_error_message, format_resource_limit_error_message
 from ..core import CommandContext
 from .errors import blocking_parent_path, error_code, first_file_in_path
@@ -631,9 +631,7 @@ def _finish_sed_simple_command(source: str, index: int) -> int:
 
 def _compile_sed_regex(pattern: str, extended_regex: bool, ignore_case: bool) -> re.Pattern[str]:
     source = _translate_sed_extended_regex(pattern) if extended_regex else _translate_sed_basic_regex(pattern)
-    if ignore_case:
-        source = build_c_locale_case_insensitive_regex_source(source)
-    return re.compile(source, C_LOCALE_REGEX_FLAGS)
+    return compile_c_locale_regex(source, ignore_case=ignore_case)
 
 
 def _normalize_sed_script_source(source: str) -> str:

@@ -1,5 +1,6 @@
 import type { FetchAdapter, FetchResponse, SearchAdapter, SearchHit } from '../types.js';
-import { compareCLocaleText, tokenizeForSearch } from '../utils.js';
+import { compareCLocaleText } from '../c-locale.js';
+import { tokenizeForSearch } from '../utils.js';
 
 export interface DemoSearchDocument {
   title: string;

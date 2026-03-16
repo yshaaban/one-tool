@@ -1,8 +1,8 @@
 import type { MaybePromise, CommandResult, ToolAdapters } from '../types.js';
 import type { VFS } from '../vfs/interface.js';
 import type { ResolvedAgentCLIExecutionPolicy } from '../execution-policy.js';
+import { compareCLocaleText } from '../c-locale.js';
 import { SimpleMemory } from '../memory.js';
-import { compareCLocaleText } from '../utils.js';
 
 export interface CommandSpec {
   name: string;

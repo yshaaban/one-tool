@@ -83,6 +83,16 @@ def build_c_locale_case_insensitive_regex_source(source: str) -> str:
     return "".join(output)
 
 
+def compile_c_locale_regex(
+    source: str,
+    *,
+    ignore_case: bool = False,
+    flags: int = C_LOCALE_REGEX_FLAGS,
+) -> re.Pattern[str]:
+    pattern = build_c_locale_case_insensitive_regex_source(source) if ignore_case else source
+    return re.compile(pattern, flags)
+
+
 def _transform_regex_escape(source: str, index: int, *, in_character_class: bool) -> tuple[str, int]:
     if index + 1 >= len(source):
         return (r"\\", len(source))

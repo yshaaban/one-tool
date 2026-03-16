@@ -1,7 +1,7 @@
 import type { CommandResult } from '../../types.js';
 import { err, ok, okBytes } from '../../types.js';
+import { compileCLocaleRegex } from '../../c-locale.js';
 import {
-  buildCLocaleCaseInsensitiveRegexSource,
   errorMessage,
   looksBinary,
   parentPath,
@@ -1525,13 +1525,10 @@ function compileSedRegex(
   ignoreCase: boolean,
 ): { ok: true; value: RegExp } | { ok: false; error: string } {
   try {
-    let source = extendedRegex ? translateSedExtendedRegex(pattern) : translateSedBasicRegex(pattern);
-    if (ignoreCase) {
-      source = buildCLocaleCaseInsensitiveRegexSource(source);
-    }
+    const source = extendedRegex ? translateSedExtendedRegex(pattern) : translateSedBasicRegex(pattern);
     return {
       ok: true,
-      value: new RegExp(source, ''),
+      value: compileCLocaleRegex(source, '', ignoreCase),
     };
   } catch (caught) {
     return { ok: false, error: `invalid regex: ${errorMessage(caught)}` };

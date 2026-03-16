@@ -2,11 +2,11 @@ import { SimpleMemory } from '../memory.js';
 import { createAgentCLI, type AgentCLI } from '../runtime.js';
 import type { ToolAdapters } from '../types.js';
 import { textEncoder } from '../types.js';
+import { compareCLocaleText } from '../c-locale.js';
 import { parentPath } from '../utils.js';
 import { MemoryVFS } from '../vfs/memory-vfs.js';
 import { DemoFetch, DemoSearch } from './adapters.js';
 import type { WorldSpec } from './scenario.js';
-import { compareCLocaleText } from '../utils.js';
 
 export async function buildWorld(world: WorldSpec): Promise<AgentCLI> {
   const vfs = new MemoryVFS();

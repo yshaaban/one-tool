@@ -1,5 +1,6 @@
+import { compareCLocaleText, foldAsciiCaseText } from '../../c-locale.js';
 import { textEncoder } from '../../types.js';
-import { compareCLocaleText, errorMessage, foldAsciiCaseText, looksBinary } from '../../utils.js';
+import { errorMessage, looksBinary } from '../../utils.js';
 import type { VFileInfo } from '../../vfs/interface.js';
 import type { CommandContext } from '../core.js';
 import { materializedLimitError } from './io.js';

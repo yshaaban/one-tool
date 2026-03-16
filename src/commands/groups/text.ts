@@ -1,11 +1,13 @@
+import {
+  compileCLocaleRegex,
+  compareCLocaleText,
+  foldAsciiCaseText,
+} from '../../c-locale.js';
 import type { CommandResult } from '../../types.js';
 import { err, ok, okBytes, textEncoder } from '../../types.js';
 import {
-  buildCLocaleCaseInsensitiveRegexSource,
-  compareCLocaleText as sharedCompareCLocaleText,
   errorMessage,
   formatSize,
-  foldAsciiCaseText,
   looksBinary,
   splitLines,
 } from '../../utils.js';
@@ -305,12 +307,8 @@ function buildGrepMatcher(
     source = `^(?:${source})$`;
   }
 
-  if (options.ignoreCase) {
-    source = buildCLocaleCaseInsensitiveRegexSource(source);
-  }
-
   try {
-    const regex = new RegExp(source, 'g');
+    const regex = compileCLocaleRegex(source, 'g', options.ignoreCase);
     return {
       ok: true,
       value: createRegexGrepMatcher(regex),
@@ -1065,7 +1063,7 @@ function countWords(text: string): number {
 }
 
 function compareTextSortLines(left: string, right: string, ignoreCase: boolean): number {
-  return sharedCompareCLocaleText(left, right, ignoreCase);
+  return compareCLocaleText(left, right, ignoreCase);
 }
 
 function compareVersionSortLines(left: string, right: string, ignoreCase: boolean): number {
@@ -1083,7 +1081,7 @@ function compareVersionSortLines(left: string, right: string, ignoreCase: boolea
     if (leftIsDigit && rightIsDigit) {
       comparison = compareVersionNumberTokens(leftToken, rightToken);
     } else {
-      comparison = sharedCompareCLocaleText(leftToken, rightToken, ignoreCase);
+      comparison = compareCLocaleText(leftToken, rightToken, ignoreCase);
     }
 
     if (comparison !== 0) {

@@ -2,11 +2,12 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import type { CommandResult } from '../../src/types.js';
+import { compareCLocaleText } from '../../src/c-locale.js';
 import { SimpleMemory } from '../../src/memory.js';
 import type { PipelineExecutionTrace, RunExecution } from '../../src/runtime.js';
 import { DemoFetch, DemoSearch } from '../../src/testing/adapters.js';
 import type { OracleTrace, ScenarioSpec } from '../../src/testing/index.js';
-import { compareCLocaleText, looksBinary } from '../../src/utils.js';
+import { looksBinary } from '../../src/utils.js';
 import type { VFS } from '../../src/vfs/interface.js';
 import type { VfsResourcePolicy } from '../../src/vfs/policy.js';
 import type { AgentCLIExecutionPolicy } from '../../src/execution-policy.js';

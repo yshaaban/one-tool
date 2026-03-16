@@ -1,4 +1,4 @@
-import { compareCLocaleText } from '../utils.js';
+import { compareCLocaleText } from '../c-locale.js';
 import type { VFS, VFileInfo } from './interface.js';
 import { guessMediaType } from './interface.js';
 import { posixNormalize, parentOf, baseName, isStrictDescendantPath } from './path-utils.js';

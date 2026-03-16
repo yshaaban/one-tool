@@ -5,14 +5,11 @@ import re
 from dataclasses import dataclass
 from functools import cmp_to_key
 
-from ...c_locale import C_LOCALE_REGEX_FLAGS
+from ...c_locale import compile_c_locale_regex, compare_c_locale_text, fold_ascii_case_text
 from ...types import CommandResult, err, ok, ok_bytes
 from ...utils import (
-    build_c_locale_case_insensitive_regex_source,
-    compare_c_locale_text,
     error_message,
     format_size,
-    fold_ascii_case_text,
     looks_binary,
     split_lines,
 )
@@ -379,11 +376,8 @@ def build_grep_matcher(pattern: str, options: GrepOptions) -> tuple[GrepMatcher 
     if options.whole_line:
         source = rf"^(?:{source})$"
 
-    if options.ignore_case:
-        source = build_c_locale_case_insensitive_regex_source(source)
-
     try:
-        return (RegexGrepMatcher(re.compile(source, C_LOCALE_REGEX_FLAGS)), None)
+        return (RegexGrepMatcher(compile_c_locale_regex(source, ignore_case=options.ignore_case)), None)
     except re.error as caught:
         return (None, f"grep: invalid regex: {error_message(caught)}")
 

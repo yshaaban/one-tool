@@ -1,5 +1,6 @@
+import { compareCLocaleText } from '../../c-locale.js';
 import { err, ok } from '../../types.js';
-import { compareCLocaleText, errorMessage, safeEvalArithmetic } from '../../utils.js';
+import { errorMessage, safeEvalArithmetic } from '../../utils.js';
 import type { CommandContext, CommandSpec } from '../core.js';
 import { extractJsonPath, loadJson } from '../shared/json.js';
 

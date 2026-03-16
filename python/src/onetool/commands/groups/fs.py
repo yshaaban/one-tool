@@ -4,8 +4,9 @@ import datetime as dt
 import re
 from dataclasses import dataclass
 
+from ...c_locale import to_c_locale_sort_bytes
 from ...types import CommandResult, err, ok, ok_bytes
-from ...utils import error_message, format_size, looks_binary, parent_path, to_c_locale_sort_bytes
+from ...utils import error_message, format_size, looks_binary, parent_path
 from ...vfs.errors import format_escape_path_error_message, format_resource_limit_error_message
 from ...vfs.interface import VFileInfo
 from ...vfs.path_utils import base_name
