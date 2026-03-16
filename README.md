@@ -58,6 +58,8 @@ At a glance:
   - [`examples/README.md`](examples/README.md)
   - [`docs/vfs.md`](docs/vfs.md)
   - [`docs/providers.md`](docs/providers.md)
+- Release notes:
+  - [`CHANGELOG.md`](CHANGELOG.md)
 - Command authoring:
   - [`COMMANDS.md`](COMMANDS.md)
   - runnable example: `npm run example:custom-command`
@@ -147,6 +149,8 @@ For the rest of the walkthrough, open [`examples/README.md`](examples/README.md)
 
 The Python port lives under [`python/`](python) and is maintained against TypeScript-generated golden snapshots.
 
+Package-specific notes live in [`python/README.md`](python/README.md).
+
 Run the Python suite with:
 
 ```bash
@@ -189,7 +193,7 @@ TypeScript is the source of truth for command, runtime, and scenario behavior. T
 ```bash
 npm run snapshots
 npm run snapshots:check
-pytest -q python/tests
+(cd python && pytest -q)
 ```
 
 When TypeScript behavior changes:
@@ -197,7 +201,7 @@ When TypeScript behavior changes:
 1. Update the TypeScript source.
 2. Regenerate snapshots with `npm run snapshots`.
 3. Commit the snapshot diffs.
-4. Port the same behavior to Python until `pytest -q python/tests` is green again.
+4. Port the same behavior to Python until `(cd python && pytest -q)` is green again.
 
 The generated corpus now covers parser, VFS, utils, commands, runtime executions/tool descriptions, and oracle scenarios under [`snapshots/`](snapshots).
 
@@ -613,6 +617,7 @@ Testing helpers and conformance utilities are documented in [`docs/api.md#comman
 one-tool/
 ├─ README.md
 ├─ COMMANDS.md
+├─ CHANGELOG.md
 ├─ docs/
 │  ├─ api.md
 │  ├─ command-reference.md
@@ -620,6 +625,9 @@ one-tool/
 │  ├─ vfs.md
 │  └─ diagrams/
 ├─ examples/
+├─ python/
+├─ scripts/
+├─ snapshots/
 ├─ src/
 └─ test/
 ```

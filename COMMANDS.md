@@ -269,5 +269,6 @@ test('say writes arguments back out', async () => {
 - group array updated
 - `src/commands/register.ts` updated if needed
 - `test/commands/system.test.ts` snapshot updated
+- `npm run snapshots` regenerated when the command or its behavior affects committed snapshot coverage
 - command-specific tests added when behavior needs more than baseline conformance coverage
 - reusable conformance coverage still passes through `createCommandConformanceCases(...)`

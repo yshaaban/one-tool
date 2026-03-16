@@ -7,12 +7,15 @@
 - Structured execution via `runDetailed(...)`, including per-command trace data and presentation metadata
 - Public extension helpers at `one-tool/extensions` for command authors
 - Deterministic scenario/oracle testing utilities at `one-tool/testing`
+- Python parity port as the `onetool` package, including the runtime, command layer, testing helpers, `MemoryVFS`, and `LocalVFS`
 - Prompt-description variants for tool/schema generation and agent sessions
 - Typed VFS errors, resource-policy enforcement, and execution-time materialization limits
 - MCP server support with `createMcpServer(...)` and `serveStdioMcpServer(...)`
 - Browser-safe package entrypoint at `one-tool/browser`
 - Interactive website with a browser playground, guided examples, and an OpenRouter-backed agent demo
 - Four new built-in commands: `tr`, `diff`, `sed`, and `echo`
+- Snapshot corpus covering parser, VFS, utils, commands, runtime executions/tool descriptions, and oracle scenarios
+- Differential TypeScript-vs-Python parity tests and shared snapshot-backed verification infrastructure
 
 ### Changed
 
@@ -20,6 +23,8 @@
 - Refined browser and site UX, including terminal autocomplete, command highlighting, scripted example playback, and a clearer agent-focused flow
 - Updated the site and README positioning around a constrained agent workspace instead of generic shell or code-interpreter framing
 - Switched the browser LLM demo from direct OpenAI attempts to OpenRouter with a curated model picker
+- Standardized C-locale sorting, comparison, and ASCII-only case folding across commands, VFS backends, adapters, and testing surfaces for deterministic cross-platform behavior
+- Expanded the automated parity surface to 809 TypeScript tests and 302 Python tests
 
 ### Fixed
 
@@ -27,12 +32,15 @@
 - Improved VFS and command error formatting across typed errors, policy failures, and command-level recovery paths
 - Tightened parity coverage and behavior for `tr`, `diff`, and `sed`, including clustered option parsing and in-place edit failure paths
 - Improved browser example/runtime alignment so interactive examples use the correct runtime shape and autoplay/output behavior
+- Fixed `sed` multiline editing escapes so `\n` and `\t` in `a`/`i`/`c` text and `s` replacements produce real newlines and tabs
+- Fixed `sed` BRE literal metacharacter matching, negated addresses, zero-address ranges, and GNU-style range behavior across both runtimes
 
 ### Docs
 
 - Split the oversized README into focused docs for API, commands, VFS, providers, and examples
 - Expanded MCP, provider, browser, and extension-surface documentation
 - Added richer browser-site copy and example guides that better reflect the SDK’s agent-oriented workflow
+- Added Python package documentation and documented the TypeScript-to-Python snapshot parity workflow
 
 ## [0.1.0] - 2026-03-13
 

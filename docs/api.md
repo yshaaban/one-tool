@@ -4,6 +4,12 @@ Full API reference for `@onetool/one-tool`.
 
 For the top-level overview, start with [`../README.md`](../README.md). For command authoring, see [`../COMMANDS.md`](../COMMANDS.md).
 
+## Python port
+
+The `onetool` Python package mirrors the runtime and command model through snapshot-backed parity and differential tests.
+
+For installation and package-specific usage notes, see [`../python/README.md`](../python/README.md).
+
 ---
 
 ## Core runtime

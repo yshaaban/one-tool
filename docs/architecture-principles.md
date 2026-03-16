@@ -263,12 +263,33 @@ Files:
 
 - `test/*`
 - `test/oracles/*`
+- `test/differential/*`
+- `snapshots/*`
+- `scripts/snapshot.ts`
+- `scripts/snapshot/*`
 
 Responsibilities:
 
 - protect user-visible behavior
 - make compatibility claims measurable
 - keep scenario coverage readable and deterministic
+
+### Parity layer
+
+Files:
+
+- `python/*`
+- `snapshots/*`
+- `scripts/snapshot.ts`
+- `scripts/snapshot/*`
+- `test/differential/*`
+
+Responsibilities:
+
+- keep TypeScript as the source of truth for behavior
+- generate golden snapshots from TypeScript and verify them in Python
+- detect cross-runtime drift through direct differential tests
+- make portability claims explicit and measurable
 
 ### Communication layer
 
