@@ -7,42 +7,14 @@ import { compareCLocaleText } from '../../src/c-locale.js';
 import { SimpleMemory } from '../../src/memory.js';
 import { MemoryVFS } from '../../src/vfs/memory-vfs.js';
 import type { VfsResourcePolicy } from '../../src/vfs/index.js';
+import {
+  seedSnapshotWorld,
+  type SerializedSnapshotWorld,
+  type SerializedSnapshotWorldEntry,
+} from '../../scripts/snapshot/shared.js';
+import type { SnapshotFileEntry, SnapshotWorld } from '../../scripts/snapshot-cases.js';
 
-export interface SerializedTextWorldEntry {
-  kind: 'text';
-  text: string;
-}
-
-export interface SerializedBytesWorldEntry {
-  kind: 'bytes';
-  data_b64: string;
-}
-
-export interface SerializedDirectoryWorldEntry {
-  kind: 'dir';
-}
-
-export type SerializedWorldEntry = SerializedTextWorldEntry | SerializedBytesWorldEntry | SerializedDirectoryWorldEntry;
-
-export interface DifferentialSnapshotWorld {
-  files?: Record<string, SerializedWorldEntry>;
-  searchDocs?: unknown[];
-  fetchResources?: Record<string, unknown>;
-  memory?: string[];
-  outputLimits?: Record<string, unknown>;
-}
-
-export interface SerializedExecutionPolicy {
-  maxMaterializedBytes?: number;
-}
-
-export interface SerializedVfsResourcePolicy {
-  maxDirectoryDepth?: number;
-  maxEntriesPerDirectory?: number;
-  maxFileBytes?: number;
-  maxOutputArtifactBytes?: number;
-  maxTotalBytes?: number;
-}
+export type DifferentialSnapshotWorld = SerializedSnapshotWorld;
 
 export async function loadJsonRecords<T>(rootDir: string, label: string): Promise<T[]> {
   const snapshotPaths = await collectJsonFiles(rootDir);
@@ -58,21 +30,16 @@ export async function loadJsonRecords<T>(rootDir: string, label: string): Promis
 }
 
 export function deserializeExecutionPolicy(
-  raw: SerializedExecutionPolicy | undefined,
+  raw: AgentCLIExecutionPolicy | undefined,
 ): AgentCLIExecutionPolicy | undefined {
   if (raw === undefined) {
     return undefined;
   }
-
-  if (raw.maxMaterializedBytes === undefined) {
-    return {};
-  }
-
-  return { maxMaterializedBytes: raw.maxMaterializedBytes };
+  return { ...raw };
 }
 
 export function deserializeVfsResourcePolicy(
-  raw: SerializedVfsResourcePolicy | undefined,
+  raw: VfsResourcePolicy | undefined,
 ): VfsResourcePolicy | undefined {
   if (raw === undefined) {
     return undefined;
@@ -81,17 +48,26 @@ export function deserializeVfsResourcePolicy(
   return { ...raw };
 }
 
-export function deserializeSnapshotWorld(raw: DifferentialSnapshotWorld | undefined): Record<string, unknown> | undefined {
+export function deserializeSnapshotWorld(raw: DifferentialSnapshotWorld | undefined): SnapshotWorld | undefined {
   if (raw === undefined) {
     return undefined;
   }
 
-  const world: Record<string, unknown> = {};
+  const world: SnapshotWorld = {};
+  if (raw.files !== undefined) {
+    world.files = deserializeRawFileEntries(raw.files);
+  }
   if (raw.searchDocs !== undefined) {
     world.searchDocs = raw.searchDocs;
   }
   if (raw.fetchResources !== undefined) {
     world.fetchResources = deserializeFetchResources(raw.fetchResources);
+  }
+  if (raw.memory !== undefined) {
+    world.memory = [...raw.memory];
+  }
+  if (raw.outputLimits !== undefined) {
+    world.outputLimits = raw.outputLimits;
   }
   return world;
 }
@@ -101,34 +77,7 @@ export async function seedWorldFromRecord(
   memory: SimpleMemory,
   raw: DifferentialSnapshotWorld | undefined,
 ): Promise<void> {
-  if (raw === undefined) {
-    return;
-  }
-
-  if (raw.files !== undefined) {
-    const filePaths = Object.keys(raw.files).sort(function (left, right): number {
-      return compareCLocaleText(left, right);
-    });
-
-    for (const filePath of filePaths) {
-      const entry = raw.files[filePath]!;
-      if (entry.kind === 'dir') {
-        await vfs.mkdir(filePath, true);
-        continue;
-      }
-      if (entry.kind === 'text') {
-        await vfs.writeBytes(filePath, Buffer.from(entry.text, 'utf8'), true);
-        continue;
-      }
-      await vfs.writeBytes(filePath, decodeBase64(entry.data_b64), true);
-    }
-  }
-
-  if (raw.memory !== undefined) {
-    for (const item of raw.memory) {
-      memory.store(item);
-    }
-  }
+  await seedSnapshotWorld(vfs, memory, deserializeSnapshotWorld(raw));
 }
 
 export function decodeBase64(value: string): Uint8Array {
@@ -190,4 +139,32 @@ function deserializeFetchPayload(value: unknown): unknown {
     payload[key] = deserializeFetchPayload(nested);
   }
   return payload;
+}
+
+function deserializeRawFileEntries(
+  raw: Record<string, SerializedSnapshotWorldEntry>,
+): Record<string, SnapshotFileEntry> {
+  const files: Record<string, SnapshotFileEntry> = {};
+
+  for (const [filePath, entry] of Object.entries(raw).sort(function ([left], [right]): number {
+    return compareCLocaleText(left, right);
+  })) {
+    switch (entry.kind) {
+      case 'dir':
+        files[filePath] = { kind: 'dir' };
+        break;
+      case 'text':
+        files[filePath] = entry.text;
+        break;
+      case 'bytes':
+        files[filePath] = decodeBase64(entry.data_b64);
+        break;
+      default: {
+        const _exhaustive: never = entry;
+        return _exhaustive;
+      }
+    }
+  }
+
+  return files;
 }

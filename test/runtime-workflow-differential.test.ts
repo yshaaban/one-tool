@@ -4,7 +4,13 @@ import test from 'node:test';
 import { SimpleMemory } from '../src/memory.js';
 import { AgentCLI } from '../src/runtime.js';
 import { MemoryVFS } from '../src/vfs/memory-vfs.js';
-import { serializeRunExecution, snapshotWorldState, withMockedNow } from '../scripts/snapshot/shared.js';
+import {
+  type SerializedRunExecution,
+  type SerializedWorldState,
+  serializeRunExecution,
+  snapshotWorldState,
+  withMockedNow,
+} from '../scripts/snapshot/shared.js';
 import { runPythonDifferentialDriver } from './differential/python-driver.js';
 import {
   EDITING_WORKFLOW_CASES,
@@ -13,8 +19,8 @@ import {
 } from './parity-cases/editing-workflows.js';
 
 interface DifferentialWorkflowResult {
-  executions: Record<string, unknown>[];
-  worldAfter: Record<string, unknown>;
+  executions: SerializedRunExecution[];
+  worldAfter: SerializedWorldState;
 }
 
 interface PythonWorkflowBatchResponse {
@@ -72,12 +78,12 @@ async function runTypescriptWorkflow(workflow: EditingWorkflowCase): Promise<Dif
   });
 }
 
-async function runWorkflowCommands(runtime: AgentCLI, commandLines: readonly string[]): Promise<Record<string, unknown>[]> {
-  const executions: Record<string, unknown>[] = [];
+async function runWorkflowCommands(runtime: AgentCLI, commandLines: readonly string[]): Promise<SerializedRunExecution[]> {
+  const executions: SerializedRunExecution[] = [];
 
   for (const commandLine of commandLines) {
     const execution = await runtime.runDetailed(commandLine);
-    executions.push(serializeRunExecution(execution) as unknown as Record<string, unknown>);
+    executions.push(serializeRunExecution(execution));
   }
 
   return executions;

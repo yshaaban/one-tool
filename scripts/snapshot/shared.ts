@@ -13,38 +13,87 @@ import type { VfsResourcePolicy } from '../../src/vfs/policy.js';
 import type { AgentCLIExecutionPolicy } from '../../src/execution-policy.js';
 import type { SnapshotDirectoryEntry, SnapshotFileEntry, SnapshotWorld } from '../snapshot-cases.js';
 
-interface SerializedTextFileEntry {
+export interface SerializedTextFileEntry {
   kind: 'text';
   text: string;
 }
 
-interface SerializedBinaryFileEntry {
+export interface SerializedBinaryFileEntry {
   kind: 'bytes';
   data_b64: string;
 }
 
-type SerializedRawFileEntry = SnapshotDirectoryEntry | SerializedTextFileEntry | SerializedBinaryFileEntry;
+export type SerializedSnapshotWorldEntry = SnapshotDirectoryEntry | SerializedTextFileEntry | SerializedBinaryFileEntry;
 
-interface SerializedWorldStateFileEntry {
+export interface SerializedSnapshotWorld {
+  files?: Record<string, SerializedSnapshotWorldEntry>;
+  searchDocs?: SnapshotWorld['searchDocs'];
+  fetchResources?: Record<string, unknown>;
+  memory?: string[];
+  outputLimits?: SnapshotWorld['outputLimits'];
+}
+
+export interface SerializedWorldStateFileEntry {
   path: string;
   kind: 'dir' | 'text' | 'bytes';
   text?: string;
   data_b64?: string;
 }
 
-interface SerializedMemoryItem {
+export interface SerializedWorldState {
+  files: SerializedWorldStateFileEntry[];
+  memory: SerializedMemoryItem[];
+}
+
+export interface SerializedMemoryItem {
   id: number;
   text: string;
   createdEpochMs: number;
   metadata: Record<string, unknown>;
 }
 
-interface SerializedCommandResult {
+export interface SerializedCommandResult {
   stdout_b64: string;
   stdout_text?: string;
   stderr: string;
   exitCode: number;
   contentType: string;
+}
+
+export interface SerializedRunExecutionPresentation {
+  text: string;
+  body: RunExecution['presentation']['body'];
+  stdoutMode: RunExecution['presentation']['stdoutMode'];
+  savedPath?: string;
+  totalBytes?: number;
+  totalLines?: number;
+}
+
+export interface SerializedPipelineCommandTrace {
+  argv: string[];
+  stdinBytes: number;
+  stdoutBytes: number;
+  stderr: string;
+  exitCode: number;
+  contentType: string;
+}
+
+export interface SerializedPipelineExecutionTrace {
+  relationFromPrevious: PipelineExecutionTrace['relationFromPrevious'];
+  executed: boolean;
+  skippedReason?: PipelineExecutionTrace['skippedReason'];
+  exitCode?: number;
+  commands: SerializedPipelineCommandTrace[];
+}
+
+export interface SerializedRunExecution {
+  exitCode: number;
+  stdout_b64: string;
+  stdout_text?: string;
+  stderr: string;
+  contentType: string;
+  trace: SerializedPipelineExecutionTrace[];
+  presentation: SerializedRunExecutionPresentation;
 }
 
 const textEncoder = new TextEncoder();
@@ -125,7 +174,9 @@ export async function seedSnapshotWorld(
   }
 }
 
-export function buildAdapters(world: SnapshotWorld | undefined): {
+export function buildAdapters(
+  world: Pick<SnapshotWorld, 'searchDocs' | 'fetchResources'> | undefined,
+): {
   search?: DemoSearch;
   fetch?: DemoFetch;
 } {
@@ -145,8 +196,8 @@ export function buildAdapters(world: SnapshotWorld | undefined): {
   return adapters;
 }
 
-export function serializeSnapshotWorld(world: SnapshotWorld): Record<string, unknown> {
-  const serialized: Record<string, unknown> = {};
+export function serializeSnapshotWorld(world: SnapshotWorld): SerializedSnapshotWorld {
+  const serialized: SerializedSnapshotWorld = {};
 
   if (world.files !== undefined) {
     serialized.files = serializeRawFileEntries(world.files);
@@ -170,7 +221,7 @@ export function serializeSnapshotWorld(world: SnapshotWorld): Record<string, unk
 export async function snapshotWorldState(
   vfs: VFS,
   memory: SimpleMemory,
-): Promise<{ files: SerializedWorldStateFileEntry[]; memory: SerializedMemoryItem[] }> {
+): Promise<SerializedWorldState> {
   return {
     files: await snapshotVfsEntries(vfs),
     memory: snapshotMemoryItems(memory),
@@ -198,8 +249,8 @@ export function serializeCommandResult(result: CommandResult): SerializedCommand
   };
 }
 
-export function serializeRunExecution(execution: RunExecution): Record<string, unknown> {
-  const presentation: Record<string, unknown> = {
+export function serializeRunExecution(execution: RunExecution): SerializedRunExecution {
+  const presentation: SerializedRunExecutionPresentation = {
     text: normalizePresentationText(execution.presentation.text),
     body: execution.presentation.body,
     stdoutMode: execution.presentation.stdoutMode,
@@ -214,17 +265,17 @@ export function serializeRunExecution(execution: RunExecution): Record<string, u
     presentation.totalLines = execution.presentation.totalLines;
   }
 
-  const serialized: Record<string, unknown> = {
+  const serialized: SerializedRunExecution = {
     exitCode: execution.exitCode,
     stdout_b64: toBase64(execution.stdout),
+    stderr: execution.stderr,
+    contentType: execution.contentType,
+    trace: execution.trace.map(serializePipelineExecutionTrace),
+    presentation,
   };
   if (!looksBinary(execution.stdout) && execution.stdout.length > 0) {
     serialized.stdout_text = textDecoder.decode(execution.stdout);
   }
-  serialized.stderr = execution.stderr;
-  serialized.contentType = execution.contentType;
-  serialized.trace = execution.trace.map(serializePipelineExecutionTrace);
-  serialized.presentation = presentation;
 
   return serialized;
 }
@@ -272,8 +323,8 @@ export function serializeOracleTrace(trace: OracleTrace): Record<string, unknown
   };
 }
 
-export function serializeExecutionPolicy(policy: AgentCLIExecutionPolicy): Record<string, unknown> {
-  const serialized: Record<string, unknown> = {};
+export function serializeExecutionPolicy(policy: AgentCLIExecutionPolicy): AgentCLIExecutionPolicy {
+  const serialized: AgentCLIExecutionPolicy = {};
 
   if (policy.maxMaterializedBytes !== undefined) {
     serialized.maxMaterializedBytes = policy.maxMaterializedBytes;
@@ -282,8 +333,8 @@ export function serializeExecutionPolicy(policy: AgentCLIExecutionPolicy): Recor
   return serialized;
 }
 
-export function serializeVfsResourcePolicy(policy: VfsResourcePolicy): Record<string, unknown> {
-  const serialized: Record<string, unknown> = {};
+export function serializeVfsResourcePolicy(policy: VfsResourcePolicy): VfsResourcePolicy {
+  const serialized: VfsResourcePolicy = {};
 
   if (policy.maxFileBytes !== undefined) {
     serialized.maxFileBytes = policy.maxFileBytes;
@@ -310,8 +361,8 @@ export function isSnapshotDirectoryEntry(value: SnapshotFileEntry): value is Sna
 
 function serializeRawFileEntries(
   entries: Record<string, SnapshotFileEntry>,
-): Record<string, SerializedRawFileEntry> {
-  const serialized: Record<string, SerializedRawFileEntry> = {};
+): Record<string, SerializedSnapshotWorldEntry> {
+  const serialized: Record<string, SerializedSnapshotWorldEntry> = {};
 
   for (const filePath of Object.keys(entries).sort(function (left, right) {
     return compareCLocaleText(left, right);
@@ -423,10 +474,20 @@ function snapshotMemoryItems(memory: SimpleMemory): SerializedMemoryItem[] {
     });
 }
 
-function serializePipelineExecutionTrace(trace: PipelineExecutionTrace): Record<string, unknown> {
-  const serialized: Record<string, unknown> = {
+function serializePipelineExecutionTrace(trace: PipelineExecutionTrace): SerializedPipelineExecutionTrace {
+  const serialized: SerializedPipelineExecutionTrace = {
     relationFromPrevious: trace.relationFromPrevious,
     executed: trace.executed,
+    commands: trace.commands.map(function (commandTrace) {
+      return {
+        argv: [...commandTrace.argv],
+        stdinBytes: commandTrace.stdinBytes,
+        stdoutBytes: commandTrace.stdoutBytes,
+        stderr: commandTrace.stderr,
+        exitCode: commandTrace.exitCode,
+        contentType: commandTrace.contentType,
+      };
+    }),
   };
 
   if (trace.skippedReason !== undefined) {
@@ -435,16 +496,6 @@ function serializePipelineExecutionTrace(trace: PipelineExecutionTrace): Record<
   if (trace.exitCode !== undefined) {
     serialized.exitCode = trace.exitCode;
   }
-  serialized.commands = trace.commands.map(function (commandTrace) {
-    return {
-      argv: [...commandTrace.argv],
-      stdinBytes: commandTrace.stdinBytes,
-      stdoutBytes: commandTrace.stdoutBytes,
-      stderr: commandTrace.stderr,
-      exitCode: commandTrace.exitCode,
-      contentType: commandTrace.contentType,
-    };
-  });
 
   return serialized;
 }

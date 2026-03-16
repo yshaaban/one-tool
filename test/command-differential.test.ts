@@ -3,13 +3,17 @@ import path from 'node:path';
 import test from 'node:test';
 
 import { createCommandRegistry } from '../src/commands/index.js';
+import type { AgentCLIExecutionPolicy } from '../src/execution-policy.js';
 import { resolveExecutionPolicy } from '../src/execution-policy.js';
 import { SimpleMemory } from '../src/memory.js';
 import { createTestCommandContext, runRegisteredCommand } from '../src/testing/index.js';
 import { MemoryVFS } from '../src/vfs/memory-vfs.js';
+import type { VfsResourcePolicy } from '../src/vfs/policy.js';
 import {
   EMPTY_STDIN,
   buildAdapters,
+  type SerializedCommandResult,
+  type SerializedWorldState,
   serializeCommandResult,
   snapshotWorldState,
   withMockedNow,
@@ -17,8 +21,6 @@ import {
 import { runPythonDifferentialDriver } from './differential/python-driver.js';
 import {
   type DifferentialSnapshotWorld,
-  type SerializedExecutionPolicy,
-  type SerializedVfsResourcePolicy,
   decodeBase64,
   deserializeExecutionPolicy,
   deserializeSnapshotWorld,
@@ -33,15 +35,15 @@ interface CommandSnapshotRecord {
   args: string[];
   stdin_b64: string;
   world?: DifferentialSnapshotWorld;
-  executionPolicy?: SerializedExecutionPolicy;
-  vfsResourcePolicy?: SerializedVfsResourcePolicy;
-  result: Record<string, unknown>;
-  worldAfter: Record<string, unknown>;
+  executionPolicy?: AgentCLIExecutionPolicy;
+  vfsResourcePolicy?: VfsResourcePolicy;
+  result: SerializedCommandResult;
+  worldAfter: SerializedWorldState;
 }
 
 interface DifferentialCommandCaseResult {
-  result: Record<string, unknown>;
-  worldAfter: Record<string, unknown>;
+  result: SerializedCommandResult;
+  worldAfter: SerializedWorldState;
 }
 
 interface PythonCommandCaseBatchResponse {
@@ -105,7 +107,7 @@ async function runTypescriptCommandSnapshotRecord(record: CommandSnapshotRecord)
     });
 
     return {
-      result: serializeCommandResult(result) as unknown as Record<string, unknown>,
+      result: serializeCommandResult(result),
       worldAfter: await snapshotWorldState(vfs, memory),
     };
   });

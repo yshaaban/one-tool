@@ -1,11 +1,10 @@
 import type { CommandContext } from '../commands/index.js';
 import { loadJson } from '../commands/shared/json.js';
-import { readTextFromFileOrStdin } from '../commands/shared/io.js';
+import { materializedLimitError, readTextFromFileOrStdin } from '../commands/shared/io.js';
 import { err } from '../types.js';
 import { errorMessage } from '../utils.js';
 import { vfsError } from '../vfs/errors.js';
 import { formatVfsError } from './errors.js';
-import { materializedLimitError } from '../commands/shared/io.js';
 import { helperFailure, helperSuccess, type HelperResult } from './types.js';
 
 export async function readTextInput(

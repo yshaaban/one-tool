@@ -3,12 +3,16 @@ import path from 'node:path';
 import test from 'node:test';
 
 import type { BuiltinCommandSelection } from '../src/commands/index.js';
+import type { AgentCLIExecutionPolicy } from '../src/execution-policy.js';
 import { SimpleMemory } from '../src/memory.js';
-import { AgentCLI, type AgentCLIOutputLimits } from '../src/runtime.js';
+import { AgentCLI, type AgentCLIOutputLimits, type ToolDescriptionVariant } from '../src/runtime.js';
 import { MemoryVFS } from '../src/vfs/memory-vfs.js';
+import type { VfsResourcePolicy } from '../src/vfs/policy.js';
 import { runtimeFixtureCommands, type RuntimeFixtureCommandId } from './runtime-fixture-commands.js';
 import {
   buildAdapters,
+  type SerializedRunExecution,
+  type SerializedWorldState,
   serializeRunExecution,
   snapshotWorldState,
   withMockedNow,
@@ -16,8 +20,6 @@ import {
 import { runPythonDifferentialDriver } from './differential/python-driver.js';
 import {
   type DifferentialSnapshotWorld,
-  type SerializedExecutionPolicy,
-  type SerializedVfsResourcePolicy,
   deserializeExecutionPolicy,
   deserializeSnapshotWorld,
   deserializeVfsResourcePolicy,
@@ -32,15 +34,15 @@ interface RuntimeExecutionRecord {
   builtinCommands?: BuiltinCommandSelection | false;
   customCommands?: RuntimeFixtureCommandId[];
   outputLimits?: AgentCLIOutputLimits;
-  executionPolicy?: SerializedExecutionPolicy;
-  vfsResourcePolicy?: SerializedVfsResourcePolicy;
-  execution: Record<string, unknown>;
-  worldAfter: Record<string, unknown>;
+  executionPolicy?: AgentCLIExecutionPolicy;
+  vfsResourcePolicy?: VfsResourcePolicy;
+  execution: SerializedRunExecution;
+  worldAfter: SerializedWorldState;
 }
 
 interface RuntimeDescriptionRecord {
   id: string;
-  variant: 'full-tool-description' | 'minimal-tool-description' | 'terse';
+  variant: ToolDescriptionVariant;
   world?: DifferentialSnapshotWorld;
   builtinCommands?: BuiltinCommandSelection | false;
   customCommands?: RuntimeFixtureCommandId[];
@@ -48,8 +50,8 @@ interface RuntimeDescriptionRecord {
 }
 
 interface DifferentialRuntimeExecutionResult {
-  execution: Record<string, unknown>;
-  worldAfter: Record<string, unknown>;
+  execution: SerializedRunExecution;
+  worldAfter: SerializedWorldState;
 }
 
 interface PythonRuntimeExecutionBatchResponse {
@@ -134,7 +136,7 @@ async function runTypescriptRuntimeExecutionRecord(
     const execution = await runtime.runDetailed(record.commandLine);
 
     return {
-      execution: serializeRunExecution(execution) as unknown as Record<string, unknown>,
+      execution: serializeRunExecution(execution),
       worldAfter: await snapshotWorldState(runtime.ctx.vfs, runtime.ctx.memory),
     };
   });
