@@ -1,0 +1,20 @@
+{
+  "id": "parity-ignore-case-non-ascii-regex",
+  "command": "grep",
+  "args": [
+    "-i",
+    "é"
+  ],
+  "stdin_b64": "w4kKw6kKRQplCg==",
+  "result": {
+    "stdout_b64": "w6k=",
+    "stdout_text": "é",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

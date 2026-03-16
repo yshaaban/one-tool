@@ -1,0 +1,73 @@
+{
+  "id": "parity-non-ascii-c-locale-order",
+  "command": "ls",
+  "args": [
+    "/tree"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/tree/a": {
+        "kind": "text",
+        "text": ""
+      },
+      "/tree/z": {
+        "kind": "text",
+        "text": ""
+      },
+      "/tree/É": {
+        "kind": "text",
+        "text": ""
+      },
+      "/tree/ä": {
+        "kind": "text",
+        "text": ""
+      },
+      "/tree/Ω": {
+        "kind": "text",
+        "text": ""
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "YQp6CsOJCsOkCs6p",
+    "stdout_text": "a\nz\nÉ\nä\nΩ",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/tree",
+        "kind": "dir"
+      },
+      {
+        "path": "/tree/a",
+        "kind": "text",
+        "text": ""
+      },
+      {
+        "path": "/tree/z",
+        "kind": "text",
+        "text": ""
+      },
+      {
+        "path": "/tree/É",
+        "kind": "text",
+        "text": ""
+      },
+      {
+        "path": "/tree/ä",
+        "kind": "text",
+        "text": ""
+      },
+      {
+        "path": "/tree/Ω",
+        "kind": "text",
+        "text": ""
+      }
+    ],
+    "memory": []
+  }
+}

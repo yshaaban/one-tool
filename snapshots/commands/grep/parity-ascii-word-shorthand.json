@@ -1,0 +1,19 @@
+{
+  "id": "parity-ascii-word-shorthand",
+  "command": "grep",
+  "args": [
+    "^\\w$"
+  ],
+  "stdin_b64": "w4kKw6kKRQplCg==",
+  "result": {
+    "stdout_b64": "RQpl",
+    "stdout_text": "E\ne",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

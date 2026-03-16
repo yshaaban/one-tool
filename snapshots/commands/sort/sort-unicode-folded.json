@@ -1,0 +1,19 @@
+{
+  "id": "sort-unicode-folded",
+  "command": "sort",
+  "args": [
+    "-f"
+  ],
+  "stdin_b64": "w6kKZQpFCsOJCg==",
+  "result": {
+    "stdout_b64": "RQplCsOJCsOp",
+    "stdout_text": "E\ne\nÉ\né",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "id": "sort-unicode-version",
+  "command": "sort",
+  "args": [
+    "-V"
+  ],
+  "stdin_b64": "djEuMgp2MS4xMAp2w4kxLjIKdsOpMS4yCnYxLjAyCnYxLjAwMgo=",
+  "result": {
+    "stdout_b64": "djEuMDAyCnYxLjAyCnYxLjIKdjEuMTAKdsOJMS4yCnbDqTEuMg==",
+    "stdout_text": "v1.002\nv1.02\nv1.2\nv1.10\nvÉ1.2\nvé1.2",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

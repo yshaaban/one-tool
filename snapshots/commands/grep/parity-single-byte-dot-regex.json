@@ -1,0 +1,19 @@
+{
+  "id": "parity-single-byte-dot-regex",
+  "command": "grep",
+  "args": [
+    "^.$"
+  ],
+  "stdin_b64": "w4kKw6kKRQplCg==",
+  "result": {
+    "stdout_b64": "RQpl",
+    "stdout_text": "E\ne",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

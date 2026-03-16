@@ -1,0 +1,34 @@
+{
+  "id": "uniq-ignore-case-unicode",
+  "command": "uniq",
+  "args": [
+    "-i",
+    "/folded.txt"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/folded.txt": {
+        "kind": "text",
+        "text": "Error\nerror\nWARN\né\nÉ\n"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "RXJyb3IKV0FSTgrDqQrDiQ==",
+    "stdout_text": "Error\nWARN\né\nÉ",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/folded.txt",
+        "kind": "text",
+        "text": "Error\nerror\nWARN\né\nÉ\n"
+      }
+    ],
+    "memory": []
+  }
+}

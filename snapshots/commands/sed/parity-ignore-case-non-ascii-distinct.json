@@ -1,0 +1,19 @@
+{
+  "id": "parity-ignore-case-non-ascii-distinct",
+  "command": "sed",
+  "args": [
+    "s/é/X/I"
+  ],
+  "stdin_b64": "w4kKw6kK",
+  "result": {
+    "stdout_b64": "w4kKWAo=",
+    "stdout_text": "É\nX\n",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

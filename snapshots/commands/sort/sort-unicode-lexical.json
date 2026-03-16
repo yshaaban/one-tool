@@ -1,0 +1,17 @@
+{
+  "id": "sort-unicode-lexical",
+  "command": "sort",
+  "args": [],
+  "stdin_b64": "egrDpAphCsOJCs6pCg==",
+  "result": {
+    "stdout_b64": "YQp6CsOJCsOkCs6p",
+    "stdout_text": "a\nz\nÉ\nä\nΩ",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

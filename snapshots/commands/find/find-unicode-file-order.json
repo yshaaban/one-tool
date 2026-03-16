@@ -1,0 +1,75 @@
+{
+  "id": "find-unicode-file-order",
+  "command": "find",
+  "args": [
+    "/tree",
+    "--type",
+    "file"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/tree/a.txt": {
+        "kind": "text",
+        "text": "a"
+      },
+      "/tree/z.txt": {
+        "kind": "text",
+        "text": "z"
+      },
+      "/tree/É.txt": {
+        "kind": "text",
+        "text": "e-acute"
+      },
+      "/tree/ä.txt": {
+        "kind": "text",
+        "text": "a-umlaut"
+      },
+      "/tree/Ω.txt": {
+        "kind": "text",
+        "text": "omega"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "L3RyZWUvYS50eHQKL3RyZWUvei50eHQKL3RyZWUvw4kudHh0Ci90cmVlL8OkLnR4dAovdHJlZS/OqS50eHQ=",
+    "stdout_text": "/tree/a.txt\n/tree/z.txt\n/tree/É.txt\n/tree/ä.txt\n/tree/Ω.txt",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/tree",
+        "kind": "dir"
+      },
+      {
+        "path": "/tree/a.txt",
+        "kind": "text",
+        "text": "a"
+      },
+      {
+        "path": "/tree/z.txt",
+        "kind": "text",
+        "text": "z"
+      },
+      {
+        "path": "/tree/É.txt",
+        "kind": "text",
+        "text": "e-acute"
+      },
+      {
+        "path": "/tree/ä.txt",
+        "kind": "text",
+        "text": "a-umlaut"
+      },
+      {
+        "path": "/tree/Ω.txt",
+        "kind": "text",
+        "text": "omega"
+      }
+    ],
+    "memory": []
+  }
+}

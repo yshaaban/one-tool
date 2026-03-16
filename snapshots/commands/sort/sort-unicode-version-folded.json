@@ -1,0 +1,20 @@
+{
+  "id": "sort-unicode-version-folded",
+  "command": "sort",
+  "args": [
+    "-V",
+    "-f"
+  ],
+  "stdin_b64": "djFhCnYxQQp2McOpCnYxw4kK",
+  "result": {
+    "stdout_b64": "djFBCnYxYQp2McOJCnYxw6k=",
+    "stdout_text": "v1A\nv1a\nv1É\nv1é",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

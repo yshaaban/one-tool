@@ -1,0 +1,19 @@
+{
+  "id": "json-keys-unicode-order",
+  "command": "json",
+  "args": [
+    "keys"
+  ],
+  "stdin_b64": "eyJ6IjoxLCLDpCI6MiwiYSI6Mywiw4kiOjQsIs6pIjo1fQ==",
+  "result": {
+    "stdout_b64": "YQp6CsOJCsOkCs6p",
+    "stdout_text": "a\nz\nÉ\nä\nΩ",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

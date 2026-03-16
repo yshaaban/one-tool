@@ -1,0 +1,44 @@
+{
+  "id": "diff-ignore-case-unicode-distinct",
+  "command": "diff",
+  "args": [
+    "-i",
+    "/left.txt",
+    "/right.txt"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "files": {
+      "/left.txt": {
+        "kind": "text",
+        "text": "É\n"
+      },
+      "/right.txt": {
+        "kind": "text",
+        "text": "é\n"
+      }
+    }
+  },
+  "result": {
+    "stdout_b64": "MWMxCjwgw4kKLS0tCj4gw6kK",
+    "stdout_text": "1c1\n< É\n---\n> é\n",
+    "stderr": "",
+    "exitCode": 1,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [
+      {
+        "path": "/left.txt",
+        "kind": "text",
+        "text": "É\n"
+      },
+      {
+        "path": "/right.txt",
+        "kind": "text",
+        "text": "é\n"
+      }
+    ],
+    "memory": []
+  }
+}

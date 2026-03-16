@@ -1,0 +1,19 @@
+{
+  "id": "sort-numeric-tied-values",
+  "command": "sort",
+  "args": [
+    "-n"
+  ],
+  "stdin_b64": "MgowMgphcHBsZQo=",
+  "result": {
+    "stdout_b64": "YXBwbGUKMDIKMg==",
+    "stdout_text": "apple\n02\n2",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}

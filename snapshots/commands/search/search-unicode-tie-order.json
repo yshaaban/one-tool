@@ -1,0 +1,48 @@
+{
+  "id": "search-unicode-tie-order",
+  "command": "search",
+  "args": [
+    "refund"
+  ],
+  "stdin_b64": "",
+  "world": {
+    "searchDocs": [
+      {
+        "title": "ä title",
+        "body": "refund issue",
+        "source": "kb://1"
+      },
+      {
+        "title": "z title",
+        "body": "refund issue",
+        "source": "kb://2"
+      },
+      {
+        "title": "a title",
+        "body": "refund issue",
+        "source": "kb://3"
+      },
+      {
+        "title": "É title",
+        "body": "refund issue",
+        "source": "kb://4"
+      },
+      {
+        "title": "Ω title",
+        "body": "refund issue",
+        "source": "kb://5"
+      }
+    ]
+  },
+  "result": {
+    "stdout_b64": "MS4gYSB0aXRsZQogICBzb3VyY2U6IGtiOi8vMwogICByZWZ1bmQgaXNzdWUKCjIuIHogdGl0bGUKICAgc291cmNlOiBrYjovLzIKICAgcmVmdW5kIGlzc3VlCgozLiDDiSB0aXRsZQogICBzb3VyY2U6IGtiOi8vNAogICByZWZ1bmQgaXNzdWUKCjQuIMOkIHRpdGxlCiAgIHNvdXJjZToga2I6Ly8xCiAgIHJlZnVuZCBpc3N1ZQoKNS4gzqkgdGl0bGUKICAgc291cmNlOiBrYjovLzUKICAgcmVmdW5kIGlzc3Vl",
+    "stdout_text": "1. a title\n   source: kb://3\n   refund issue\n\n2. z title\n   source: kb://2\n   refund issue\n\n3. É title\n   source: kb://4\n   refund issue\n\n4. ä title\n   source: kb://1\n   refund issue\n\n5. Ω title\n   source: kb://5\n   refund issue",
+    "stderr": "",
+    "exitCode": 0,
+    "contentType": "text/plain"
+  },
+  "worldAfter": {
+    "files": [],
+    "memory": []
+  }
+}
