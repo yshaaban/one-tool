@@ -2,12 +2,14 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-03-16
+
 ### Added
 
 - Structured execution via `runDetailed(...)`, including per-command trace data and presentation metadata
 - Public extension helpers at `one-tool/extensions` for command authors
 - Deterministic scenario/oracle testing utilities at `one-tool/testing`
-- Python parity port as the `onetool` package, including the runtime, command layer, testing helpers, `MemoryVFS`, and `LocalVFS`
+- Python package support as `onetool`, including the runtime, command layer, testing helpers, `MemoryVFS`, and `LocalVFS`
 - Prompt-description variants for tool/schema generation and agent sessions
 - Typed VFS errors, resource-policy enforcement, and execution-time materialization limits
 - MCP server support with `createMcpServer(...)` and `serveStdioMcpServer(...)`

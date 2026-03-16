@@ -1,6 +1,6 @@
 # onetool (Python)
 
-Python parity port of [`one-tool`](../README.md).
+Supported Python package for [`one-tool`](../README.md).
 
 The TypeScript runtime remains the source of truth. The Python package tracks behavior through TypeScript-generated snapshots plus direct differential tests.
 
@@ -10,6 +10,12 @@ From a local checkout:
 
 ```bash
 python -m pip install ./python
+```
+
+Directly from GitHub without PyPI:
+
+```bash
+python -m pip install "git+https://github.com/yshaaban/one-tool.git#subdirectory=python"
 ```
 
 For development inside this repo:

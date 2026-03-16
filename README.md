@@ -145,11 +145,18 @@ npm run demo
 
 For the rest of the walkthrough, open [`examples/README.md`](examples/README.md).
 
-### Python parity workspace
+### Python package support
 
-The Python port lives under [`python/`](python) and is maintained against TypeScript-generated golden snapshots.
+`one-tool` now includes a supported Python package under [`python/`](python). The TypeScript runtime remains the source of truth, and the Python package is maintained against TypeScript-generated golden snapshots plus differential tests.
 
 Package-specific notes live in [`python/README.md`](python/README.md).
+
+You can use it in Python projects today without waiting for PyPI publishing:
+
+```bash
+python -m pip install ./python
+python -m pip install "git+https://github.com/yshaaban/one-tool.git#subdirectory=python"
+```
 
 Run the Python suite with:
 
@@ -159,7 +166,7 @@ python3 -m pip install -e ".[dev]"
 pytest -q
 ```
 
-The Python package currently includes the parity runtime, command layer, testing helpers, `MemoryVFS`, and `LocalVFS`.
+The Python package currently includes the supported runtime, command layer, testing helpers, `MemoryVFS`, and `LocalVFS`.
 
 Start with:
 
